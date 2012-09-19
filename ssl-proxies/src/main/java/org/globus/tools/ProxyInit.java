@@ -51,9 +51,8 @@ import java.io.File;
 import org.globus.common.CoGProperties;
 import org.globus.common.Version;
 import org.globus.gsi.OpenSSLKey;
-import org.globus.gsi.CertUtil;
-import org.globus.gsi.GlobusCredential;
 import org.globus.gsi.GSIConstants;
+import org.globus.gsi.X509Credential;
 import org.globus.gsi.bc.BouncyCastleOpenSSLKey;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
 import org.globus.gsi.proxy.ext.ProxyPolicy;
@@ -129,7 +128,7 @@ public abstract class ProxyInit {
     protected boolean debug = false;
     protected boolean stdin = false;
 
-    protected GlobusCredential proxy = null;
+    protected X509Credential proxy = null;
 
     public abstract void init(String [] args);
     public abstract void loadCertificates(String args);
@@ -510,7 +509,7 @@ public abstract class ProxyInit {
         System.err.println("  user cert : " + ((certFile == null) ? "none" : certFile));
     }
     
-    CertUtil.init();
+    CertificateUtil.init();
 
     ProxyCertInfo proxyCertInfo = null;
 
@@ -698,12 +697,12 @@ class DefaultProxyInit extends ProxyInit {
                     extSet.add(new GlobusProxyCertInfoExtension(proxyCertInfo));
                 }
         }
-
+        
         proxy = factory.createCredential(certificates,
                          userKey,
                          bits,
                          lifetime,
-                         proxyType.getCode(),
+                         proxyType,
                          extSet);
     } catch (GeneralSecurityException e) {
         System.err.println("Failed to create a proxy: " + e.getMessage());
