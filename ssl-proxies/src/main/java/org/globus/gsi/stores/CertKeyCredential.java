@@ -12,20 +12,13 @@
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
-
 package org.globus.gsi.stores;
 
-import org.globus.gsi.CredentialException;
-import org.globus.gsi.X509Credential;
-
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.cert.CertificateEncodingException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.globus.gsi.CredentialException;
+import org.globus.gsi.X509Credential;
 import org.springframework.core.io.Resource;
 
 /**
@@ -33,7 +26,6 @@ import org.springframework.core.io.Resource;
  */
 
 public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>, Storable, CredentialWrapper {
-	private Log logger = LogFactory.getLog(getClass().getCanonicalName());
 	
     protected Resource certFile;
     protected Resource keyFile;
@@ -126,34 +118,13 @@ public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>,
 
     protected X509Credential createObject(Resource certSource, Resource keySource)
             throws ResourceStoreException {
-        InputStream certIns = null;
-        InputStream keyIns = null;
         try {
-            certIns = certSource.getInputStream();
-            keyIns = keySource.getInputStream();
-            return new X509Credential(certIns, keyIns);
-        } catch (FileNotFoundException e) {
-            throw new ResourceStoreException(e);
+            return new X509Credential(certSource.getFile().getAbsolutePath(), keySource.getFile().getAbsolutePath());
         } catch (CredentialException e) {
             throw new ResourceStoreException(e);
-        } catch (IOException ioe) {
-            throw new ResourceStoreException(ioe);
-        }finally{
-        	if(certIns != null){
-        		try {
-					certIns.close();
-				} catch (IOException e) {
-					logger.warn("Unable to close stream.");
-				}
-        	}
-        	if(keyIns != null){
-        		try {
-        			keyIns.close();
-				} catch (IOException e) {
-					logger.warn("Unable to close stream.");
-				}
-        	}
-        }
+        } catch (IOException e) {
+        	throw new ResourceStoreException(e);
+		}
     }
 
     public X509Credential getSecurityObject() throws ResourceStoreException {
@@ -174,9 +145,9 @@ public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>,
             this.credential.writeToFile(this.certFile.getFile(), this.keyFile.getFile());
         } catch (IOException e) {
             throw new ResourceStoreException(e);
-        } catch (CertificateEncodingException e) {
-            throw new ResourceStoreException(e);
-        }
+        } catch (CredentialException e) {
+        	throw new ResourceStoreException(e);
+		}
     }
 
     public String getAlias() {

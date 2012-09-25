@@ -21,6 +21,7 @@ import org.globus.gsi.util.CertificateLoadUtil;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509CRL;
@@ -113,19 +114,20 @@ public class CertificateUtilTest {
 
         BufferedReader reader =
                 new BufferedReader(new StringReader(this.validCert1));
-        X509Certificate cert =
-                CertificateLoadUtil.readCertificate(reader);
+        X509Certificate[] cert =
+                CertificateLoadUtil.readCertificates(reader);
         assert (cert != null);
+        assert (cert.length == 1);
 
         reader = new BufferedReader(new StringReader(this.invalidCert1));
 
         boolean expected = false;
         try {
-            cert = CertificateLoadUtil.readCertificate(reader);
-        } catch (GeneralSecurityException e) {
+            cert = CertificateLoadUtil.readCertificates(reader);
+        } catch (IOException e) {
 
             if ((e.getMessage().indexOf(
-                    "Certificate needs to start with  BEGIN CERTIFICATE")) != -1) {
+                    "Certificate not well formatted")) != -1) {
                 expected = true;
             }
         }
@@ -135,11 +137,11 @@ public class CertificateUtilTest {
 
         expected = false;
         try {
-            cert = CertificateLoadUtil.readCertificate(reader);
-        } catch (GeneralSecurityException e) {
+            cert = CertificateLoadUtil.readCertificates(reader);
+        } catch (IOException e) {
 
             if ((e.getMessage().indexOf(
-                    "Certificate needs to start with  BEGIN CERTIFICATE")) != -1) {
+                    "Certificate not well formatted")) != -1) {
                 expected = true;
             }
         }
@@ -154,7 +156,7 @@ public class CertificateUtilTest {
 
             X509Certificate cert =
                     CertificateLoadUtil
-                            .loadCertificate(testCert1.getAbsoluteFilename());
+                            .loadCertificates(testCert1.getAbsoluteFilename())[0];
 
             assert (cert != null);
 
@@ -163,11 +165,11 @@ public class CertificateUtilTest {
             boolean worked = false;
             try {
                 cert = CertificateLoadUtil
-                        .loadCertificate(testCert2.getAbsoluteFilename());
-            } catch (GeneralSecurityException e) {
+                        .loadCertificates(testCert2.getAbsoluteFilename())[0];
+            } catch (IOException e) {
                 String err = e.getMessage();
                 if (err != null &&
-                        err.indexOf("BEGIN CERTIFICATE") != -1) {
+                        err.indexOf("Certificate not well formatted") != -1) {
                     worked = true;
                 }
             }
@@ -192,7 +194,7 @@ public class CertificateUtilTest {
         boolean worked = false;
         try {
             crl = CertificateLoadUtil.loadCrl(in);
-        } catch (GeneralSecurityException e) {
+        } catch (IOException e) {
             worked = true;
         }
 

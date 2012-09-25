@@ -14,16 +14,16 @@
  */
 package org.globus.gsi.gssapi.jaas;
 
-import java.security.Principal;
 import java.io.Serializable;
+import java.security.Principal;
 
 /**
  * Simple string-based principal.
  */
 public class SimplePrincipal 
     implements Principal, Serializable {
-    
-    private String name;
+	private static final long serialVersionUID = 1L;
+	private String name;
     
     public SimplePrincipal() {
     }

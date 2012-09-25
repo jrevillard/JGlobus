@@ -15,10 +15,6 @@
 
 package org.globus.gsi.trustmanager;
 
-import org.globus.gsi.util.ProxyCertificateUtil;
-
-import org.globus.gsi.provider.SigningPolicyStore;
-
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertStoreException;
 import java.security.cert.X509Certificate;
@@ -27,6 +23,8 @@ import javax.security.auth.x500.X500Principal;
 
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.SigningPolicy;
+import org.globus.gsi.provider.SigningPolicyStore;
+import org.globus.gsi.util.ProxyCertificateUtil;
 
 /**
  * This checks to make sure the Distinguished Name in the certificate is valid according to the signing policy.
@@ -58,13 +56,13 @@ public class SigningPolicyChecker implements CertificateChecker {
         }
 
         if (policy == null) {
-            throw new CertPathValidatorException("No signing policy for " + cert.getIssuerDN());
+            throw new CertPathValidatorException("No signing policy for " + cert.getIssuerX500Principal());
         }
 
         boolean valid = policy.isValidSubject(cert.getSubjectX500Principal());
 
         if (!valid) {
-            throw new CertPathValidatorException("Certificate " + cert.getSubjectDN()
+            throw new CertPathValidatorException("Certificate " + cert.getSubjectX500Principal()
                     + " violates signing policy for CA " + caPrincipal.getName());
         }
     }

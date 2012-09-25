@@ -15,15 +15,12 @@
 
 package org.globus.gsi.stores;
 
-import org.apache.commons.logging.Log;
-
-import org.apache.commons.logging.LogFactory;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.security.cert.TrustAnchor;
 
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.core.io.Resource;
 
 /**

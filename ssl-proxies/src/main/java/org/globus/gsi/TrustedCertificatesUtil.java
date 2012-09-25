@@ -1,30 +1,14 @@
 package org.globus.gsi;
 
-import org.globus.gsi.stores.ResourceCertStoreParameters;
-
-import org.globus.gsi.provider.GlobusProvider;
-import org.globus.gsi.provider.KeyStoreParametersFactory;
-
-import org.globus.gsi.provider.simple.SimpleMemoryCertStoreParams;
-import org.globus.gsi.provider.simple.SimpleMemoryKeyStoreLoadStoreParameter;
-import org.globus.gsi.provider.simple.SimpleMemoryProvider;
-
-
-
-import java.security.KeyStore.LoadStoreParameter;
-
-
+import java.security.Security;
+import java.security.cert.CertStore;
 import java.security.cert.CertStoreParameters;
 
-import java.security.cert.CertStore;
-
 import org.globus.common.CoGProperties;
-
-
-
-import java.security.Security;
-
-import java.security.KeyStore;
+import org.globus.gsi.provider.GlobusProvider;
+import org.globus.gsi.provider.simple.SimpleMemoryCertStoreParams;
+import org.globus.gsi.provider.simple.SimpleMemoryProvider;
+import org.globus.gsi.stores.ResourceCertStoreParameters;
 
 /**
  * This is a helper class to create convert TrustCertificates

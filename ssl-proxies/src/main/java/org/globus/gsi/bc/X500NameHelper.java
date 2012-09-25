@@ -16,22 +16,19 @@ package org.globus.gsi.bc;
 
 import java.io.IOException;
 
-import java.util.Enumeration;
-
 import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
-import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERPrintableString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
-import org.bouncycastle.asn1.DERString;
-import org.bouncycastle.asn1.x509.X509Name;
+import org.bouncycastle.asn1.x500.X500Name;
 
 /**
- * A helper class to deal with {@link X509Name X509Name} object.
+ * A helper class to deal with {@link X500Name X500Name} object.
  */
-public class X509NameHelper {
+public class X500NameHelper {
 
     private ASN1Sequence seq;
 
@@ -40,44 +37,40 @@ public class X509NameHelper {
      *
      * @param seq the name sequence
      */
-    public X509NameHelper(ASN1Sequence seq) {
+    public X500NameHelper(ASN1Sequence seq) {
         this.seq = seq;
     }
 
     /**
-     * Creates an instance using existing {@link X509Name X509Name} 
+     * Creates an instance using existing {@link X500Name X500Name} 
      * object. 
      * This behaves like a copy constructor.
      *
-     * @param name existing <code>X509Name</code> 
+     * @param name existing <code>X500Name</code> 
      */
-    public X509NameHelper(X509Name name) {
-        try {
-            this.seq = (ASN1Sequence)BouncyCastleUtil.duplicate(name.getDERObject());
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage());
-        }
+    public X500NameHelper(X500Name name) {
+        this.seq = ASN1Sequence.getInstance(name.toASN1Primitive());
     }
 
     /**
-     * Converts to {@link X509Name X509Name} object.
+     * Converts to {@link X500Name X500Name} object.
      *
-     * @return the <code>X509Name</code> object.
+     * @return the <code>X500Name</code> object.
      */
-    public X509Name getAsName() {
-        return new X509Name(this.seq);
+    public X500Name getAsName() {
+        return X500Name.getInstance(GlobusStyle.INSTANCE, this.seq);
     }
 
     /**
      * Appends the specified OID and value pair name component to the end of the
      * current name.
      *
-     * @param oid   the name component oid, e.g. {@link X509Name#CN
-     *              X509Name.CN}
+     * @param oid   the name component oid, e.g. {@link X500Name#CN
+     *              X500Name.CN}
      * @param value the value (e.g. "proxy")
      */
     public void add(
-            DERObjectIdentifier oid,
+            ASN1ObjectIdentifier oid,
             String value) {
         ASN1EncodableVector v = new ASN1EncodableVector();
         v.add(oid);
@@ -94,10 +87,10 @@ public class X509NameHelper {
     public void add(ASN1Set entry) {
         ASN1EncodableVector v = new ASN1EncodableVector();
         int size = seq.size();
+        v.add(entry);
         for (int i = 0; i < size; i++) {
             v.add(seq.getObjectAt(i));
         }
-        v.add(entry);
         seq = new DERSequence(v);
     }
 
@@ -121,12 +114,13 @@ public class X509NameHelper {
     }
 
     /**
-     * Gets the last name component from the {@link X509Name X509Name} name.
+     * Gets the last name component from the {@link X500Name X500Name} name.
      *
      * @return the last name component. Null if there is none.
+     * @throws IOException 
      */
-    public static ASN1Set getLastNameEntry(X509Name name) {
-        ASN1Sequence seq = (ASN1Sequence) name.getDERObject();
+    public static ASN1Set getLastNameEntry(X500Name name) throws IOException {
+        ASN1Sequence seq = (ASN1Sequence) ASN1Sequence.fromByteArray(name.getEncoded());
         int size = seq.size();
         return (size > 0) ? (ASN1Set) seq.getObjectAt(size - 1) : null;
     }
@@ -138,42 +132,18 @@ public class X509NameHelper {
      * @param name the name to get the Globus format of.
      * @return the Globus format of the name
      */
-    public static String toString(X509Name name) {
+    public static String toString(X500Name name) {
         if (name == null) {
             return null;
         }
-        return toString((ASN1Sequence)name.getDERObject());
+        return GlobusStyle.INSTANCE.toString(name);
     }
 
     private static String toString(ASN1Sequence seq) {
         if (seq == null) {
             return null;
         }
-
-        Enumeration e = seq.getObjects();
-        StringBuffer buf = new StringBuffer();
-        while (e.hasMoreElements()) {
-            ASN1Set set = (ASN1Set)e.nextElement();
-            Enumeration ee = set.getObjects();
-            buf.append('/');
-            while (ee.hasMoreElements()) {
-                ASN1Sequence s = (ASN1Sequence)ee.nextElement();
-                DERObjectIdentifier oid = (DERObjectIdentifier)s.getObjectAt(0);
-                String sym = (String)X509Name.OIDLookUp.get(oid);
-                if (sym == null) {
-                    buf.append(oid.getId());
-                } else {
-                    buf.append(sym);
-                }
-                buf.append('=');
-                buf.append(((DERString)s.getObjectAt(1)).getString());
-                if (ee.hasMoreElements()) {
-                    buf.append('+');
-                }
-            }
-        }
-
-        return buf.toString();
+        return X500Name.getInstance(GlobusStyle.INSTANCE, seq).toString();
     }
 
     /**

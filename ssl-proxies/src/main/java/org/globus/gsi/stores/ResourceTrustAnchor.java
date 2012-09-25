@@ -15,18 +15,16 @@
 
 package org.globus.gsi.stores;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.gsi.util.CertificateIOUtil;
 import org.globus.gsi.util.CertificateLoadUtil;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.GeneralSecurityException;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.TrustAnchor;
-import java.security.cert.X509Certificate;
-
 import org.springframework.core.io.Resource;
 
 /**
@@ -90,8 +88,6 @@ public class ResourceTrustAnchor extends AbstractResourceSecurityWrapper<TrustAn
     public void store() throws ResourceStoreException {
         try {
             CertificateIOUtil.writeCertificate(this.getTrustAnchor().getTrustedCert(), resource.getFile());
-        } catch (CertificateEncodingException e) {
-            throw new ResourceStoreException(e);
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         }

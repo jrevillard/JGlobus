@@ -1,8 +1,8 @@
 package org.globus.gsi;
 
-import org.globus.gsi.provider.GlobusProvider;
-
 import java.security.Security;
+
+import org.globus.gsi.provider.GlobusProvider;
 
 
 public class ProviderLoader {

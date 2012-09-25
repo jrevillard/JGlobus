@@ -14,19 +14,19 @@
  */
 package org.globus.gsi.util;
 
-import org.apache.commons.logging.Log;
-
-import org.apache.commons.logging.LogFactory;
-
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.FileReader;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.PrivateKey;
 import java.security.Security;
+import java.security.cert.CRL;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509CRL;
@@ -35,13 +35,12 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
-import java.util.List;
-import java.util.Vector;
 
-
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.openssl.PasswordFinder;
 
 /**
  * Contains various security-related utility methods.
@@ -108,195 +107,226 @@ public final class CertificateLoadUtil {
         return (X509Certificate) getCertificateFactory().generateCertificate(in);
     }
 
-
     /**
-     * Loads an X.509 certificate from the specified file. The certificate file
-     * must be in PEM/Base64 format and start with "BEGIN CERTIFICATE" and end
-     * with "END CERTIFICATE" line.
-     *
-     * @param file the file to load the certificate from.
-     * @return <code>java.security.cert.X509Certificate</code> the loaded
-     *         certificate.
-     * @throws IOException              if I/O error occurs
-     * @throws GeneralSecurityException if security problems occurs.
-     */
-    public static X509Certificate loadCertificate(String file)
-            throws IOException, GeneralSecurityException {
-
-        if (file == null) {
-            throw new IllegalArgumentException("Certificate file is null");
-            //i18n
-            //  .getMessage("certFileNull"));
-        }
-
-        X509Certificate cert = null;
-
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        try {
-            cert = readCertificate(reader);
-        } finally {
-            reader.close();
-        }
-
-        if (cert == null) {
-            throw new GeneralSecurityException("No certificate data");
-            //i18n.getMessage("noCertData"));
-        }
-
-        return cert;
-    }
-
-    /**
-     * Loads multiple X.509 certificates from the specified file. Each
-     * certificate must be in PEM/Base64 format and start with "BEGIN
-     * CERTIFICATE" and end with "END CERTIFICATE" line.
+     * Loads multiple X.509 certificates from the specified file.
      *
      * @param file the certificate file to load the certificate from.
      * @return an array of certificates loaded from the file.
      * @throws IOException              if I/O error occurs
      * @throws GeneralSecurityException if security problems occurs.
      */
-    public static X509Certificate[] loadCertificates(String file)
-            throws IOException, GeneralSecurityException {
+    public static X509Certificate[] loadCertificates(String file) throws IOException, GeneralSecurityException {
 
         if (file == null) {
             throw new IllegalArgumentException("Certificate file is null");
-            //i18n
-            //                                 .getMessage("certFileNull"));
         }
-        
-        List<X509Certificate> list = new ArrayList<X509Certificate>();
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        X509Certificate cert = readCertificate(reader);
-        try {
-            while (cert != null) {
-                list.add(cert);
-                cert = readCertificate(reader);
-            }
-        } finally {
-            reader.close();
+        X509Certificate[] x509Certificates = readCertificates(reader);
+        if(x509Certificates == null){
+        	throw new GeneralSecurityException("No certificate data");
         }
-
-        if (list.size() == 0) {
-            throw new GeneralSecurityException("No certificate data");
-            //i18n.getMessage("noCertData"));
-        }
-
-        int size = list.size();
-        return list.toArray(new X509Certificate[size]);
+        return x509Certificates;
     }
-
+    
     /**
-     * Loads a X.509 certificate from the specified reader. The certificate
-     * contents must start with "BEGIN CERTIFICATE" line and end with "END
-     * CERTIFICATE" line, and be in PEM/Base64 format.
-     * <p/>
-     * This function does not close the input stream.
+     * Loads multiple X.509 certificates from the specified stream.
      *
-     * @param reader the stream from which load the certificate.
-     * @return the loaded certificate or null if there was no certificate in the
-     *         stream or the stream is closed.
+     * @param inputStream the inputStream to load the certificate from.
+     * @param closeStream if <code>false</code>, the stream will not be closed.
+     * @return an array of certificates loaded from the file.
      * @throws IOException              if I/O error occurs
      * @throws GeneralSecurityException if security problems occurs.
      */
-    public static X509Certificate readCertificate(BufferedReader reader)
-            throws IOException, GeneralSecurityException {
-        String line;
-        StringBuffer buff = new StringBuffer();
-        boolean isCert = false;
-        boolean isKey = false;
-        boolean notNull = false;
-        while ((line = reader.readLine()) != null) {
-            // Skip key info, if any
-            if (line.indexOf("BEGIN RSA PRIVATE KEY") != -1 ||
-                 line.indexOf("BEGIN PRIVATE KEY") != -1) {
-                isKey = true;
-                continue;
-            } else if (isKey && (line.indexOf("END RSA PRIVATE KEY") != -1 ||
-                                 line.indexOf("END PRIVATE KEY") != -1)) {
-                isKey = false;
-                continue;
-            } else if (isKey)
-                continue;
+    public static X509Certificate[] loadCertificates(InputStream inputStream, boolean closeStream) throws IOException, GeneralSecurityException {
 
-            notNull = true;
-            if (line.indexOf("BEGIN CERTIFICATE") != -1) {
-                isCert = true;
-            } else if (isCert && line.indexOf("END CERTIFICATE") != -1) {
-                byte[] data = Base64.decode(buff.toString().getBytes());
-                return loadCertificate(new ByteArrayInputStream(data));
-            } else if (isCert) {
-                buff.append(line);
-            }
+        if (inputStream == null) {
+            throw new IllegalArgumentException("Certificate InputStream is null");
         }
-        if (notNull && !isCert) {
-            throw new GeneralSecurityException(
-                    "Certificate needs to start with "
-                            + " BEGIN CERTIFICATE");
+        if(!closeStream){
+        	inputStream = new NotClosableInputStream(inputStream);
         }
-        return null;
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        X509Certificate[] x509Certificates = readCertificates(reader);
+        if(x509Certificates == null){
+        	throw new GeneralSecurityException("No certificate data");
+        }
+        return x509Certificates;
+    }
+    
+    /**
+     * Loads a private key from the specified file.
+     *
+     * @param file the private key file to load the private key from.
+     * @param passwordFinder the password finder object which allows the {@link PEMReader} to decrypt the private key. (Can be null if not needed)
+     * @return an array of certificates loaded from the file.
+     * @throws IOException              if I/O error occurs
+     * @throws GeneralSecurityException if security problems occurs.
+     */
+    public static PrivateKey loadPrivateKey(String file, PasswordFinder passwordFinder) throws IOException, GeneralSecurityException {
+        if (file == null) {
+            throw new IllegalArgumentException("Private Key file is null");
+        }
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        PrivateKey privateKey = readPrivateKey(reader, passwordFinder);
+        if(privateKey == null){
+        	throw new GeneralSecurityException("No private key data");
+        }
+        return privateKey;
+    }
+    
+    /**
+     * Loads a private key from the specified stream.
+     *
+     * @param file the private key file to load the private key from.
+     * @param passwordFinder the password finder object which allows the {@link PEMReader} to decrypt the private key. (Can be null if not needed)
+     * @param closeStream if <code>false</code>, the stream will not be closed.
+     * @return an array of certificates loaded from the file.
+     * @throws IOException              if I/O error occurs
+     * @throws GeneralSecurityException if security problems occurs.
+     */
+    public static PrivateKey loadPrivateKey(InputStream inputStream, PasswordFinder passwordFinder, boolean closeStream) throws IOException, GeneralSecurityException {
+        if (inputStream == null) {
+            throw new IllegalArgumentException("Private Key Input Stream is null");
+        }
+        if(!closeStream){
+        	inputStream = new NotClosableInputStream(inputStream);
+        }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        PrivateKey privateKey = readPrivateKey(reader, passwordFinder);
+        if(privateKey == null){
+        	throw new GeneralSecurityException("No private key data");
+        }
+        return privateKey;
     }
 
 
-    public static X509CRL loadCrl(String file)
-            throws IOException, GeneralSecurityException {
+    /**
+     * Loads the PEM certificates from the specified reader.
+     * <p/>
+     * This function does close the input reader.
+     *
+     * @param reader the stream from which load the certificate.
+     * @return the loaded certificate or null if there was no data in the
+     *         reader or the reader is closed.
+     * @throws IOException              if I/O error occurs
+     */
+    public static X509Certificate[] readCertificates(BufferedReader reader) throws IOException {
+    	if (reader == null) {
+			throw new IllegalArgumentException("The reader must not be null.");
+		}
+    	PEMReader pemReader = null;
+    	try {
+	    	if(!reader.ready()){
+	    		//No data;
+	    		return null;
+	    	}
+			pemReader = new PEMReader(reader);
+			Object pemObject = null;
+			ArrayList<X509Certificate> certificates = new ArrayList<X509Certificate>(3);
+			while ((pemObject = pemReader.readObject()) != null) {
+				if(pemObject instanceof X509Certificate){
+					certificates.add((X509Certificate)pemObject);
+				}
+			}
+			if(!certificates.isEmpty()){
+				return certificates.toArray(new X509Certificate[certificates.size()]);
+			}
+		}finally{
+			if(pemReader != null){
+				try{
+					pemReader.close();
+				}catch (IOException e) {}
+			}
+		}
+    	throw new IOException("Certificate not well formatted");
+    }
+    
+    /**
+     * Loads the private key from the specified reader.
+     * <p/>
+     * This function does close the input reader.
+     *
+     * @param reader the stream from which load the certificate.
+     * @param passwordFinder the password finder object which allows the {@link PEMReader} to decrypt the private key. (Can be null if not needed)
+     * @return the loaded private key or null if there was no private key in the
+     *         reader or the reader is closed.
+     * @throws IOException              if I/O error occurs
+     */
+    public static PrivateKey readPrivateKey(BufferedReader reader, PasswordFinder passwordFinder) throws IOException {
+    	if (reader == null) {
+			throw new IllegalArgumentException("The reader must not be null.");
+		}
+		PEMReader pemReader = null;
+		Object pemObject = null;
+		try {
+			if(!reader.ready()){
+	    		//No data;
+	    		return null;
+	    	}
+			pemReader = new PEMReader(reader, passwordFinder);
+			while ((pemObject = pemReader.readObject()) != null) {
+				if(pemObject instanceof KeyPair){
+					return ((KeyPair)pemObject).getPrivate();
+				}else if(pemObject instanceof PrivateKey){
+					return (PrivateKey)pemObject;
+				}
+			}
+		}finally{
+			if(pemReader != null){
+				try{
+					pemReader.close();
+				}catch (IOException e) {}
+			}
+		}
+		throw new IOException("Private key not well formatted");
+    }
+
+
+
+    public static X509CRL loadCrl(String file) throws IOException, GeneralSecurityException {
 
         if (file == null) {
             throw new IllegalArgumentException("crlFileNull");
             //i18n.getMessage("crlFileNull"));
         }
-
-        boolean isCrl = false;
-        X509CRL crl = null;
-
-        BufferedReader reader;
-
-        String line;
-        StringBuffer buff = new StringBuffer();
-
-        reader = new BufferedReader(new FileReader(file));
-
-        try {
-            while ((line = reader.readLine()) != null) {
-                if (line.indexOf("BEGIN X509 CRL") != -1) {
-                    isCrl = true;
-                } else if (isCrl && line.indexOf("END X509 CRL") != -1) {
-                    byte[] data = Base64.decode(buff.toString().getBytes());
-                    crl = loadCrl(new ByteArrayInputStream(data));
-                } else if (isCrl) {
-                    buff.append(line);
-                }
-            }
-        } finally {
-            reader.close();
-        }
-
-        if (crl == null) {
-            throw new GeneralSecurityException("noCrlsData");
-            //i18n.getMessage("noCrlData"));
-        }
-
-        return crl;
+        return loadCrl(new BufferedReader(new FileReader(file)));
     }
 
-    public static X509CRL loadCrl(InputStream in)
-            throws GeneralSecurityException {
-        return (X509CRL) getCertificateFactory().generateCRL(in);
+    public static X509CRL loadCrl(InputStream in) throws IOException, GeneralSecurityException {
+    	return loadCrl(new BufferedReader(new InputStreamReader(in)));
+    }
+    
+    public static X509CRL loadCrl(BufferedReader br) throws IOException, GeneralSecurityException{
+    	PEMReader pemReader = null;
+		Object pemObject = null;
+		try {
+			pemReader = new PEMReader(br);
+			pemObject = pemReader.readObject();
+			if(pemObject instanceof X509CRL){
+				return (X509CRL)pemObject;
+			}else if(pemObject instanceof CRL){
+				throw new IllegalArgumentException("The provided input stream is a CRL but for the moment only X509CRL are accepted");
+			}
+		}finally{
+			if(pemReader != null){
+				try{
+					pemReader.close();
+				}catch (IOException e) {}
+			}
+		}
+		throw new GeneralSecurityException("noCrlsData");
+        //i18n.getMessage("noCrlData"));
     }
 
-    public static Collection<X509Certificate>
-    getTrustedCertificates(KeyStore keyStore, X509CertSelector selector)
-            throws KeyStoreException {
+    public static Collection<X509Certificate> getTrustedCertificates(KeyStore keyStore, X509CertSelector selector) throws KeyStoreException {
 
-        Vector<X509Certificate> certificates = new Vector<X509Certificate>();
+        ArrayList<X509Certificate> certificates = new ArrayList<X509Certificate>();
         Enumeration<String> aliases = keyStore.aliases();
         while (aliases.hasMoreElements()) {
             String alias = aliases.nextElement();
             if (keyStore.isCertificateEntry(alias)) {
-                // If a specific impl of keystore requires refresh, this would be a
-                // good place to add it.
-                Certificate certificate =
-                        keyStore.getCertificate(alias);
+                //XXX: If a specific impl of keystore requires refresh, this would be a good place to add it.
+                Certificate certificate = keyStore.getCertificate(alias);
                 if (certificate instanceof X509Certificate) {
                     X509Certificate x509Cert =
                             (X509Certificate) certificate;
@@ -311,4 +341,16 @@ public final class CertificateLoadUtil {
         }
         return certificates;
     }
+    
+    private static class NotClosableInputStream extends FilterInputStream {
+
+		public NotClosableInputStream(InputStream in) {
+			super(in);
+		}
+
+		@Override
+		public void close() throws IOException {
+			// Do not close nor flush
+		}
+	}
 }

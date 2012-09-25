@@ -24,8 +24,9 @@ import java.security.GeneralSecurityException;
  * @since 1.0
  */
 public class SigningPolicyException extends GeneralSecurityException {
+	private static final long serialVersionUID = 1L;
 
-    public SigningPolicyException(String msg) {
+	public SigningPolicyException(String msg) {
         super(msg);
     }
 

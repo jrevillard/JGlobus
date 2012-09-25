@@ -20,8 +20,9 @@ package org.globus.gsi.gssapi.jaas;
  */
 public class UserNamePrincipal 
     extends SimplePrincipal {
-    
-    public UserNamePrincipal(String username) {
+	private static final long serialVersionUID = 1L;
+
+	public UserNamePrincipal(String username) {
 	super(username);
     }
     

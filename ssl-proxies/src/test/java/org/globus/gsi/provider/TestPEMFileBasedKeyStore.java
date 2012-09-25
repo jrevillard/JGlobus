@@ -21,7 +21,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.apache.commons.io.FileUtils;
 import org.globus.gsi.testutils.DirSetupUtil;
 import org.globus.gsi.testutils.FileSetupUtil;
 import org.globus.gsi.util.CertificateLoadUtil;
@@ -37,7 +36,6 @@ import org.globus.gsi.provider.KeyStoreParametersFactory;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.Key;
 import java.security.KeyStore;
@@ -131,14 +129,13 @@ public class TestPEMFileBasedKeyStore {
         this.proxyFile1 = new FileSetupUtil(proxyFilename1);
         this.proxyFile1.copyFileToTemp();
         this.proxyCertificates.put(this.proxyFile1,
-                new X509Credential(loader.getResourceAsStream(proxyFilename1), loader.getResourceAsStream(proxyFilename1)));
+                new X509Credential(loader.getResource(proxyFilename1).getFile(), loader.getResource(proxyFilename1).getFile()));
 
         String proxyFilename2 = "validatorTest/gsi3FromPathOneProxy.pem";
         this.proxyFile2 = new FileSetupUtil(proxyFilename2);
         this.proxyFile2.copyFileToTemp();
         this.proxyCertificates.put(this.proxyFile2,
-                new X509Credential(loader.getResourceAsStream(proxyFilename2),
-                        loader.getResourceAsStream(proxyFilename2)));
+                new X509Credential(loader.getResource(proxyFilename2).getFile(), loader.getResource(proxyFilename2).getFile()));
 
         String certFilename = "validatorTest/testeec2.pem";
         this.certFile = new FileSetupUtil(certFilename);
@@ -358,8 +355,8 @@ public class TestPEMFileBasedKeyStore {
         Certificate certificate = store.engineGetCertificate(alias);
         assertNull(certificate);
 
-        X509Credential x509Credential = new X509Credential(new FileInputStream(this.certFile.getAbsoluteFilename()),
-                new FileInputStream(this.keyFile.getAbsoluteFilename()));
+        X509Credential x509Credential = new X509Credential(this.certFile.getAbsoluteFilename(),
+                this.keyFile.getAbsoluteFilename());
 
         assertEquals(key, x509Credential.getPrivateKey());
         Certificate[] x509CredentialChain = x509Credential.getCertificateChain();

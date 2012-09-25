@@ -28,7 +28,9 @@ import java.security.cert.X509Certificate;
 public class ProxyPathValidatorException 
     extends GeneralSecurityException {
     
-    public static final int FAILURE = -1;
+	private static final long serialVersionUID = 1L;
+
+	public static final int FAILURE = -1;
 
     // proxy constraints violation
     public static final int PROXY_VIOLATION = 1;

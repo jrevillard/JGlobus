@@ -15,17 +15,11 @@
 
 package org.globus.gsi.trustmanager;
 
-import org.globus.gsi.util.CertificateUtil;
-import org.globus.gsi.util.KeyStoreUtil;
-
-import java.util.Iterator;
-
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.Principal;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.cert.CertPath;
@@ -38,8 +32,11 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.globus.gsi.util.CertificateUtil;
+import org.globus.gsi.util.KeyStoreUtil;
 
 
 /**
@@ -164,9 +161,9 @@ public final class TrustedCertPathFinder {
                 // fine, just move on to check the next potential CA cert
                 // after the loop we'll check whether any were successful
                 logger.warn("Failed to validate signature of certificate with "
-                          + "subject DN '" + x509Certificate.getSubjectDN()
+                          + "subject DN '" + x509Certificate.getSubjectX500Principal()
                           + "' against a CA certificate with issuer DN '"
-                          + ((X509Certificate)caCert).getSubjectDN() + "'");
+                          + ((X509Certificate)caCert).getSubjectX500Principal() + "'");
             }
         }
 
@@ -205,19 +202,19 @@ public final class TrustedCertPathFinder {
             x509Certificate.verify(publicKey);
         } catch (CertificateException e) {
             throw new CertPathValidatorException(
-                    "Signature validation on the certificate " + x509Certificate.getSubjectDN(), e);
+                    "Signature validation on the certificate " + x509Certificate.getSubjectX500Principal(), e);
         } catch (NoSuchAlgorithmException e) {
             throw new CertPathValidatorException(
-                    "Signature validation on the certificate " + x509Certificate.getSubjectDN(), e);
+                    "Signature validation on the certificate " + x509Certificate.getSubjectX500Principal(), e);
         } catch (InvalidKeyException e) {
             throw new CertPathValidatorException(
-                    "Signature validation on the certificate " + x509Certificate.getSubjectDN(), e);
+                    "Signature validation on the certificate " + x509Certificate.getSubjectX500Principal(), e);
         } catch (NoSuchProviderException e) {
             throw new CertPathValidatorException(
-                    "Signature validation on the certificate " + x509Certificate.getSubjectDN(), e);
+                    "Signature validation on the certificate " + x509Certificate.getSubjectX500Principal(), e);
         } catch (SignatureException e) {
             throw new CertPathValidatorException(
-                    "Signature validation on the certificate " + x509Certificate.getSubjectDN(), e);
+                    "Signature validation on the certificate " + x509Certificate.getSubjectX500Principal(), e);
         }
 
         trustedCertPath.add(x509Certificate);

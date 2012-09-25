@@ -92,7 +92,7 @@ public class TrustedCertificates implements Serializable {
         this.certSubjectDNMap = new HashMap();
         for (int i=0;i<certs.length;i++) {
             if (certs[i] != null) {
-                String dn = certs[i].getSubjectDN().toString();
+                String dn = certs[i].getSubjectX500Principal().toString();
                 this.certSubjectDNMap.put(dn,certs[i]);
             }
         }
@@ -240,7 +240,7 @@ public class TrustedCertificates implements Serializable {
                 Iterator iter = caCerts.iterator();
                 while (iter.hasNext()) {
                     X509Certificate cert = (X509Certificate) iter.next();
-                    newCertSubjectDNMap.put(cert.getSubjectDN().toString(), cert);
+                    newCertSubjectDNMap.put(cert.getSubjectX500Principal().toString(), cert);
                 }
             } catch (Exception e) {
                 logger.warn("Failed to create trust store",e);
@@ -257,7 +257,7 @@ public class TrustedCertificates implements Serializable {
                     if (policy != null) {
                         newSigningDNMap.put(CertificateUtil.toGlobusID(policy.getCASubjectDN()), policy);
                     } else {
-                        logger.warn("no signing policy for ca cert " + cert.getSubjectDN());
+                        logger.warn("no signing policy for ca cert " + cert.getSubjectX500Principal().getName());
                     }
                 }
             } catch (Exception e) {

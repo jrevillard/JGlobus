@@ -14,15 +14,17 @@
  */
 package org.globus.gsi.bc;
 
+import org.globus.gsi.GSIConstants.CertificateType;
+import org.globus.gsi.TrustedCertificates;
 import org.globus.gsi.util.CertificateLoadUtil;
+import org.globus.gsi.util.CertificateUtil;
 
 import java.io.InputStream;
 import org.globus.gsi.proxy.ProxyPathValidatorTest;
 import java.io.ByteArrayInputStream;
+import java.security.cert.CertStore;
 import java.security.cert.X509Certificate;
 import java.security.cert.CertificateException;
-import org.globus.gsi.GSIConstants;
-import org.globus.gsi.TrustedCertificates;
 import org.globus.gsi.bc.BouncyCastleUtil;
 import junit.framework.TestCase;
 
@@ -44,7 +46,7 @@ public class BouncyCastleUtilTest extends TestCase {
 	for (int i=0;i<ProxyPathValidatorTest.certs.length;i++) {
 	    X509Certificate cert = getCertificate(i);
 	    String type = ProxyPathValidatorTest.certs[i][0];
-	    assertEquals(type, BouncyCastleUtil.getCertificateType(cert).name());
+	    assertEquals(type, CertificateUtil.getCertificateType(cert).name());
 	}
     }
 
@@ -52,8 +54,8 @@ public class BouncyCastleUtilTest extends TestCase {
 	for (int i=0;i<badCerts.length;i++) {
 	    X509Certificate cert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(badCerts[i].getBytes()));
 	    try {
-		BouncyCastleUtil.getCertificateType(cert);
-		fail("proxy verification did not fail as expected");
+	    	CertificateUtil.getCertificateType(cert);
+	    	fail("proxy verification did not fail as expected");
 	    } catch (CertificateException e) {
 		// ignore
 	    }
@@ -62,11 +64,11 @@ public class BouncyCastleUtilTest extends TestCase {
 
     public void testGetCertificateType3() throws Exception {
 	X509Certificate cert = getCertificate(1);
-	assertEquals(GSIConstants.CertificateType.EEC, BouncyCastleUtil.getCertificateType(cert));
+	assertEquals(CertificateType.EEC, CertificateUtil.getCertificateType(cert));
 
 	TrustedCertificates trustedCerts =
 	    new TrustedCertificates(new X509Certificate[] {cert});
-	assertEquals(GSIConstants.CertificateType.CA, BouncyCastleUtil.getCertificateType(cert, trustedCerts));
+	assertEquals(CertificateType.CA, CertificateUtil.getCertificateType(cert, trustedCerts));
     }
 
     public void testGetGsi2IdentityCertificate() throws Exception {

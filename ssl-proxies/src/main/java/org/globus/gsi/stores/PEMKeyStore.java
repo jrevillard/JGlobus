@@ -2,7 +2,7 @@
  * Copyright 1999-2010 University of Chicago
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
- * compliance with the License. You may obtain a copy of the License at
+ * compliance with the License.  You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -12,19 +12,9 @@
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
-
 package org.globus.gsi.stores;
 
 import static org.globus.gsi.util.CertificateIOUtil.writeCertificate;
-
-import org.globus.gsi.CredentialException;
-import org.globus.gsi.X509Credential;
-
-import org.globus.gsi.provider.KeyStoreParametersFactory;
-
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +28,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
@@ -50,10 +39,14 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.globus.gsi.CredentialException;
+import org.globus.gsi.X509Credential;
+import org.globus.gsi.provider.KeyStoreParametersFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-
 /**
  * This class provides a KeyStore implementation that supports trusted
  * certificates stored in PEM format and proxy certificates stored in PEM
@@ -706,8 +699,6 @@ public class PEMKeyStore extends KeyStoreSpi {
 		} catch (ResourceStoreException e) {
 			throw new KeyStoreException(e);
 		} catch (IOException e) {
-			throw new KeyStoreException(e);
-		} catch (CertificateEncodingException e) {
 			throw new KeyStoreException(e);
 		}
 	}

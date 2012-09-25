@@ -15,15 +15,13 @@
 
 package org.globus.gsi.trustmanager;
 
-import org.globus.gsi.util.ProxyCertificateUtil;
-
-import org.globus.gsi.proxy.ext.ProxyCertInfo;
-
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.X509Certificate;
 import java.util.Set;
 
 import org.globus.gsi.GSIConstants;
+import org.globus.gsi.proxy.ext.ProxyCertInfo;
+import org.globus.gsi.util.ProxyCertificateUtil;
 
 /**
  * Checks if the certificate includes unsupported critical extensions.

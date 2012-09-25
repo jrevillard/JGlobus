@@ -410,13 +410,12 @@ public class TestProxyPathValidator {
                         false);
         boolean exception = false;
         try {
-            X509ProxyCertPathValidatorResult result =
-                    (X509ProxyCertPathValidatorResult) validator.engineValidate(certPath, parameters);
+            validator.engineValidate(certPath, parameters);
         } catch (CertPathValidatorException exp) {
             exception = true;
         }
 
-        assert (error == exception);
+        assertTrue("Signing policy check error", error == exception);
     }
 
     protected KeyStore getKeyStore(X509Certificate[] certificates)
@@ -426,7 +425,7 @@ public class TestProxyPathValidator {
         keyStore.load(null, null);
         if (certificates != null) {
             for (X509Certificate certificate : certificates) {
-                keyStore.setCertificateEntry(certificate.getSubjectDN().getName(), certificate);
+                keyStore.setCertificateEntry(certificate.getSubjectX500Principal().getName(), certificate);
             }
         }
         return keyStore;

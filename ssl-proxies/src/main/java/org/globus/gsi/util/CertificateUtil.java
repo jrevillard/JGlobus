@@ -14,60 +14,51 @@
  */
 package org.globus.gsi.util;
 
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
-import java.security.Provider;
-
-
-
-import org.globus.common.CoGProperties;
-
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import java.security.Security;
-
-import java.security.KeyPairGenerator;
-
-import java.security.GeneralSecurityException;
-
-import java.security.KeyPair;
-
-import java.security.Principal;
-
-import org.globus.gsi.bc.X509NameHelper;
-
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.StringTokenizer;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-
-import java.security.cert.CertificateFactory;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.Principal;
+import java.security.Provider;
+import java.security.Security;
 import java.security.cert.CertPath;
-import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertStore;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
 import javax.security.auth.x500.X500Principal;
 
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.ASN1Object;
-import org.bouncycastle.asn1.ASN1Sequence;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.DERObject;
-import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.bouncycastle.asn1.DERString;
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.TBSCertificateStructure;
-import org.bouncycastle.asn1.x509.X509Extension;
-import org.bouncycastle.asn1.x509.X509Extensions;
-import org.bouncycastle.asn1.x509.X509Name;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.globus.common.CoGProperties;
 import org.globus.gsi.GSIConstants;
+import org.globus.gsi.GSIConstants.CertificateType;
+import org.globus.gsi.TrustedCertificates;
+import org.globus.gsi.TrustedCertificatesUtil;
+import org.globus.gsi.bc.GlobusStyle;
+import org.globus.gsi.bc.X500NameHelper;
 import org.globus.gsi.proxy.ext.ProxyCertInfo;
 import org.globus.gsi.proxy.ext.ProxyPolicy;
+import org.globus.util.I18n;
 
 /**
  * FILL ME
@@ -89,6 +80,9 @@ public final class CertificateUtil {
 
     private static String provider;
     private static Log logger;
+
+    private static I18n i18n = I18n.getI18n("org.globus.gsi.errors", CertificateUtil.class.getClassLoader());
+
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -127,7 +121,7 @@ public final class CertificateUtil {
         CoGProperties props = CoGProperties.getDefault();
         String providerName = props.getSecureRandomProvider();
         try {
-            Class providerClass = Class.forName(providerName);
+            Class<?> providerClass = Class.forName(providerName);
             Security.insertProviderAt( (Provider)providerClass.newInstance(), 
                                        1 );
         } catch (Exception e) {
@@ -142,18 +136,17 @@ public final class CertificateUtil {
      * @return
      * @throws IOException
      */
-    public static int getCAPathConstraint(TBSCertificateStructure crt)
+    public static int getCAPathConstraint(X509CertificateHolder crt)
             throws IOException {
 
-        X509Extensions extensions = crt.getExtensions();
+        List<?> extensions = crt.getExtensionOIDs();
         if (extensions == null) {
             return -1;
         }
-        X509Extension proxyExtension =
-                extensions.getExtension(X509Extensions.BasicConstraints);
+        
+        Extension proxyExtension = crt.getExtension(Extension.basicConstraints);
         if (proxyExtension != null) {
-            BasicConstraints basicExt =
-                    getBasicConstraints(proxyExtension);
+            BasicConstraints basicExt = getBasicConstraints(proxyExtension);
             if (basicExt.isCA()) {
                 BigInteger pathLen = basicExt.getPathLenConstraint();
                 return (pathLen == null) ? Integer.MAX_VALUE : pathLen.intValue();
@@ -183,48 +176,110 @@ public final class CertificateUtil {
         generator.initialize(bits);
         return generator.generateKeyPair();
     }
-
+    
 
     /**
-     * Returns certificate type of the given TBS certificate. <BR> The
-     * certificate type is {@link org.globus.gsi.GSIGSIConstants.CertificateType#CA
+     * Returns certificate type of the given certificate. 
+     * Please see {@link #getCertificateType(TBSCertificateStructure,
+     * TrustedCertificates) getCertificateType} for details for 
+     * determining the certificate type.
+     *
+     * @param cert the certificate to get the type of.
+     * @param trustedCerts the trusted certificates to double check the 
+     *                     {@link GSIConstants#EEC GSIConstants.EEC} 
+     *                     certificate against.
+     * @return the certificate type as determined by 
+     *             {@link #getCertificateType(TBSCertificateStructure, 
+     *              TrustedCertificates) getCertificateType}.
+     * @exception CertificateException if something goes wrong.
+     * @deprecated
+     */
+    public static GSIConstants.CertificateType getCertificateType(X509Certificate cert,
+					 TrustedCertificates trustedCerts)
+	throws CertificateException {
+        try {
+            return getCertificateType(cert, TrustedCertificatesUtil.createCertStore(trustedCerts));
+	} catch (Exception e) {
+	    throw new CertificateException("", e);
+	}
+    }
+
+    /**
+     * Returns the certificate type of the given certificate. 
+     * Please see {@link #getCertificateType(TBSCertificateStructure,
+     * TrustedCertificates) getCertificateType} for details for 
+     * determining the certificate type.
+     *
+     * @param cert the certificate to get the type of.
+     * @param trustedCerts the trusted certificates to double check the 
+     *                     {@link GSIConstants#EEC GSIConstants.EEC} 
+     *                     certificate against.
+     * @return the certificate type as determined by 
+     *             {@link #getCertificateType(TBSCertificateStructure, 
+     *              TrustedCertificates) getCertificateType}.
+     * @exception CertificateException if something goes wrong.
+     */
+    public static GSIConstants.CertificateType getCertificateType(X509Certificate cert, CertStore trustedCerts) throws CertificateException {
+        try {
+            GSIConstants.CertificateType type = getCertificateType(cert);
+
+            // check subject of the cert in trusted cert list
+            // to make sure the cert is not a ca cert
+            if (type == GSIConstants.CertificateType.EEC) {
+                X509CertSelector selector = new X509CertSelector();
+                selector.setSubject(cert.getSubjectX500Principal());
+                Collection<?> c = trustedCerts.getCertificates(selector);
+                if (c != null && c.size() > 0) {
+                    type = GSIConstants.CertificateType.CA;
+                }
+            }
+            return type;
+        } catch (Exception e) {
+            // but this should not happen
+            throw new CertificateException("", e);
+        }
+    }
+
+    /**
+     * Returns certificate type of the given certificate. <BR> The
+     * certificate type is {@link org.globus.gsi.GSICertificateType#CA
      * CertificateType.CA} <B>only</B> if the certificate contains a
      * BasicConstraints extension and it is marked as CA.<BR> A certificate is a
      * GSI-2 proxy when the subject DN of the certificate ends with
-     * <I>"CN=proxy"</I> (certificate type {@link org.globus.gsi.GSIGSIConstants.CertificateType#GSI_2_PROXY
+     * <I>"CN=proxy"</I> (certificate type {@link org.globus.gsi.GSICertificateType#GSI_2_PROXY
      * CertificateType.GSI_2_PROXY}) or <I>"CN=limited proxy"</I> (certificate
-     * type {@link org.globus.gsi.GSIGSIConstants.CertificateType#GSI_2_LIMITED_PROXY
+     * type {@link org.globus.gsi.GSICertificateType#GSI_2_LIMITED_PROXY
      * CertificateType.LIMITED_PROXY}) component and the issuer DN of the
      * certificate matches the subject DN without the last proxy <I>CN</I>
      * component.<BR> A certificate is a GSI-3 proxy when the subject DN of the
      * certificate ends with a <I>CN</I> component, the issuer DN of the
      * certificate matches the subject DN without the last <I>CN</I> component
-     * and the certificate contains {@link org.globus.security.proxyExtension.ProxyCertInfo
+     * and the certificate contains {@link fr.maatg.pandora.clients.applets.proxyinitialisation.newglobus.gsi.proxy.ext.globus.security.proxyExtension.ProxyCertInfo
      * ProxyCertInfo} critical extension. The certificate type is {@link
-     * org.globus.gsi.GSIGSIConstants.CertificateType#GSI_3_IMPERSONATION_PROXY
+     * org.globus.gsi.GSICertificateType#GSI_3_IMPERSONATION_PROXY
      * CertificateType.GSI_3_IMPERSONATION_PROXY} if the policy language of the
-     * {@link org.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo}
+     * {@link fr.maatg.pandora.clients.applets.proxyinitialisation.newglobus.gsi.proxy.ext.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo}
      * extension is set to {@link org.globus.security.proxyExtension.ProxyPolicy#IMPERSONATION
      * ProxyPolicy.IMPERSONATION} OID. The certificate type is {@link
-     * org.globus.gsi.GSIGSIConstants.CertificateType#GSI_3_LIMITED_PROXY
+     * org.globus.gsi.GSICertificateType#GSI_3_LIMITED_PROXY
      * CertificateType.GSI_3_LIMITED_PROXY} if the policy language of the {@link
-     * org.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo} extension
+     * fr.maatg.pandora.clients.applets.proxyinitialisation.newglobus.gsi.proxy.ext.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo} extension
      * is set to {@link org.globus.security.proxyExtension.ProxyPolicy#LIMITED
      * ProxyPolicy.LIMITED} OID. The certificate type is {@link
-     * org.globus.gsi.GSIGSIConstants.CertificateType#GSI_3_INDEPENDENT_PROXY
+     * org.globus.gsi.GSICertificateType#GSI_3_INDEPENDENT_PROXY
      * CertificateType.GSI_3_INDEPENDENT_PROXY} if the policy language of the
-     * {@link org.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo}
+     * {@link fr.maatg.pandora.clients.applets.proxyinitialisation.newglobus.gsi.proxy.ext.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo}
      * extension is set to {@link org.globus.security.proxyExtension.ProxyPolicy#INDEPENDENT
      * ProxyPolicy.INDEPENDENT} OID. The certificate type is {@link
-     * org.globus.gsi.GSIGSIConstants.CertificateType#GSI_3_RESTRICTED_PROXY
+     * org.globus.gsi.GSICertificateType#GSI_3_RESTRICTED_PROXY
      * CertificateType.GSI_3_RESTRICTED_PROXY} if the policy language of the
-     * {@link org.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo}
+     * {@link fr.maatg.pandora.clients.applets.proxyinitialisation.newglobus.gsi.proxy.ext.globus.security.proxyExtension.ProxyCertInfo ProxyCertInfo}
      * extension is set to any other OID then the above.<BR> The certificate
-     * type is {@link org.globus.gsi.GSIGSIConstants.CertificateType#EEC
+     * type is {@link org.globus.gsi.GSICertificateType#EEC
      * CertificateType.EEC} if the certificate is not a CA certificate or a
      * GSI-2 or GSI-3 proxy.
      *
-     * @param crt the TBS certificate to get the type of.
+     * @param cert the certificate to get the type of.
      * @return the certificate type. The certificate type is determined by rules
      *         described above.
      * @throws java.io.IOException if something goes wrong.
@@ -236,111 +291,98 @@ public final class CertificateUtil {
      *                             <code>ProxyCertInfo</code> extension is not
      *                             marked as critical.
      */
-    public static GSIConstants.CertificateType getCertificateType(
-            TBSCertificateStructure crt)
-            throws CertificateException, IOException {
+    public static CertificateType getCertificateType(X509Certificate crt) throws CertificateException {
+    	X509CertificateHolder certificateHolder;
+		try {
+			certificateHolder = new X509CertificateHolder(crt.getEncoded());
+			return getCertificateType(certificateHolder);
+		} catch (IOException e) {
+			throw new CertificateException(e);
+		}
+    	
+    }
+    
+    
+    public static CertificateType getCertificateType(X509CertificateHolder crt) throws CertificateException, IOException {
+    	if(crt.hasExtensions()){
+	        Extension ext = crt.getExtension(Extension.basicConstraints);
+	        if (ext != null) {
+	            BasicConstraints basicExt = getBasicConstraints(ext);
+	            if (basicExt.isCA()) {
+	                return CertificateType.CA;
+	            }
+	        }
+    	}
 
-        X509Extensions extensions = crt.getExtensions();
-        X509Extension ext = null;
-
-        if (extensions != null) {
-            ext = extensions.getExtension(X509Extensions.BasicConstraints);
-            if (ext != null) {
-                BasicConstraints basicExt = getBasicConstraints(ext);
-                if (basicExt.isCA()) {
-                    return GSIConstants.CertificateType.CA;
-                }
-            }
-        }
-
-        GSIConstants.CertificateType type = GSIConstants.CertificateType.EEC;
+        CertificateType type = CertificateType.EEC;
 
         // does not handle multiple AVAs
-        X509Name subject = crt.getSubject();
-
-        ASN1Set entry = X509NameHelper.getLastNameEntry(subject);
-        ASN1Sequence ava = (ASN1Sequence) entry.getObjectAt(0);
-        if (X509Name.CN.equals(ava.getObjectAt(0))) {
-            type = processCN(extensions, type, ava);
-        }
-
-        return type;
-    }
-
-    private static GSIConstants.CertificateType processCN(
-            X509Extensions extensions, GSIConstants.CertificateType type, ASN1Sequence ava) throws CertificateException {
-        X509Extension ext;
-        String value = ((DERString) ava.getObjectAt(1)).getString();
-        GSIConstants.CertificateType certType = type;
-        if (value.equalsIgnoreCase("proxy")) {
-            certType = GSIConstants.CertificateType.GSI_2_PROXY;
-        } else if (value.equalsIgnoreCase("limited proxy")) {
-            certType = GSIConstants.CertificateType.GSI_2_LIMITED_PROXY;
-        } else if (extensions != null) {
-            boolean gsi4 = true;
-            // GSI_4
-            ext = extensions.getExtension(ProxyCertInfo.OID);
-            if (ext == null) {
-                // GSI_3
-                ext = extensions.getExtension(ProxyCertInfo.OLD_OID);
-                gsi4 = false;
-            }
-            if (ext != null) {
-                if (ext.isCritical()) {
-                    certType = processCriticalExtension(ext, gsi4);
-                } else {
-                    String err = "proxyCertCritical";
-                    throw new CertificateException(err);
-                }
-            }
-        }
-
-        
-        return certType;
-    }
-
-    private static GSIConstants.CertificateType processCriticalExtension(X509Extension ext, boolean gsi4) {
-        GSIConstants.CertificateType type;
-        ProxyCertInfo proxyCertExt =
-                ProxyCertificateUtil.getProxyCertInfo(ext);
-        ProxyPolicy proxyPolicy =
-                proxyCertExt.getProxyPolicy();
-        DERObjectIdentifier oid =
-                proxyPolicy.getPolicyLanguage();
-        if (ProxyPolicy.IMPERSONATION.equals(oid)) {
-            if (gsi4) {
-                type =
-                        GSIConstants.CertificateType.GSI_4_IMPERSONATION_PROXY;
-            } else {
-                type =
-                        GSIConstants.CertificateType.GSI_3_IMPERSONATION_PROXY;
-            }
-        } else if (ProxyPolicy.INDEPENDENT.equals(oid)) {
-            if (gsi4) {
-                type =
-                        GSIConstants.CertificateType.GSI_4_INDEPENDENT_PROXY;
-            } else {
-                type =
-                        GSIConstants.CertificateType.GSI_3_INDEPENDENT_PROXY;
-            }
-        } else if (ProxyPolicy.LIMITED.equals(oid)) {
-            if (gsi4) {
-                type =
-                        GSIConstants.CertificateType.GSI_4_LIMITED_PROXY;
-            } else {
-                type =
-                        GSIConstants.CertificateType.GSI_3_LIMITED_PROXY;
-            }
-        } else {
-            if (gsi4) {
-                type =
-                        GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY;
-            } else {
-                type =
-                        GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY;
-            }
-        }
-        return type;
+        X500Name x500name = crt.getSubject();
+		RDN[] rdns = x500name.getRDNs();
+		if (! rdns[rdns.length - 1].isMultiValued() && BCStyle.CN.equals(rdns[rdns.length - 1].getFirst().getType())) {
+			// Finish by CN=
+			String value = IETFUtils.valueToString(rdns[rdns.length - 1].getFirst().getValue());
+			rdns[rdns.length - 1].getFirst().getValue();
+			if (value.equalsIgnoreCase("proxy")) {
+				type = CertificateType.GSI_2_PROXY;
+			} else if (value.equalsIgnoreCase("limited proxy")) {
+				type = CertificateType.GSI_2_LIMITED_PROXY;
+			} else if (crt.hasExtensions()) {
+				boolean gsi4 = true;
+				// GSI_4
+				Extension proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OID);
+				if (proxyCertInfosExtension == null) {
+					// GSI_3
+					proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OLD_OID);
+					gsi4 = false;
+				}
+				if (proxyCertInfosExtension != null) {
+					if (proxyCertInfosExtension.isCritical()) {
+						ProxyCertInfo proxyCertExt = ProxyCertificateUtil.getProxyCertInfo(proxyCertInfosExtension);
+						ProxyPolicy proxyPolicy = proxyCertExt.getProxyPolicy();
+						ASN1ObjectIdentifier oid = proxyPolicy.getPolicyLanguage();
+						if (ProxyPolicy.IMPERSONATION.equals(oid)) {
+							if (gsi4) {
+								type = GSIConstants.CertificateType.GSI_4_IMPERSONATION_PROXY;
+							} else {
+								type = GSIConstants.CertificateType.GSI_3_IMPERSONATION_PROXY;
+							}
+						} else if (ProxyPolicy.INDEPENDENT.equals(oid)) {
+							if (gsi4) {
+								type = GSIConstants.CertificateType.GSI_4_INDEPENDENT_PROXY;
+							} else {
+								type = GSIConstants.CertificateType.GSI_3_INDEPENDENT_PROXY;
+							}
+						} else if (ProxyPolicy.LIMITED.equals(oid)) {
+							if (gsi4) {
+								type = GSIConstants.CertificateType.GSI_4_LIMITED_PROXY;
+							} else {
+								type = GSIConstants.CertificateType.GSI_3_LIMITED_PROXY;
+							}
+						} else {
+							if (gsi4) {
+								type = GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY;
+							} else {
+								type = GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY;
+							}
+						}
+						ASN1Set entry = X500NameHelper.getLastNameEntry(x500name);
+						
+						X500NameHelper iss = new X500NameHelper(crt.getIssuer());
+						iss.add(ASN1Set.getInstance(entry.getEncoded()));
+						X500Name subject = iss.getAsName();
+						if (!subject.equals(crt.getSubject())) {
+							String err = i18n.getMessage("proxyDNErr");
+							throw new CertificateException(err);
+						}
+					} else {
+						String err = i18n.getMessage("proxyCertCritical");
+						throw new CertificateException(err);
+					}
+				}
+			}
+		}
+		return type;
     }
 
     /**
@@ -350,52 +392,34 @@ public final class CertificateUtil {
      * @return the <code>BasicConstraints</code> object.
      * @throws IOException if something fails.
      */
-    public static BasicConstraints getBasicConstraints(X509Extension ext)
-            throws IOException {
-
-        ASN1Object object = X509Extension.convertValueToObject(ext);
-        return BasicConstraints.getInstance(object);
+    public static BasicConstraints getBasicConstraints(Extension ext) throws IOException{
+        return BasicConstraints.getInstance(ext.getParsedValue().toASN1Primitive().getEncoded());
     }
 
 
     /**
-     * Converts the DER-encoded byte array into a <code>DERObject</code>.
+     * Converts the ASN1-encoded byte array into a <code>ASN1Primitive</code>.
      *
-     * @param data the DER-encoded byte array to convert.
-     * @return the DERObject.
+     * @param data the ASN1-encoded byte array to convert.
+     * @return the ASN1Primitive.
      * @throws IOException if conversion fails
      */
-    public static DERObject toDERObject(byte[] data)
-            throws IOException {
-        ByteArrayInputStream inStream = new ByteArrayInputStream(data);
-        ASN1InputStream derInputStream = new ASN1InputStream(inStream);
-        return derInputStream.readObject();
+    public static ASN1Primitive toASN1Primitive(byte[] data) throws IOException {
+        return  ASN1Primitive.fromByteArray(data);
     }
-
 
     /**
-     * Extracts the TBS certificate from the given certificate.
+     * Gets a boolean array representing bits of the KeyUsage extension.
      *
-     * @param cert the X.509 certificate to extract the TBS certificate from.
-     * @return the TBS certificate
-     * @throws IOException                  if extraction fails.
-     * @throws CertificateEncodingException if extraction fails.
+     * @throws IOException if failed to extract the KeyUsage extension value.
+     * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static TBSCertificateStructure getTBSCertificateStructure(
-            X509Certificate cert)
-            throws CertificateEncodingException, IOException {
-        DERObject obj = toDERObject(cert.getTBSCertificate());
-        return TBSCertificateStructure.getInstance(obj);
-    }
-
-    public static boolean[] getKeyUsage(TBSCertificateStructure crt)
-            throws IOException {
-        X509Extensions extensions = crt.getExtensions();
-        if (extensions == null) {
+    public static boolean[] getKeyUsage(X509CertificateHolder crt) throws IOException {
+    	
+        if (!crt.hasExtensions()) {
             return new boolean[0];
         }
-        X509Extension extension =
-                extensions.getExtension(X509Extensions.KeyUsage);
+        Extension extension = crt.getExtension(Extension.keyUsage);
         return (extension != null) ? getKeyUsage(extension) : new boolean[0];
     }
 
@@ -405,7 +429,7 @@ public final class CertificateUtil {
      * @throws IOException if failed to extract the KeyUsage extension value.
      * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static boolean[] getKeyUsage(X509Extension ext)
+    public static boolean[] getKeyUsage(Extension ext)
             throws IOException {
         DERBitString bits = (DERBitString) getExtensionObject(ext);
 
@@ -428,9 +452,8 @@ public final class CertificateUtil {
      * @param ext the certificate extension to extract the value from.
      * @throws IOException if extraction fails.
      */
-    public static DERObject getExtensionObject(X509Extension ext)
-            throws IOException {
-        return toDERObject(ext.getValue().getOctets());
+    public static ASN1Primitive getExtensionObject(Extension ext) throws IOException {
+        return ASN1Primitive.fromByteArray(ext.getExtnValue().getOctets());
     }
 
     /**
@@ -444,45 +467,7 @@ public final class CertificateUtil {
      * @return the converted DN in Globus format.
      */
     public static String toGlobusID(String dn) {
-        return toGlobusID(dn, true);
-    }
-
-    /**
-     * Converts DN of the form "CN=A, OU=B, O=C" into Globus 
-     * format "/CN=A/OU=B/O=C" or "/O=C/OU=B/CN=A" depending on the
-     * <code>noreverse</code> option. If <code>noreverse</code> is true
-     * the order of the DN components is not reveresed - "/CN=A/OU=B/O=C" is
-     * returned. If <code>noreverse</code> is false, the order of the 
-     * DN components is reversed - "/O=C/OU=B/CN=A" is returned. <BR>
-     * This function might return incorrect Globus-formatted ID when one of
-     * the RDNs in the DN contains commas.
-     *
-     * @param dn the DN to convert to Globus format.
-     * @param noreverse the direction of the conversion.
-     * @return the converted DN in Globus format.
-     */
-    public static String toGlobusID(String dn, boolean noreverse) {
-        if (dn == null) {
-            return null;
-        }
-
-        StringTokenizer tokens = new StringTokenizer(dn, ",");
-        StringBuffer buf = new StringBuffer();
-        String token;
-        
-        while(tokens.hasMoreTokens()) {
-            token = tokens.nextToken().trim();
-
-            if (noreverse) {
-                buf.append("/");
-                buf.append(token);
-            } else {
-                buf.insert(0, token);
-                buf.insert(0, "/");
-            }
-        }
-        
-        return buf.toString();
+    	return CertificateUtil.toGlobusID(new X500Principal(dn));
     }
 
     /**
@@ -497,8 +482,8 @@ public final class CertificateUtil {
      * @return the converted DN in Globus format.
      */
     public static String toGlobusID(Principal name) {
-        if (name instanceof X509Name) {
-            return X509NameHelper.toString((X509Name)name);
+        if (name instanceof X500Name) {
+            return X500NameHelper.toString((X500Name)name);
         } else {
             return CertificateUtil.toGlobusID(name.getName());
         }
@@ -512,23 +497,8 @@ public final class CertificateUtil {
      * @return the converted DN in Globus format.
      */
     public static String toGlobusID(X500Principal principal) {
-
-        if (principal == null) {
-            return null;
-        }
-
-        String dn = principal.getName();
-
-        StringTokenizer tokens = new StringTokenizer(dn, ",");
-        StringBuffer buf = new StringBuffer();
-        String token;
-
-        while (tokens.hasMoreTokens()) {
-            token = tokens.nextToken().trim();
-            buf.insert(0, token);
-            buf.insert(0, "/");
-        }
-        return buf.toString();
+    	X500Name x500Name = new X500Name(BCStyle.INSTANCE, principal.getName());
+        return new X500Name(GlobusStyle.INSTANCE, x500Name.getRDNs()).toString();
     }
 
     /**
@@ -541,42 +511,11 @@ public final class CertificateUtil {
      * @return the X500Principal representation of the given DN
      */
     public static X500Principal toPrincipal(String globusID) {
-
         if (globusID == null) {
             return null;
         }
-        String id = globusID.trim();
-        StringTokenizer tokens = new StringTokenizer(id, "/");
-        StringBuffer buf = new StringBuffer();
-        String token;
-        LinkedList<String> rdnList = new LinkedList<String>();
-
-        while (tokens.hasMoreTokens()) {
-            token = tokens.nextToken().trim();
-
-            if (token.contains("=")) {
-                // prepend an RDN type and at least part of its value
-                rdnList.addFirst(token);
-            } else {
-                // insert part of an RDN value that was mistakenly removed
-                // as a result of tokenizing on forward slash
-                rdnList.set(0, rdnList.get(0) + "/" + token);
-            }
-        }
-
-        for (String rdn : rdnList) {
-            buf.append(",");
-            buf.append(rdn);
-        }
-
-        if (buf.length() > 0) {
-            // delete extra comma
-            buf.deleteCharAt(0);
-        }
-
-        String dn = buf.toString();
-
-        return new X500Principal(dn);
+    	X500Name globusX500Name = new X500Name(GlobusStyle.INSTANCE, globusID.trim());
+        return new X500Principal(new X500Name(BCStyle.INSTANCE, globusX500Name.getRDNs()).toString());
     }
 
     // JGLOBUS-91 

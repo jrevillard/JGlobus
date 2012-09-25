@@ -1,7 +1,5 @@
 package org.globus.gsi.provider.simple;
 
-import java.security.cert.X509CertSelector;
-
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,7 +67,6 @@ public class SimpleMemoryCertStore extends CertStoreSpi {
     @Override
     public Collection<? extends Certificate> engineGetCertificates(CertSelector selector) throws CertStoreException {
         List<X509Certificate> l = new LinkedList<X509Certificate>();
-        X509CertSelector select = (X509CertSelector) selector;
         for (X509Certificate cert : certStore) {
             if (selector.match(cert)) {
                 l.add(cert);

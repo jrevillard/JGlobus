@@ -15,16 +15,12 @@
 
 package org.globus.gsi.stores;
 
-import org.globus.gsi.X509Credential;
-
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
 import java.io.File;
 import java.io.FilenameFilter;
 
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.globus.gsi.X509Credential;
 import org.springframework.core.io.Resource;
 
 /**

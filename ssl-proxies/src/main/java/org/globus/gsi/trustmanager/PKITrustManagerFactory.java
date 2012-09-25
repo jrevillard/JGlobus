@@ -15,10 +15,6 @@
 
 package org.globus.gsi.trustmanager;
 
-import org.globus.gsi.X509ProxyCertPathParameters;
-
-import org.globus.gsi.provider.GlobusTrustManagerFactoryParameters;
-
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -29,6 +25,9 @@ import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactorySpi;
+
+import org.globus.gsi.X509ProxyCertPathParameters;
+import org.globus.gsi.provider.GlobusTrustManagerFactoryParameters;
 
 
 /**

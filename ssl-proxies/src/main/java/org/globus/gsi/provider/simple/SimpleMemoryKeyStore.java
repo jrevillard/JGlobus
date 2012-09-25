@@ -45,8 +45,8 @@ public class SimpleMemoryKeyStore extends KeyStoreSpi {
         if (certs != null) {
             for (X509Certificate cert : certs) {
                 if (cert != null) {
-                    logger.debug("adding cert " + cert.getSubjectDN().getName());
-                    certMap.put(cert.getSubjectDN().getName(), cert);
+                    logger.debug("adding cert " + cert.getSubjectX500Principal().getName());
+                    certMap.put(cert.getSubjectX500Principal().getName(), cert);
                 }
             }
         }

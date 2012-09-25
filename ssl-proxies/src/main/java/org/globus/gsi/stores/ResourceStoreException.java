@@ -25,7 +25,9 @@ import java.security.GeneralSecurityException;
  * To change this template use File | Settings | File Templates.
  */
 public class ResourceStoreException extends GeneralSecurityException {
-    public ResourceStoreException() {
+	private static final long serialVersionUID = 1L;
+
+	public ResourceStoreException() {
     }
 
     public ResourceStoreException(String s) {

@@ -14,10 +14,10 @@
  */
 package org.globus.gsi.proxy;
 
-import org.globus.gsi.proxy.ext.ProxyCertInfo;
-
 import java.security.cert.CertPath;
 import java.security.cert.CertPathValidatorException;
+
+import org.globus.gsi.proxy.ext.ProxyCertInfo;
 
 /**
  * A restricted proxy policy handler interface. All policy handlers must

@@ -15,19 +15,10 @@
 
 package org.globus.gsi.stores;
 
+import java.io.IOException;
+
 import org.globus.gsi.CredentialException;
 import org.globus.gsi.X509Credential;
-
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.cert.CertificateEncodingException;
-
-
 import org.springframework.core.io.Resource;
 
 /**
@@ -37,8 +28,6 @@ import org.springframework.core.io.Resource;
  */
 public class ResourceProxyCredential extends AbstractResourceSecurityWrapper<X509Credential>
         implements CredentialWrapper {
-
-    private Log logger = LogFactory.getLog(getClass().getCanonicalName());
 
     public ResourceProxyCredential(String locationPattern) throws ResourceStoreException {
     	super(false);
@@ -65,33 +54,12 @@ public class ResourceProxyCredential extends AbstractResourceSecurityWrapper<X50
     }
 
     protected X509Credential create(Resource resource) throws ResourceStoreException {
-
-        InputStream keyInputStream = null;
-        InputStream certInputStream = null;
         try {
-            keyInputStream = new BufferedInputStream(resource.getInputStream());
-            certInputStream = new BufferedInputStream(resource.getInputStream());
-            return new X509Credential(keyInputStream, certInputStream);
+            return new X509Credential(resource.getFile().getAbsolutePath());
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         } catch (CredentialException e) {
             throw new ResourceStoreException(e);
-        } finally {
-
-            if (keyInputStream != null) {
-                try {
-                    keyInputStream.close();
-                } catch (Exception e) {
-                    logger.warn("Unable to close stream.");
-                }
-            }
-            if (certInputStream != null) {
-                try {
-                    certInputStream.close();
-                } catch (Exception e) {
-                    logger.warn("Unable to close stream.");
-                }
-            }
         }
     }
 
@@ -101,7 +69,7 @@ public class ResourceProxyCredential extends AbstractResourceSecurityWrapper<X50
             credential.writeToFile(resource.getFile());
         } catch (IOException ioe) {
             throw new ResourceStoreException(ioe);
-        } catch (CertificateEncodingException e) {
+        } catch (CredentialException e) {
             throw new ResourceStoreException(e);
         }
     }

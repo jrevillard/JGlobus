@@ -22,9 +22,9 @@ import java.io.ByteArrayInputStream;
 import org.globus.gsi.proxy.ext.ProxyPolicy;
 import org.globus.gsi.proxy.ext.ProxyCertInfo;
 
-import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.bouncycastle.asn1.DEROutputStream;
-import org.bouncycastle.asn1.DERObject;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OutputStream;
+import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Sequence;
 
 import junit.framework.TestCase;
@@ -32,7 +32,7 @@ import junit.framework.TestCase;
 public class ProxyCertInfoTest extends TestCase {
     
     String testPolicy = "blahblah";
-    DERObjectIdentifier testOid = new DERObjectIdentifier("1.2.3.4.5");
+    ASN1ObjectIdentifier testOid = new ASN1ObjectIdentifier("1.2.3.4.5");
 
     public void testCreateProxyCertInfo() throws Exception {
 
@@ -57,13 +57,13 @@ public class ProxyCertInfoTest extends TestCase {
 	
 	
 	ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-        DEROutputStream dOut = new DEROutputStream(bOut);
+	ASN1OutputStream dOut = new ASN1OutputStream(bOut);
 	dOut.writeObject(info);
 
 	ByteArrayInputStream bIn = 
 	    new ByteArrayInputStream(bOut.toByteArray());
 	ASN1InputStream dIn = new ASN1InputStream(bIn);
-	DERObject obj = dIn.readObject();
+	ASN1Object obj = dIn.readObject();
 	
 	assertTrue(obj instanceof ASN1Sequence);
 	
@@ -106,13 +106,13 @@ public class ProxyCertInfoTest extends TestCase {
 	assertEquals(testOid, info.getProxyPolicy().getPolicyLanguage());
 
 	ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-        DEROutputStream dOut = new DEROutputStream(bOut);
+	ASN1OutputStream dOut = new ASN1OutputStream(bOut);
 	dOut.writeObject(info);
 	
 	ByteArrayInputStream bIn = 
 	    new ByteArrayInputStream(bOut.toByteArray());
 	ASN1InputStream dIn = new ASN1InputStream(bIn);
-	DERObject obj = dIn.readObject();
+	ASN1Object obj = dIn.readObject();
 
 	ProxyCertInfo testInfo = new ProxyCertInfo((ASN1Sequence)obj);
 

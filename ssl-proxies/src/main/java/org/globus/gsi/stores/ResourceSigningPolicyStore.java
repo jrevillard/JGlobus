@@ -14,14 +14,6 @@
  */
 package org.globus.gsi.stores;
 
-import org.globus.gsi.provider.SigningPolicyStore;
-import org.globus.gsi.provider.SigningPolicyStoreException;
-import org.globus.gsi.provider.SigningPolicyStoreParameters;
-
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
 import java.io.IOException;
 import java.net.URI;
 import java.security.InvalidAlgorithmParameterException;
@@ -29,10 +21,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-
 import javax.security.auth.x500.X500Principal;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.globus.gsi.SigningPolicy;
+import org.globus.gsi.provider.SigningPolicyStore;
+import org.globus.gsi.provider.SigningPolicyStoreException;
+import org.globus.gsi.provider.SigningPolicyStoreParameters;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
@@ -47,7 +43,7 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
     private Map<URI, ResourceSigningPolicy> signingPolicyFileMap = new HashMap<URI, ResourceSigningPolicy>();
     private Map<String, SigningPolicy> policyMap = new HashMap<String, SigningPolicy>();
     private ResourceSigningPolicyStoreParameters parameters;
-    private Log logger = LogFactory.getLog(ResourceSigningPolicyStore.class.getCanonicalName());
+    private static Log logger = LogFactory.getLog(ResourceSigningPolicyStore.class.getCanonicalName());
 
     public ResourceSigningPolicyStore(SigningPolicyStoreParameters param) throws InvalidAlgorithmParameterException {
         if (param == null) {

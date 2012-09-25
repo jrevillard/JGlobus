@@ -14,12 +14,12 @@
  */
 package org.globus.gsi;
 
-import org.globus.gsi.provider.SigningPolicyStore;
-
 import java.security.KeyStore;
 import java.security.cert.CertPathParameters;
 import java.security.cert.CertStore;
 import java.util.Map;
+
+import org.globus.gsi.provider.SigningPolicyStore;
 import org.globus.gsi.proxy.ProxyPolicyHandler;
 
 /**

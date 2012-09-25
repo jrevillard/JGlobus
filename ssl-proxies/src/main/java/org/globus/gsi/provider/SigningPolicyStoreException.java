@@ -20,8 +20,9 @@ import java.security.cert.CertStoreException;
  * This exception signifies an error processing a SigningPolicy in a SigningPolicyStore.
  */
 public class SigningPolicyStoreException extends CertStoreException {
+	private static final long serialVersionUID = 1L;
 
-    public SigningPolicyStoreException(String msg) {
+	public SigningPolicyStoreException(String msg) {
         super(msg);
     }
 
