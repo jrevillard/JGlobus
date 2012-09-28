@@ -14,6 +14,7 @@
  */
 package org.globus.gsi;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,7 +35,6 @@ import org.bouncycastle.openssl.PasswordException;
 import org.bouncycastle.openssl.PasswordFinder;
 import org.globus.common.CoGProperties;
 import org.globus.gsi.GSIConstants.CertificateType;
-import org.globus.gsi.bc.BouncyCastleUtil;
 import org.globus.gsi.bc.GlobusStyle;
 import org.globus.gsi.provider.GlobusProvider;
 import org.globus.gsi.provider.KeyStoreParametersFactory;
@@ -66,7 +66,7 @@ public class X509Credential {
     
     private static X509Credential defaultCred;
     private static long credentialLastModified = -1;
-    // indicates if default credential was explicitely set
+    // indicates if default credential was explicitly set
     // and if so - if the credential expired it try
     // to load the proxy from a file.
     private static boolean credentialSet = false;
@@ -142,13 +142,19 @@ public class X509Credential {
      */
     public X509Credential(InputStream in) throws CredentialException {
     	try{
+    		if(!in.markSupported()){
+    			in =  new BufferedInputStream(in);
+        	}
+    		in.mark(in.available());
     		this.privateKey = CertificateLoadUtil.loadPrivateKey(in, null, false);
     	} catch (IOException e) {
 			throw new CredentialException("No Private Key found or Encrypted one",e);
 		} catch (GeneralSecurityException e) {
 			throw new CredentialException("No Private Key found", e);
 		}
+    	
     	try {
+    		in.reset();
 			this.certChain = CertificateLoadUtil.loadCertificates(in, true);
 		} catch (IOException e) {
 			throw new CredentialException("No Certificate found",e);
@@ -317,7 +323,7 @@ public class X509Credential {
      */
     public String getIdentity() {
     try {
-        return BouncyCastleUtil.getIdentity(this.certChain);
+        return CertificateUtil.getIdentity(this.certChain);
     } catch (CertificateException e) {
             logger.debug("Error getting certificate identity.", e);
         return null;
@@ -333,7 +339,7 @@ public class X509Credential {
      */
     public X509Certificate getIdentityCertificate() {
         try {
-            return BouncyCastleUtil.getIdentityCertificate(this.certChain);
+            return CertificateUtil.getIdentityCertificate(this.certChain);
         } catch (CertificateException e) {
             logger.debug("Error getting certificate identity.", e);
             return null;
@@ -374,7 +380,7 @@ public class X509Credential {
      * certificates in default locations.
      * 
      * @exception CredentialException
-     *                if one of the certificates in the chain expired or if path validiation fails.
+     *                if one of the certificates in the chain expired or if path validation fails.
      */
     public void verify() throws CredentialException {
         try {

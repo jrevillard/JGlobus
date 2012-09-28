@@ -14,27 +14,28 @@
  */
 package org.globus.gsi.gssapi;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import org.globus.gsi.util.CertificateUtil;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.Oid;
-
 import javax.security.auth.x500.X500Principal;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import org.globus.gsi.util.CertificateUtil;
+import org.ietf.jgss.GSSException;
+import org.ietf.jgss.GSSName;
+import org.ietf.jgss.Oid;
 
 /**
  * An implementation of <code>GSSName</code>.
  */
 public class GlobusGSSName implements GSSName, Serializable {
 
-    protected Oid nameType;
+	private static final long serialVersionUID = 1L;
+	
+	protected Oid nameType;
     protected X500Principal name;
 
     // set toString called

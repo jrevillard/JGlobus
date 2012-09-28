@@ -1,12 +1,11 @@
 package org.globus.gsi.gssapi;
 
-import java.util.Map;
-import java.util.Hashtable;
-
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.util.Hashtable;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,7 +54,7 @@ public class KeyPairCache {
      * is significant, since we rely on access to the table being
      * synchronized.
      */
-    private final Map entries = new Hashtable();
+    private final Map<Integer, KeyPairCacheEntry> entries = new Hashtable<Integer, KeyPairCacheEntry>();
 
     /**
      * Creates a KeyPairCache object for the specified algorithm, as

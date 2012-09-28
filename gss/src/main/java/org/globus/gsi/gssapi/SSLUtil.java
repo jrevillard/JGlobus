@@ -14,9 +14,9 @@
  */
 package org.globus.gsi.gssapi;
 
-import java.io.InputStream;
-import java.io.IOException;
 import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * A collection of SSL-protocol related functions.

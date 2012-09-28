@@ -14,32 +14,28 @@
  */
 package org.globus.gsi.gssapi;
 
-import org.globus.gsi.gssapi.jaas.JaasSubject;
-
-import java.io.InputStream;
-import java.io.FileInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.Provider;
-import java.util.Set;
 import java.util.Iterator;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSContext;
-import org.ietf.jgss.Oid;
-
-import org.gridforum.jgss.ExtendedGSSManager;
-import org.gridforum.jgss.ExtendedGSSCredential;
-
-import org.globus.gsi.X509Credential;
-import org.globus.gsi.CredentialException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.globus.gsi.CredentialException;
+import org.globus.gsi.X509Credential;
+import org.globus.gsi.gssapi.jaas.JaasSubject;
+import org.gridforum.jgss.ExtendedGSSCredential;
+import org.gridforum.jgss.ExtendedGSSManager;
+import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSCredential;
+import org.ietf.jgss.GSSException;
+import org.ietf.jgss.GSSName;
+import org.ietf.jgss.Oid;
 
 /**
  * An implementation of <code>GlobusGSSManager</code>.
@@ -104,13 +100,11 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	Subject subject = JaasSubject.getCurrentSubject();
 	if (subject != null) {
 	    logger.debug("Getting credential from context");
-	    Set gssCreds = 
-		subject.getPrivateCredentials(GlobusGSSCredentialImpl.class);
+	    Set<GlobusGSSCredentialImpl> gssCreds = subject.getPrivateCredentials(GlobusGSSCredentialImpl.class);
 	    if (gssCreds != null) {
-		Iterator iter = gssCreds.iterator();
+		Iterator<GlobusGSSCredentialImpl> iter = gssCreds.iterator();
 		if (iter.hasNext()) {
-		    GlobusGSSCredentialImpl credImpl = 
-			(GlobusGSSCredentialImpl)iter.next();
+		    GlobusGSSCredentialImpl credImpl = iter.next();
 		    cred = credImpl.getX509Credential();
 		}
 	    }

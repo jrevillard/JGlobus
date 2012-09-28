@@ -27,9 +27,8 @@ import junit.framework.TestSuite;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
@@ -92,7 +91,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     String policyValue = "bar";
     
     ArrayList<Extension> list = new ArrayList<Extension>();
-    ext = new Extension(new ASN1ObjectIdentifier(oid), critical, expectedValue.getBytes());
+    ext = new Extension(new ASN1ObjectIdentifier(oid), critical, new DERUTF8String(expectedValue).getEncoded());
     list.add(ext);
 
     ext = new Extension(Extension.basicConstraints, false,  new BasicConstraints(15).getEncoded());
@@ -146,9 +145,9 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     boolean critical2 = true;
     
     ArrayList<Extension> list = new ArrayList<Extension>();
-    ext = new Extension(new ASN1ObjectIdentifier(oid1), critical1, expectedValue1.getBytes());
+    ext = new Extension(new ASN1ObjectIdentifier(oid1), critical1, new DERUTF8String(expectedValue1).getEncoded());
     list.add(ext);
-    ext = new Extension(new ASN1ObjectIdentifier(oid2), critical2, expectedValue2.getBytes());
+    ext = new Extension(new ASN1ObjectIdentifier(oid2), critical2, new DERUTF8String(expectedValue2).getEncoded());
     list.add(ext);
     
     Extensions extSet = new Extensions(list.toArray(new Extension[list.size()]));
@@ -177,9 +176,9 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     assertTrue(realValue != null && realValue.length > 0);
 
     DEROctetString derOctetString = (DEROctetString) toASN1Object(realValue);
-    derOctetString = (DEROctetString) toASN1Object(derOctetString.getOctets());
+    DERUTF8String derutf8String = (DERUTF8String) toASN1Object(derOctetString.getOctets());
 	
-    assertEquals(expectedValue, new String(derOctetString.getOctets()));
+    assertEquals(expectedValue, derutf8String.getString());
 
     Set<String> exts = null;
     if (critical) {

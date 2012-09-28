@@ -32,6 +32,7 @@ import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.TimeZone;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -39,6 +40,7 @@ import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.KeyUsage;
@@ -47,8 +49,13 @@ import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.jce.provider.X509CertificateObject;
+import org.bouncycastle.operator.ContentVerifierProvider;
+import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.bc.BcRSAContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -159,7 +166,10 @@ public class BouncyCastleCertProcessingFactory {
 
         boolean rs;
 		try {
-			rs = certReq.isSignatureValid(new JcaContentVerifierProviderBuilder().setProvider("BC").build(cert));
+			AsymmetricKeyParameter asymmetricKeyParameter =  PublicKeyFactory.createKey(certReq.getSubjectPublicKeyInfo());
+			BcRSAContentVerifierProviderBuilder bcRSAContentVerifierProviderBuilder = new BcRSAContentVerifierProviderBuilder(new DefaultDigestAlgorithmIdentifierFinder());
+			ContentVerifierProvider  contentVerifierProvider = bcRSAContentVerifierProviderBuilder.build(asymmetricKeyParameter);
+			rs = certReq.isSignatureValid(contentVerifierProvider);
 		} catch (OperatorCreationException e) {
 			throw new GeneralSecurityException(e);
 		} catch (PKCSException e) {
@@ -469,7 +479,7 @@ public class BouncyCastleCertProcessingFactory {
 	                        throw new GeneralSecurityException(err);
 	                    }
 	
-	                    DERBitString bits = (DERBitString) BouncyCastleUtil.getExtensionObject(ext);
+	                    DERBitString bits = (DERBitString) ext.getParsedValue().toASN1Primitive();
 	
 	                    byte[] bytes = bits.getBytes();
 	
@@ -500,7 +510,10 @@ public class BouncyCastleCertProcessingFactory {
 	                    continue;
 	                }
 	                x509Ext = extSet.getExtension(oid);
-	                certBuilder.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getExtnValue());
+	                if(Extension.basicConstraints.equals(x509Ext.getExtnId())){
+	                	BasicConstraints.getInstance(x509Ext.getExtnValue().getOctets());
+	                }
+	                certBuilder.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getParsedValue());
 	            }
 	        }
 	        

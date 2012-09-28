@@ -21,11 +21,11 @@ public class GlobusStyle extends BCStyle{
     /**
      * see {@link BCStyle} DefaultSymbols variable
      */
-    private static final Hashtable<ASN1ObjectIdentifier, String> DefaultSymbols = new Hashtable<ASN1ObjectIdentifier, String>();
+    protected static final Hashtable<ASN1ObjectIdentifier, String> DefaultSymbols = new Hashtable<ASN1ObjectIdentifier, String>();
     /**
      *  see {@link BCStyle} DefaultLookUp variable
      */
-    private static final Hashtable<String, ASN1ObjectIdentifier> DefaultLookUp = new Hashtable<String, ASN1ObjectIdentifier>();
+    protected static final Hashtable<String, ASN1ObjectIdentifier> DefaultLookUp = new Hashtable<String, ASN1ObjectIdentifier>();
     
     static
     {
@@ -110,7 +110,8 @@ public class GlobusStyle extends BCStyle{
     {
 		StringTokenizer nTok = new StringTokenizer(dirName, "/");
         X500NameBuilder builder = new X500NameBuilder(this);
-
+        ASN1ObjectIdentifier previousOID = null;
+        String previousValue = null;
         while (nTok.hasMoreTokens())
         {
             String  token = nTok.nextToken();
@@ -118,7 +119,19 @@ public class GlobusStyle extends BCStyle{
 
             if (index == -1)
             {
-                throw new IllegalArgumentException("badly formated directory string");
+            	//This mean that the value contained the "/" char -> append it to previous value
+            	if(previousOID == null){
+            		throw new IllegalArgumentException("badly formated directory string");
+            	}
+            	previousValue += "/" + token;
+            	continue;
+            }else{
+            	if(previousOID != null){
+            		//insert the previous value
+            		builder.addRDN(previousOID, previousValue);
+            		previousOID = null;
+            		previousValue = null;
+            	}
             }
 
             String               attr = token.substring(0, index);
@@ -140,7 +153,13 @@ public class GlobusStyle extends BCStyle{
                 {
                     String  sv = vTok.nextToken();
                     int     ndx = sv.indexOf('=');
-
+                    
+                    if (index == -1)
+                    {
+                    	//This mean that the value contained the "+" char -> append it to previous value
+                    	values.set(values.size()-1, values.get(values.size()-1) + "+" + token);
+                    	continue;
+                    }
                     String  nm = sv.substring(0, ndx);
                     String  vl = sv.substring(ndx + 1);
 
@@ -152,9 +171,14 @@ public class GlobusStyle extends BCStyle{
             }
             else
             {
-                builder.addRDN(oid, value);
+            	previousOID = oid;
+            	previousValue = value;
             }
         }
+        if(previousOID != null){
+    		//insert the previous value
+    		builder.addRDN(previousOID, previousValue);
+    	}
 
         //Swap the RDNs in order to have them in the standard order.
         RDN[] rdns = builder.build().getRDNs();
@@ -162,11 +186,34 @@ public class GlobusStyle extends BCStyle{
         for(int start=0, end = rdns.length -1 ; start < end; start++, end--){
             //swap rdns
             temp = rdns[start];
+            if(temp.isMultiValued()){
+            	temp = new RDN(invertAttributeTypeAndValueArray(temp.getTypesAndValues()));
+            }
+            if(rdns[end].isMultiValued()){
+            	rdns[end] = new RDN(invertAttributeTypeAndValueArray(rdns[end].getTypesAndValues()));
+            }
             rdns[start] = rdns[end];
             rdns[end] = temp;
         }
+        if (rdns.length % 2 != 0) {
+        	if(rdns[((rdns.length+1)/2)-1].isMultiValued()){
+        		rdns[((rdns.length+1))/2] = new RDN(invertAttributeTypeAndValueArray(rdns[((rdns.length+1))/2].getTypesAndValues()));
+        	}
+        }
+        
         return rdns;
     }
+	
+	private AttributeTypeAndValue[] invertAttributeTypeAndValueArray(AttributeTypeAndValue[] attributeTypeAndValues){
+    	AttributeTypeAndValue temp= null;
+    	for(int start=0, end = attributeTypeAndValues.length -1 ; start < end; start++, end--){
+    		//swap
+            temp = attributeTypeAndValues[start];
+            attributeTypeAndValues[start] = attributeTypeAndValues[end];
+            attributeTypeAndValues[end] = temp;
+    	}
+    	return attributeTypeAndValues;
+	}
 	
 	@Override
 	public ASN1ObjectIdentifier attrNameToOID(String attrName)

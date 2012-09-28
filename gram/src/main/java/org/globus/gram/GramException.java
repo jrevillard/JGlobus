@@ -19,7 +19,7 @@ import java.util.ResourceBundle;
 import java.util.MissingResourceException;
 import java.util.Locale;
 
-import org.globus.common.ChainedException;
+import org.globus.common.ChainedIOException;
 import org.globus.gram.internal.GRAMProtocolErrorConstants;
 
 /** 
@@ -31,7 +31,7 @@ import org.globus.gram.internal.GRAMProtocolErrorConstants;
  * are added for errors that can occur in the Java code.
  * 
  */
-public class GramException extends ChainedException implements GRAMProtocolErrorConstants {
+public class GramException extends ChainedIOException implements GRAMProtocolErrorConstants {
 
     private static ResourceBundle resources;
     

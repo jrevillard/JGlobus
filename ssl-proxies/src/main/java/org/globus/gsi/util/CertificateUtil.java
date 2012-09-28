@@ -40,12 +40,14 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.TBSCertificateStructure;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -66,16 +68,6 @@ import org.globus.util.I18n;
  * @author ranantha@mcs.anl.gov
  */
 public final class CertificateUtil {
-
-    public static final int DIGITAL_SIGNATURE = 0;
-    public static final int NON_REPUDIATION = 1;
-    public static final int KEY_ENCIPHERMENT = 2;
-    public static final int DATA_ENCIPHERMENT = 3;
-    public static final int KEY_AGREEMENT = 4;
-    public static final int KEY_CERTSIGN = 5;
-    public static final int CRL_SIGN = 6;
-    public static final int ENCIPHER_ONLY = 7;
-    public static final int DECIPHER_ONLY = 8;
     public static final int DEFAULT_USAGE_LENGTH = 9;
 
     private static String provider;
@@ -316,13 +308,19 @@ public final class CertificateUtil {
 
         CertificateType type = CertificateType.EEC;
 
-        // does not handle multiple AVAs
         X500Name x500name = crt.getSubject();
-		RDN[] rdns = x500name.getRDNs();
-		if (! rdns[rdns.length - 1].isMultiValued() && BCStyle.CN.equals(rdns[rdns.length - 1].getFirst().getType())) {
+        //Needed to put the RDN array in the expected order.
+		RDN[] rdns = new X500Name(GlobusStyle.INSTANCE, CertificateUtil.toGlobusID(x500name.toString())).getRDNs();
+		AttributeTypeAndValue attributeTypeAndValue;
+		if(rdns[0].isMultiValued()){
+			AttributeTypeAndValue[] attributeTypeAndValues = rdns[0].getTypesAndValues();
+			attributeTypeAndValue = attributeTypeAndValues[attributeTypeAndValues.length -1];
+		}else{
+			attributeTypeAndValue = rdns[0].getFirst();
+		}
+		if (BCStyle.CN.equals(attributeTypeAndValue.getType())) {
 			// Finish by CN=
-			String value = IETFUtils.valueToString(rdns[rdns.length - 1].getFirst().getValue());
-			rdns[rdns.length - 1].getFirst().getValue();
+			String value = IETFUtils.valueToString(attributeTypeAndValue.getValue());
 			if (value.equalsIgnoreCase("proxy")) {
 				type = CertificateType.GSI_2_PROXY;
 			} else if (value.equalsIgnoreCase("limited proxy")) {
@@ -409,52 +407,92 @@ public final class CertificateUtil {
     }
 
     /**
-     * Gets a boolean array representing bits of the KeyUsage extension.
+     * Gets the {@link DERBitString} representation  of the KeyUsage extension or <code>null</code> 
+     * if the certificate does not have this extension.
      *
      * @throws IOException if failed to extract the KeyUsage extension value.
      * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static boolean[] getKeyUsage(X509CertificateHolder crt) throws IOException {
+    public static DERBitString getKeyUsage(X509CertificateHolder crt) throws IOException {
     	
         if (!crt.hasExtensions()) {
-            return new boolean[0];
+            return null;
         }
         Extension extension = crt.getExtension(Extension.keyUsage);
-        return (extension != null) ? getKeyUsage(extension) : new boolean[0];
+        return (extension != null) ? getKeyUsage(extension) : null;
     }
 
     /**
-     * Gets a boolean array representing bits of the KeyUsage extension.
+     * Gets the {@link DERBitString} representation of the KeyUsage extension
      *
      * @throws IOException if failed to extract the KeyUsage extension value.
      * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static boolean[] getKeyUsage(Extension ext)
-            throws IOException {
-        DERBitString bits = (DERBitString) getExtensionObject(ext);
-
-        // copied from X509CertificateObject
-        byte[] bytes = bits.getBytes();
-        int length = (bytes.length * 8) - bits.getPadBits();
-
-        boolean[] keyUsage = new boolean[(length < DEFAULT_USAGE_LENGTH) ? DEFAULT_USAGE_LENGTH : length];
-
-        for (int i = 0; i != length; i++) {
-            keyUsage[i] = (bytes[i / 8] & (0x80 >>> (i % 8))) != 0;
-        }
-
-        return keyUsage;
+    public static DERBitString getKeyUsage(Extension ext) throws IOException {
+        try{
+        	return KeyUsage.getInstance(ext.getParsedValue());
+        }catch (Exception e) {
+			throw new IOException(e);
+		}
     }
+    
+	/**
+	 * Returns the subject DN of the given certificate in the Globus format.
+	 * 
+	 * @param cert
+	 *            the certificate to get the subject of. The certificate
+	 *            must be of <code>X509CertificateObject</code> type.
+	 * @return the subject DN of the certificate in the Globus format.
+	 */
+	public static String getIdentity(X509Certificate cert) {
+		if (cert == null) {
+			return null;
+		}
+		return CertificateUtil.toGlobusID(cert.getSubjectX500Principal());
+	}
 
-    /**
-     * Extracts the value of a certificate extension.
-     *
-     * @param ext the certificate extension to extract the value from.
-     * @throws IOException if extraction fails.
-     */
-    public static ASN1Primitive getExtensionObject(Extension ext) throws IOException {
-        return ASN1Primitive.fromByteArray(ext.getExtnValue().getOctets());
-    }
+	/**
+	 * Finds the identity certificate in the given chain and
+	 * returns the subject DN of that certificate in the Globus format.
+	 * 
+	 * @param chain
+	 *            the certificate chain to find the identity
+	 *            certificate in. The certificates must be
+	 *            of <code>X509CertificateObject</code> type.
+	 * @return the subject DN of the identity certificate in
+	 *         the Globus format.
+	 * @exception CertificateException
+	 *                if something goes wrong.
+	 */
+	public static String getIdentity(X509Certificate[] chain) throws CertificateException {
+		return getIdentity(getIdentityCertificate(chain));
+	}
+
+	/**
+	 * Finds the identity certificate in the given chain.
+	 * The identity certificate is the first certificate in the
+	 * chain that is not an impersonation proxy (full or limited)
+	 * 
+	 * @param chain
+	 *            the certificate chain to find the identity
+	 *            certificate in.
+	 * @return the identity certificate.
+	 * @exception CertificateException
+	 *                if something goes wrong.
+	 */
+	public static X509Certificate getIdentityCertificate(X509Certificate[] chain) throws CertificateException {
+
+		if (chain == null) {
+			throw new IllegalArgumentException(i18n.getMessage("certChainNull"));
+		}
+		for (int i = 0; i < chain.length; i++) {
+			CertificateType certType = CertificateUtil.getCertificateType(chain[i]);
+			if (!ProxyCertificateUtil.isImpersonationProxy(certType)) {
+				return chain[i];
+			}
+		}
+		return null;
+	}
 
     /**
      * Converts DN of the form "CN=A, OU=B, O=C" into Globus 
@@ -482,17 +520,12 @@ public final class CertificateUtil {
      * @return the converted DN in Globus format.
      */
     public static String toGlobusID(Principal name) {
-        if (name instanceof X500Name) {
-            return X500NameHelper.toString((X500Name)name);
-        } else {
-            return CertificateUtil.toGlobusID(name.getName());
-        }
+    	return CertificateUtil.toGlobusID(name.getName());
     }
 
     /**
      * Converts DN of the form "CN=A, OU=B, O=C" into Globus format
-     * "/O=C/OU=B/CN=A" <BR> This function might return incorrect
-     * Globus-formatted ID when one of the RDNs in the DN contains commas.
+     * "/O=C/OU=B/CN=A" <BR>.
      *
      * @return the converted DN in Globus format.
      */

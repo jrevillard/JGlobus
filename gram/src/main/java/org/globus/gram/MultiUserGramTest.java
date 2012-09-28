@@ -16,7 +16,6 @@
 package org.globus.gram;
 
 import org.globus.util.deactivator.Deactivator;
-import org.globus.gsi.GlobusCredential;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.gssapi.GlobusGSSCredentialImpl;
 

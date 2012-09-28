@@ -35,7 +35,6 @@ import java.security.KeyStore;
 import java.security.cert.CertStore;
 import java.security.cert.X509Certificate;
 import org.globus.gsi.SigningPolicy;
-import org.globus.gsi.bc.BouncyCastleUtil;
 import org.globus.util.I18n;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -101,7 +100,7 @@ public class ProxyPathValidator {
      *         Globus format
      */
     public String getIdentity() {
-    return BouncyCastleUtil.getIdentity(this.identityCert);
+    return CertificateUtil.getIdentity(this.identityCert);
     }
 
     /**

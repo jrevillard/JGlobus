@@ -14,25 +14,21 @@
  */
 package org.globus.gsi.gssapi;
 
-import org.globus.util.Util;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.Serializable;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
+import org.globus.gsi.CredentialException;
+import org.globus.gsi.X509Credential;
+import org.globus.util.Util;
+import org.gridforum.jgss.ExtendedGSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
-
-import org.gridforum.jgss.ExtendedGSSCredential;
-
-import java.security.cert.X509Certificate;
-import java.security.PrivateKey;
-import java.io.ByteArrayOutputStream;
-import java.io.Serializable;
-import java.io.IOException;
-import java.io.File;
-import java.io.FileOutputStream;
-
-import org.globus.gsi.X509Credential;
-import java.security.cert.CertificateEncodingException;
-import org.globus.gsi.CredentialException;
 
 /**
  * An implementation of <code>GlobusGSSCredential</code>.
@@ -40,7 +36,8 @@ import org.globus.gsi.CredentialException;
 public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
                                                 Serializable {   
 
-    private int usage = 0;
+	private static final long serialVersionUID = 1L;
+	private int usage = 0;
     private X509Credential cred;
     private GSSName name;
 
@@ -177,9 +174,9 @@ public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
 		this.cred.save(bout);
 	    } catch (IOException e) {
 		throw new GlobusGSSException(GSSException.FAILURE, e);
-	    } catch (CertificateEncodingException e) {
-		throw new GlobusGSSException(GSSException.FAILURE, e);
-	    }
+	    } catch (CredentialException e) {
+	    	throw new GlobusGSSException(GSSException.FAILURE, e);
+		}
 	    return bout.toByteArray();
 	case IMPEXP_MECH_SPECIFIC:
 	    File file = null;
@@ -191,9 +188,9 @@ public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
 		this.cred.save(fout);
 	    } catch(IOException e) {
 		throw new GlobusGSSException(GSSException.FAILURE, e);
-	    } catch (CertificateEncodingException e) {
-		throw new GlobusGSSException(GSSException.FAILURE, e);
-	    } finally {
+	    } catch (CredentialException e) {
+	    	throw new GlobusGSSException(GSSException.FAILURE, e);
+		} finally {
 		if (fout != null) {
 		    try { fout.close(); } catch (Exception e) {}
 		}
