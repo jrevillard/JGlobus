@@ -1,0 +1,76 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.jglobus</groupId>
+  <artifactId>myproxy</artifactId>
+  <version>2.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>MyProxy API and Client</name>
+  <url>http://grid.ncsa.illinois.edu/myproxy/jglobus/</url>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <source>1.5</source>
+            <target>1.5</target>
+            <showDeprecation>true</showDeprecation>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.jglobus</groupId>
+      <artifactId>gss</artifactId>
+      <version>2.0-Beta6-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+<repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>warn</checksumPolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <id>jglobus-core</id>
+      <name>JGlobus Core</name>
+      <url>https://oss.sonatype.org/content/repositories/releases/</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
+  <distributionManagement>
+		<repository>
+			<id>maatg-fr-releases</id>
+			<name>maatG France Releases</name>
+			<url>http://nexus.maatg.fr/content/repositories/maatg-fr-releases</url>
+		</repository>
+        <snapshotRepository>
+			<id>maatg-fr-snapshots</id>
+			<name>maatG France Snapshots</name>
+			<url>http://nexus.maatg.fr/content/repositories/maatg-fr-snapshots</url>
+		</snapshotRepository>
+  </distributionManagement>
+</project>

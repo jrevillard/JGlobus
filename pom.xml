@@ -14,9 +14,9 @@
 		<module>gss</module>
 		<module>ssl-proxies-tomcat</module>
 		<module>io</module>
+		<module>myproxy</module>
 		<!--module>gridftp</module-->
 		<!-- module>gram</module-->
-		<!-- module>myproxy</module-->
 	</modules>
 	<name>JGlobus 2.0</name>
 	<packaging>pom</packaging>
