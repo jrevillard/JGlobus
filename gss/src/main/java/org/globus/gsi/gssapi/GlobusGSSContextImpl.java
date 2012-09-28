@@ -764,12 +764,12 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 		 		new Exception("Unexpected BUFFER_UNDERFLOW;" +
                         " Handshaking status: " + sslEngine.getHandshakeStatus()));
                 }
-		if (result.getStatus() !=
+		/*if (result.getStatus() !=
 			SSLEngineResult.Status.OK) {
                	throw new GlobusGSSException(GSSException.FAILURE,
                                          GlobusGSSException.TOKEN_FAIL,
                                          result.getStatus().toString());
-		}
+		}*/
               } while (inBBuff.hasRemaining());
 
 		return outBBuff;
@@ -814,12 +814,12 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 			// More data needed from peer
 			break;
 		}
-		if (result.getStatus() !=
+		/*if (result.getStatus() !=
 			SSLEngineResult.Status.OK) {
                 	throw new GlobusGSSException(GSSException.FAILURE,
                                              GlobusGSSException.TOKEN_FAIL,
                                          result.getStatus().toString());
-		}
+		}*/
               } while (inBBuff.hasRemaining());
 		return outBBuff;
 	} catch (IllegalArgumentException e) {
@@ -1440,12 +1440,12 @@ done:      do {
 /*DEL
             this.context.setCredential(this.ctxCred.getX509Credential());
 */
-        KeyStore keyStore = KeyStore.getInstance("JKS");
+         KeyStore keyStore = KeyStore.getInstance("JKS");
 	    keyStore.load(null, null);
 	    X509Credential cred = this.ctxCred.getX509Credential();
 
-	    keyStore.setKeyEntry("default", cred.getPrivateKey(),
-			"password".toCharArray(), cred.getCertificateChain());
+	    keyStore.setKeyEntry("default", this.ctxCred.getPrivateKey(),
+			"password".toCharArray(), this.ctxCred.getCertificateChain());
 	    this.sslConfigurator.setCredentialStore(keyStore);
 	    this.sslConfigurator.setCredentialStorePassword("password");
 

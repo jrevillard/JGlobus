@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.PrivateKey;
