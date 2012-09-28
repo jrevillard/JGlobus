@@ -13,7 +13,7 @@
 		<module>jsse</module>
 		<module>gss</module>
 		<module>ssl-proxies-tomcat</module>
-		<!-- module>io</module-->
+		<module>io</module>
 		<!--module>gridftp</module-->
 		<!-- module>gram</module-->
 		<!-- module>myproxy</module-->

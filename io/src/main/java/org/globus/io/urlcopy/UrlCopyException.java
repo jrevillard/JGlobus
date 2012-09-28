@@ -15,13 +15,13 @@
  */
 package org.globus.io.urlcopy;
 
-import org.globus.common.ChainedException;
+import org.globus.common.ChainedIOException;
 
 /**
  * Encapsulates the exceptions caused by various errors
  * in the url-copy library.
  */
-public class UrlCopyException extends ChainedException {
+public class UrlCopyException extends ChainedIOException {
     
     public UrlCopyException(String msg) {
 	super(msg);
