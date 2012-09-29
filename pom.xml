@@ -20,6 +20,10 @@
 	<name>JGlobus 2.0</name>
 	<packaging>pom</packaging>
 
+	<properties>
+		<skipTests>true</skipTests>
+	</properties>
+
 	<issueManagement>
 		<system>JIRA</system>
 		<url>http://jira.globus.org/browse/JGLOBUS</url>
