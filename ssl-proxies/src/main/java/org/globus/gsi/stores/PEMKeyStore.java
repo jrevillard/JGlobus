@@ -2,7 +2,7 @@
  * Copyright 1999-2010 University of Chicago
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
+ * compliance with the License. You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -12,9 +12,20 @@
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
+
 package org.globus.gsi.stores;
 
 import static org.globus.gsi.util.CertificateIOUtil.writeCertificate;
+
+import org.globus.gsi.CredentialException;
+import org.globus.gsi.X509Credential;
+
+import org.globus.gsi.provider.KeyStoreParametersFactory;
+import org.globus.gsi.util.CertificateIOUtil;
+
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.commons.logging.Log;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,18 +46,16 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.globus.gsi.CredentialException;
-import org.globus.gsi.X509Credential;
-import org.globus.gsi.provider.KeyStoreParametersFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+
 /**
  * This class provides a KeyStore implementation that supports trusted
  * certificates stored in PEM format and proxy certificates stored in PEM
@@ -442,15 +451,21 @@ public class PEMKeyStore extends KeyStoreSpi {
 			caDelegate.loadWrappers(directoryList);
 			Map<String, ResourceTrustAnchor> wrapperMap = caDelegate
 					.getWrapperMap();
+            Set<String> knownCerts = new HashSet<String>();
 			for (ResourceTrustAnchor trustAnchor : wrapperMap.values()) {
 				String alias = trustAnchor.getResourceURL().toExternalForm();
 				TrustAnchor tmpTrustAnchor = trustAnchor.getTrustAnchor();
 				X509Certificate trustCert = tmpTrustAnchor.getTrustedCert();
-				certFilenameMap.put(trustCert, alias);
-				if (this.aliasObjectMap == null) {
-					System.out.println("Alias Map Null");
-				}
-				this.aliasObjectMap.put(alias, trustAnchor);
+                String hash = CertificateIOUtil.nameHash(trustCert.getSubjectX500Principal());
+                if (this.aliasObjectMap == null) {
+                    System.out.println("Alias Map Null");
+                }
+                if (knownCerts.contains(hash)) {
+                    continue;
+                }
+                knownCerts.add(hash);
+                this.aliasObjectMap.put(alias, trustAnchor);
+                certFilenameMap.put(trustCert, alias);
 			}
 		} catch (ResourceStoreException e) {
 			throw new CertificateException("",e);

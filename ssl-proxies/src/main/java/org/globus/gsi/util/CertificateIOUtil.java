@@ -21,15 +21,73 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
+import javax.security.auth.x500.X500Principal;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.openssl.PEMWriter;
 
 /**
  * Fill Me
  */
 public final class CertificateIOUtil {
+	private static Log logger = LogFactory.getLog(CertificateIOUtil.class.getCanonicalName());
+	
+	private static MessageDigest md5;
+	
+    private static void init() {
+        if (md5 == null) {
+            try {
+                md5 = MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException e) {
+                logger.error("", e);
+            }
+        }
+    }
+    
+	/**
+     * Returns equivalent of:
+     * openssl x509 -in "cert-file" -hash -noout
+     *
+     * @param subjectDN
+     * @return hash for certificate names
+     */
+    public static String nameHash(X500Principal subjectDN) {
+        try {
+            return hash(subjectDN.getEncoded());
+        } catch (Exception e) {
+            logger.error("", e);
+            return null;
+        }
+    }
+    
+    private static String hash(byte[] data) {
+        init();
+        if (md5 == null) {
+            return null;
+        }
+
+        md5.reset();
+        md5.update(data);
+
+        byte[] md = md5.digest();
+
+        long ret = (fixByte(md[0]) | (fixByte(md[1]) << 8L));
+        ret = ret | fixByte(md[2]) << 16L;
+        ret = ret | fixByte(md[3]) << 24L;
+        ret = ret & 0xffffffffL;
+
+        return Long.toHexString(ret);
+    }
+    
+    private static long fixByte(byte b) {
+        return (b < 0) ? (long) (b + 256) : (long) b;
+    }
 
 	/**
 	 * Writes certificate to the specified file in PEM format.
