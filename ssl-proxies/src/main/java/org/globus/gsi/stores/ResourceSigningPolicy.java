@@ -12,21 +12,27 @@
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
+
 package org.globus.gsi.stores;
+
+import org.globus.gsi.SigningPolicyException;
+
+import org.globus.gsi.provider.SigningPolicyStoreException;
+
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.commons.logging.Log;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Collection;
 import java.util.Map;
 
+
 import javax.security.auth.x500.X500Principal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.globus.gsi.SigningPolicy;
-import org.globus.gsi.SigningPolicyException;
 import org.globus.gsi.SigningPolicyParser;
-import org.globus.gsi.provider.SigningPolicyStoreException;
 import org.springframework.core.io.Resource;
 
 /**
