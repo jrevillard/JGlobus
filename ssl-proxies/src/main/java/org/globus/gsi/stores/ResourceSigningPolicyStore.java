@@ -14,6 +14,14 @@
  */
 package org.globus.gsi.stores;
 
+import org.globus.gsi.provider.SigningPolicyStore;
+import org.globus.gsi.provider.SigningPolicyStoreException;
+import org.globus.gsi.provider.SigningPolicyStoreParameters;
+
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.commons.logging.Log;
+
 import java.io.IOException;
 import java.net.URI;
 import java.security.InvalidAlgorithmParameterException;
@@ -21,16 +29,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+
 import javax.security.auth.x500.X500Principal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.globus.gsi.SigningPolicy;
-import org.globus.gsi.provider.SigningPolicyStore;
-import org.globus.gsi.provider.SigningPolicyStoreException;
-import org.globus.gsi.provider.SigningPolicyStoreParameters;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.globus.util.GlobusResource;
+import org.globus.util.GlobusPathMatchingResourcePatternResolver;
+
 
 /**
  * FILL ME
@@ -38,8 +43,8 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  * @author ranantha@mcs.anl.gov
  */
 public class ResourceSigningPolicyStore implements SigningPolicyStore {
-    
-    private PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+    private GlobusPathMatchingResourcePatternResolver globusResolver = new GlobusPathMatchingResourcePatternResolver();
     private Map<URI, ResourceSigningPolicy> signingPolicyFileMap = new HashMap<URI, ResourceSigningPolicy>();
     private Map<String, SigningPolicy> policyMap = new HashMap<String, SigningPolicy>();
     private ResourceSigningPolicyStoreParameters parameters;
@@ -72,23 +77,20 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
     private void loadPolicies() throws SigningPolicyStoreException {
 
         String locations = this.parameters.getTrustRootLocations();
-        Resource[] resources;
+        GlobusResource[] resources;
         
         if(locations.equals(this.oldLocations))
         {
         	return;
         }
-        try {
-            resources = resolver.getResources(locations);
-        } catch (IOException e) {
-            throw new SigningPolicyStoreException(e);
-        }
+        resources = globusResolver.getResources(locations);
+
         Map<String, SigningPolicy> newPolicyMap =
                 new HashMap<String, SigningPolicy>();
         Map<URI, ResourceSigningPolicy> newPolicyFileMap =
                 new HashMap<URI, ResourceSigningPolicy>();
 
-        for (Resource resource : resources) {
+        for (GlobusResource resource : resources) {
 
             if (!resource.isReadable()) {
                 logger.debug("Cannot read: " + resource.getFilename());
@@ -112,7 +114,7 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
     }
 
     private void loadSigningPolicy(
-            Resource policyResource, Map<String, SigningPolicy> policyMapToLoad,
+            GlobusResource policyResource, Map<String, SigningPolicy> policyMapToLoad,
             Map<URI, ResourceSigningPolicy> currentPolicyFileMap) throws SigningPolicyStoreException {
 
         URI uri;

@@ -15,13 +15,16 @@
 
 package org.globus.gsi.stores;
 
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.commons.logging.Log;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.security.cert.X509CRL;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.core.io.Resource;
+
+import org.globus.util.GlobusResource;
 
 /**
  * Fill Me
@@ -33,8 +36,8 @@ public class ResourceCRLStore extends ResourceSecurityWrapperStore<ResourceCRL, 
     private Log logger = LogFactory.getLog(getClass().getCanonicalName());
 
     @Override
-    public ResourceCRL create(Resource resource) throws ResourceStoreException {
-        return new ResourceCRL(false, resource);
+    public ResourceCRL create(GlobusResource globusResource) throws ResourceStoreException {
+        return new ResourceCRL(false, globusResource);
     }
 
     @Override
