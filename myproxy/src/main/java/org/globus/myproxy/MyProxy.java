@@ -242,7 +242,7 @@ public class MyProxy  {
         // Request confidentiality
         this.context.requestConf(true);
         
-        ((ExtendedGSSContext)this.context).setOption(GSSConstants.FORCE_SSLV3_AND_CONSTRAIN_CIPHERSUITES_FOR_GRAM, Boolean.TRUE);
+//        ((ExtendedGSSContext)this.context).setOption(GSSConstants.FORCE_SSLV3_AND_CONSTRAIN_CIPHERSUITES_FOR_GRAM, Boolean.TRUE);
         
         IOException exception = null;
         Socket socket = null;
