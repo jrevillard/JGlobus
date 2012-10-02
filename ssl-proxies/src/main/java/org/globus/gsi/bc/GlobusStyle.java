@@ -182,6 +182,11 @@ public class GlobusStyle extends BCStyle{
 
         //Swap the RDNs in order to have them in the standard order.
         RDN[] rdns = builder.build().getRDNs();
+        swap(rdns);
+        return rdns;
+    }
+	
+	public static void swap(RDN[] rdns){
         RDN temp = null ;
         for(int start=0, end = rdns.length -1 ; start < end; start++, end--){
             //swap rdns
@@ -200,11 +205,10 @@ public class GlobusStyle extends BCStyle{
         		rdns[((rdns.length+1))/2] = new RDN(invertAttributeTypeAndValueArray(rdns[((rdns.length+1))/2].getTypesAndValues()));
         	}
         }
-        
-        return rdns;
-    }
+	}
 	
-	private AttributeTypeAndValue[] invertAttributeTypeAndValueArray(AttributeTypeAndValue[] attributeTypeAndValues){
+	
+	private static AttributeTypeAndValue[] invertAttributeTypeAndValueArray(AttributeTypeAndValue[] attributeTypeAndValues){
     	AttributeTypeAndValue temp= null;
     	for(int start=0, end = attributeTypeAndValues.length -1 ; start < end; start++, end--){
     		//swap
@@ -224,8 +228,6 @@ public class GlobusStyle extends BCStyle{
 	@Override
 	public String toString(X500Name name) {
 		StringBuffer buf = new StringBuffer();
-        boolean first = true;
-
         RDN[] rdns = name.getRDNs();
         
         //Check if reverse or not
@@ -250,19 +252,19 @@ public class GlobusStyle extends BCStyle{
         
         if(revert){
         	for (int i = rdns.length-1; i >= 0; i--){
-        		appendRDNInfo(first, buf, rdns[i]);
+        		appendRDNInfo(buf, rdns[i], "/");
         	}
         }else{
         	for (int i = 0; i < rdns.length; i++){
-        		appendRDNInfo(first, buf, rdns[i]);
+        		appendRDNInfo(buf, rdns[i], "/");
         	}
         }
         
         return buf.toString();
 	}
 	
-	private void appendRDNInfo(boolean first,StringBuffer buf, RDN rdn){
-		buf.append('/');
+	protected void appendRDNInfo(StringBuffer buf, RDN rdn, String separator){
+		buf.append(separator);
         if (rdn.isMultiValued())
         {
             AttributeTypeAndValue[] atv = rdn.getTypesAndValues();

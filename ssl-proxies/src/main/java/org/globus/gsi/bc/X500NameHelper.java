@@ -24,6 +24,7 @@ import org.bouncycastle.asn1.DERPrintableString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
 
 /**
  * A helper class to deal with {@link X500Name X500Name} object.
@@ -31,15 +32,6 @@ import org.bouncycastle.asn1.x500.X500Name;
 public class X500NameHelper {
 
     private ASN1Sequence seq;
-
-    /**
-     * Creates an instance using the specified ASN.1 sequence.
-     *
-     * @param seq the name sequence
-     */
-    public X500NameHelper(ASN1Sequence seq) {
-        this.seq = seq;
-    }
 
     /**
      * Creates an instance using existing {@link X500Name X500Name} 
