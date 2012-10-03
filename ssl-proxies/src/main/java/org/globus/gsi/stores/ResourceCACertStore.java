@@ -15,13 +15,16 @@
 
 package org.globus.gsi.stores;
 
+import org.apache.commons.logging.Log;
+
+import org.apache.commons.logging.LogFactory;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.security.cert.TrustAnchor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.core.io.Resource;
+import org.globus.util.GlobusResource;
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -36,8 +39,8 @@ public class ResourceCACertStore extends ResourceSecurityWrapperStore<ResourceTr
     private Log logger = LogFactory.getLog(getClass().getCanonicalName());
 
     @Override
-    public ResourceTrustAnchor create(Resource resource) throws ResourceStoreException {
-        return new ResourceTrustAnchor(false, resource);
+    public ResourceTrustAnchor create(GlobusResource globusResource) throws ResourceStoreException {
+        return new ResourceTrustAnchor(false, globusResource);
     }
 
     @Override

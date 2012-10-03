@@ -15,13 +15,16 @@
 
 package org.globus.gsi.stores;
 
+import org.globus.gsi.X509Credential;
+
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.commons.logging.Log;
+
 import java.io.File;
 import java.io.FilenameFilter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.globus.gsi.X509Credential;
-import org.springframework.core.io.Resource;
+import org.globus.util.GlobusResource;
 
 /**
  * Created by IntelliJ IDEA. User: turtlebender Date: Dec 29, 2009 Time:
@@ -33,11 +36,11 @@ public class ResourceProxyCredentialStore extends
 	private static FilenameFilter filter = new ProxyFilenameFilter();
 	private Log logger = LogFactory.getLog(getClass().getCanonicalName());
 
-	@Override
-	public ResourceProxyCredential create(Resource resource)
-			throws ResourceStoreException {
-		return new ResourceProxyCredential(resource);
-	}
+    @Override
+    public ResourceProxyCredential create(GlobusResource globusResource)
+            throws ResourceStoreException {
+        return new ResourceProxyCredential(globusResource);
+    }
 
 	@Override
 	protected Log getLog() {
