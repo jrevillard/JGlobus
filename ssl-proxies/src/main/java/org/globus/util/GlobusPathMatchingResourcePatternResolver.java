@@ -1,13 +1,10 @@
 package org.globus.util;
 
-import org.apache.commons.codec.net.URLCodec;
-
 import java.io.File;
 import java.util.Vector;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.net.URL;
-import java.net.MalformedURLException;
 
 /**
  * Provides methods to resolve locationPatterns and return GlobusResource
@@ -63,7 +60,7 @@ public class GlobusPathMatchingResourcePatternResolver {
      * Finds all the resources that match the Ant-Style locationPattern
      * @param locationPattern  Ant-Style location pattern which may be prefixed with
      *                         classpath:/, file:/, or describe a relative path.
-     * @return An array of GlobusResource containing all resources whose locaiton match the locationPattern
+     * @return An array of GlobusResource containing all resources whose location match the locationPattern
      */
     public GlobusResource[] getResources(String locationPattern) {
         String mainPath = "";
@@ -77,13 +74,9 @@ public class GlobusPathMatchingResourcePatternResolver {
                 pathsMatchingLocationPattern.add(new GlobusResource(locationPattern.replaceFirst("file:", "")));
             }
             else {
-                try {
-                    URL resourceURL = new File(getPathUntilWildcard(locationPattern.replaceFirst("file:", ""))).toURL();
-                    mainPath = resourceURL.getPath();
-                    this.locationPattern = Pattern.compile(antToRegexConverter(locationPattern.replaceFirst("file:", "")));
-                    parseDirectoryStructure(new File(mainPath));
-                } catch (MalformedURLException ex) {
-                }
+                mainPath = getPathUntilWildcard(locationPattern.replaceFirst("file:", ""));
+                this.locationPattern = Pattern.compile(antToRegexConverter(locationPattern.replaceFirst("file:", "")));
+                parseDirectoryStructure(new File(mainPath));
             }
         } else {
             mainPath = getPathUntilWildcard(locationPattern);
@@ -101,7 +94,8 @@ public class GlobusPathMatchingResourcePatternResolver {
      * @return A regex style location pattern representation of the antStyleLocationPattern
      */
     private String antToRegexConverter(String antStyleLocationPattern) {
-        String regexStyleLocationPattern = antStyleLocationPattern.replaceAll("\\.", "\\\\."); // replace . with \\.
+    	String regexStyleLocationPattern = antStyleLocationPattern.replaceAll("\\\\", "/");  // Escape \ in Windows OS path
+        regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("\\.", "\\\\."); // replace . with \\.
         regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("//", "/");//Solution for known test cases with // issue at org.globus.gsi.proxy.ProxyPathValidatorTest line 536, Needs Review
         regexStyleLocationPattern = regexStyleLocationPattern.replace('?', '.'); // replace ? with .
         regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("\\*", "[^/]*"); //replace all * with [^/]*, this will make ** become [^/]*[^/]*
@@ -162,7 +156,7 @@ public class GlobusPathMatchingResourcePatternResolver {
         if(directoryContents != null){
         for (File currentFile : directoryContents) {
             if (currentFile.isFile()) { //We are only interested in files not directories
-                absolutePath = currentFile.getAbsolutePath();
+                absolutePath = currentFile.getAbsolutePath().replace("\\", "/");
                 locationPatternMatcher = locationPattern.matcher(absolutePath);
                 if (locationPatternMatcher.find()) {
                     pathsMatchingLocationPattern.add(new GlobusResource(absolutePath));
