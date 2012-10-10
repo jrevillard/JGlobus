@@ -35,7 +35,18 @@
 			<url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo</url>
 		</pluginRepository>
 	</pluginRepositories>
-	<distributionManagement>
+    <distributionManagement>
+        <repository>
+            <id>maven.openmole.org</id>
+            <url>http://maven.openmole.org/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven.openmole.org</id>
+            <url>http://maven.openmole.org/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+<!--	<distributionManagement>
 		<repository>
 			<id>globus.release.repository</id>
 			<url>http://repo.globus.org/content/repositories/releases/</url>
@@ -44,6 +55,6 @@
 			<id>globus.snapshot.repository</id>
 			<url>http://repo.globus.org/content/repositories/snapshots/</url>
 		</snapshotRepository>
-	</distributionManagement>
+	</distributionManagement>-->
 
 </project>
