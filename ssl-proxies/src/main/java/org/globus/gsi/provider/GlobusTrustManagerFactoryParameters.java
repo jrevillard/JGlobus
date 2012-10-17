@@ -1,12 +1,13 @@
 package org.globus.gsi.provider;
 
+import org.globus.gsi.X509ProxyCertPathParameters;
+
 import java.security.KeyStore;
 import java.security.cert.CertStore;
 import java.util.Map;
 
 import javax.net.ssl.ManagerFactoryParameters;
 
-import org.globus.gsi.X509ProxyCertPathParameters;
 import org.globus.gsi.proxy.ProxyPolicyHandler;
 
 public class GlobusTrustManagerFactoryParameters implements

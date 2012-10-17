@@ -12,11 +12,11 @@
 		<module>container-test-utils</module>
 		<module>jsse</module>
 		<module>gss</module>
+		<!--module>gram</module-->
+		<!--module>gridftp</module-->
 		<module>ssl-proxies-tomcat</module>
 		<module>io</module>
 		<!-- module>myproxy</module-->
-		<!--module>gridftp</module-->
-		<!-- module>gram</module-->
 	</modules>
 	<name>JGlobus 2.0</name>
 	<packaging>pom</packaging>

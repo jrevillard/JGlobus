@@ -15,6 +15,9 @@
 
 package org.globus.gsi.trustmanager;
 
+import org.globus.gsi.util.CertificateUtil;
+import org.globus.gsi.util.KeyStoreUtil;
+
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -32,11 +35,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.globus.gsi.util.CertificateUtil;
-import org.globus.gsi.util.KeyStoreUtil;
 
 
 /**

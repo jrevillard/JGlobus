@@ -15,11 +15,12 @@
 
 package org.globus.gsi.trustmanager;
 
+import org.globus.gsi.util.ProxyCertificateUtil;
+
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.X509Certificate;
 
 import org.globus.gsi.GSIConstants;
-import org.globus.gsi.util.ProxyCertificateUtil;
 
 /**
  * Checks to see if a limited proxy is acceptable (if the chain has a limited proxy).

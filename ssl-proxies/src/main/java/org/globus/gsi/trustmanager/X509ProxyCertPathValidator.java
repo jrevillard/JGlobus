@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -54,6 +56,8 @@ import org.globus.gsi.util.ProxyCertificateUtil;
  * @since 1.0
  */
 public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
+	
+	private static final Log logger = LogFactory.getLog(X509ProxyCertPathValidator.class);
 
     public static final String BASIC_CONSTRAINT_OID = "2.5.29.19";
     public static final String KEY_USAGE_OID = "2.5.29.15";
@@ -365,9 +369,9 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
     protected void checkKeyUsage(X509CertificateHolder issuersCertHolder)
             throws CertPathValidatorException, IOException {
 
-        DERBitString issuerKeyUsage = CertificateUtil.getKeyUsage(issuersCertHolder);
+        KeyUsage issuerKeyUsage = CertificateUtil.getKeyUsage(issuersCertHolder);
         if (issuerKeyUsage != null){
-        	int bits = issuerKeyUsage.getBytes()[0] & 0xff;
+        	int bits = issuerKeyUsage.intValue();
         	if((bits & KeyUsage.keyCertSign) != KeyUsage.keyCertSign){
         		throw new CertPathValidatorException("Certificate " + issuersCertHolder.getSubject() + " violated key usage policy.");
             }
@@ -442,10 +446,16 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
     }
 
     private void checkKeyUsage(X509CertificateHolder issuer, Extension proxyExtension) throws IOException, CertPathValidatorException {
-        DERBitString keyUsage = CertificateUtil.getKeyUsage(proxyExtension);
-        int keyUsageBits = keyUsage.getBytes()[0] & 0xff;
+        KeyUsage keyUsage = CertificateUtil.getKeyUsage(proxyExtension);
+        int keyUsageBits = keyUsage.intValue();
+
         // these must not be asserted
-        if(((keyUsageBits & KeyUsage.nonRepudiation) == KeyUsage.nonRepudiation)||((keyUsageBits & KeyUsage.keyCertSign) == KeyUsage.keyCertSign)){
+        //XXX: bug in BC 1.47? : http://www.bouncycastle.org/jira/browse/BJA-418
+        // Ignore the nonRepudiation bit for the moment!
+        if(((keyUsageBits & KeyUsage.nonRepudiation) == KeyUsage.nonRepudiation)){
+        	logger.warn("Ignoring the nonRepudiation bit for the moment: perhapse BC bug: http://www.bouncycastle.org/jira/browse/BJA-418");
+        }
+        if(((keyUsageBits & KeyUsage.keyCertSign) == KeyUsage.keyCertSign)){
         	throw new CertPathValidatorException("Proxy violation: Key usage is asserted.");
         }
         

@@ -1,10 +1,10 @@
 package org.globus.gsi.provider;
 
+import org.globus.gsi.stores.PEMKeyStore;
+
 import java.security.KeyStore;
 import java.security.KeyStore.LoadStoreParameter;
 import java.security.KeyStore.ProtectionParameter;
-
-import org.globus.gsi.stores.PEMKeyStore;
 
 
 

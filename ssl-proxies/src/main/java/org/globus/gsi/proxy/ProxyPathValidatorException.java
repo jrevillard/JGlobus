@@ -30,7 +30,7 @@ public class ProxyPathValidatorException
     
 	private static final long serialVersionUID = 1L;
 
-	public static final int FAILURE = -1;
+    public static final int FAILURE = -1;
 
     // proxy constraints violation
     public static final int PROXY_VIOLATION = 1;

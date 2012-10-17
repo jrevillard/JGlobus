@@ -19,6 +19,7 @@ import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.NoSuchProviderException;
 import java.security.Principal;
 import java.security.Provider;
 import java.security.Security;
@@ -39,7 +40,6 @@ import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Set;
-import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -407,13 +407,13 @@ public final class CertificateUtil {
     }
 
     /**
-     * Gets the {@link DERBitString} representation  of the KeyUsage extension or <code>null</code> 
+     * Gets the KeyUsage extension or <code>null</code> 
      * if the certificate does not have this extension.
      *
      * @throws IOException if failed to extract the KeyUsage extension value.
      * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static DERBitString getKeyUsage(X509CertificateHolder crt) throws IOException {
+    public static KeyUsage getKeyUsage(X509CertificateHolder crt) throws IOException {
     	
         if (!crt.hasExtensions()) {
             return null;
@@ -423,14 +423,14 @@ public final class CertificateUtil {
     }
 
     /**
-     * Gets the {@link DERBitString} representation of the KeyUsage extension
+     * Gets the KeyUsage extension
      *
      * @throws IOException if failed to extract the KeyUsage extension value.
      * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static DERBitString getKeyUsage(Extension ext) throws IOException {
+    public static KeyUsage getKeyUsage(Extension ext) throws IOException {
         try{
-        	return KeyUsage.getInstance(ext.getParsedValue());
+        	return (KeyUsage) KeyUsage.getInstance(ext.getParsedValue());
         }catch (Exception e) {
 			throw new IOException(e);
 		}
@@ -554,7 +554,12 @@ public final class CertificateUtil {
     // JGLOBUS-91 
     public static CertPath getCertPath(X509Certificate[] certs) throws CertificateException {
 
-        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        CertificateFactory factory;
+		try {
+			factory = CertificateFactory.getInstance("X.509", "BC");
+		} catch (NoSuchProviderException e) {
+			throw new CertificateException(e);
+		}
         return factory.generateCertPath(Arrays.asList(certs));
     }
 

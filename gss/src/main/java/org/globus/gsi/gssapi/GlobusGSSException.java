@@ -23,7 +23,7 @@ import org.ietf.jgss.GSSException;
 public class GlobusGSSException extends GSSException {
 	private static final long serialVersionUID = 1L;
 
-	public static final int
+    public static final int
 	PROXY_VIOLATION = 5,
 	BAD_ARGUMENT = 7,
 	BAD_NAME = 25,

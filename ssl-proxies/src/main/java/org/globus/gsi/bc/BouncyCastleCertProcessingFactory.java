@@ -28,32 +28,25 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
 import java.util.Random;
-import java.util.Set;
 import java.util.TimeZone;
 
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
-import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.X500NameStyle;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.Certificate;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
@@ -133,7 +126,7 @@ public class BouncyCastleCertProcessingFactory {
 
     /**
      * Creates a proxy certificate from the certificate request. (Signs a certificate request creating a new
-     * certificate)
+     * certificate) (DOES NOT CLOSE THE INPUT STREAM)
      * 
      * @see #createProxyCertificate(X509Certificate, PrivateKey, PublicKey, int, int, Extensions,
      *      String) createProxyCertificate
@@ -168,8 +161,11 @@ public class BouncyCastleCertProcessingFactory {
         PrivateKey privateKey, int lifetime, GSIConstants.CertificateType certType, Extensions extSet,
         String cnValue) throws IOException, GeneralSecurityException {
 
-        ASN1InputStream derin = new ASN1InputStream(certRequestInputStream);
+    	// derin MUST NOT BE CLOSED (i.e myproxy usage)
+        @SuppressWarnings("resource")
+		ASN1InputStream derin = new ASN1InputStream(certRequestInputStream);
         ASN1Primitive reqInfo = derin.readObject();
+
         PKCS10CertificationRequest certReq = new PKCS10CertificationRequest(reqInfo.getEncoded());
 
         boolean rs;
@@ -437,7 +433,7 @@ public class BouncyCastleCertProcessingFactory {
 //            GlobusStyle.swap(rdns);
 //        	X500Name realSubject = new X500Name(BCStyle.INSTANCE, rdns);
 //        	
-//	        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(realIssuer, serialNum, notBefore, notAfter, realSubject, subjectPublicKeyInfo);
+//	        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(realSubject, serialNum, notBefore, notAfter, realIssuer, subjectPublicKeyInfo);
 //	        
 //	        Extension x509Ext = null;        
 //	        if (gt3_4) {
@@ -718,7 +714,7 @@ public class BouncyCastleCertProcessingFactory {
 
     /**
      * Loads a X509 certificate from the specified input stream. Input stream must contain DER-encoded
-     * certificate.
+     * certificate. (DOES NOT CLOSE THE STREAM)
      * 
      * @param in
      *            the input stream to read the certificate from.
@@ -727,10 +723,12 @@ public class BouncyCastleCertProcessingFactory {
      *                if certificate failed to load.
      */
     public X509Certificate loadCertificate(InputStream in) throws IOException, GeneralSecurityException {
-        ASN1InputStream derin = new ASN1InputStream(in);
+        //derin MUST NOT BE CLOSED (c.f myproxy usage)
+    	@SuppressWarnings("resource")
+		ASN1InputStream derin = new ASN1InputStream(in);
         ASN1Primitive certInfo = derin.readObject();
         ASN1Sequence seq = ASN1Sequence.getInstance(certInfo);
-        return new X509CertificateObject(new X509CertificateStructure(seq));
+        return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate(new X509CertificateHolder(Certificate.getInstance(seq)));
     }
 
     /**

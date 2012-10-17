@@ -15,6 +15,10 @@
 
 package org.globus.gsi.trustmanager;
 
+import org.globus.gsi.util.ProxyCertificateUtil;
+
+import org.globus.gsi.provider.SigningPolicyStore;
+
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertStoreException;
 import java.security.cert.X509Certificate;
@@ -23,8 +27,6 @@ import javax.security.auth.x500.X500Principal;
 
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.SigningPolicy;
-import org.globus.gsi.provider.SigningPolicyStore;
-import org.globus.gsi.util.ProxyCertificateUtil;
 
 /**
  * This checks to make sure the Distinguished Name in the certificate is valid according to the signing policy.

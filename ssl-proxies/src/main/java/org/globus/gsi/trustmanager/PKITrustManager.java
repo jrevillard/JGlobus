@@ -14,6 +14,16 @@
  */
 package org.globus.gsi.trustmanager;
 
+import org.globus.gsi.util.CertificateLoadUtil;
+import org.globus.gsi.util.CertificateUtil;
+
+import org.globus.gsi.X509ProxyCertPathParameters;
+
+import org.apache.commons.logging.Log;
+
+import org.apache.commons.logging.LogFactory;
+
+
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStoreException;
 import java.security.cert.CertPath;
@@ -21,16 +31,15 @@ import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertPathValidatorResult;
 import java.security.cert.CertPathValidatorSpi;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Vector;
+
 
 import javax.net.ssl.X509TrustManager;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.globus.gsi.X509ProxyCertPathParameters;
-import org.globus.gsi.util.CertificateLoadUtil;
-import org.globus.gsi.util.CertificateUtil;
 
 
 /**

@@ -95,7 +95,7 @@ public abstract class ResourceSecurityWrapperStore<T extends AbstractResourceSec
 		this.wrapperMap = newWrapperMap;
 	}
 
-	private boolean loadResources(String locationPattern, Set<V> updatedList,
+    private boolean loadResources(String locationPattern, Set<V> updatedList,
 			Map<String, T> newWrapperMap) throws ResourceStoreException {
 		boolean changed = false;
 		try {
@@ -115,65 +115,69 @@ public abstract class ResourceSecurityWrapperStore<T extends AbstractResourceSec
 		return changed;
 	}
 
-    private boolean load(GlobusResource globusResource, Set<V> currentRoots,
-                         Map<String, T> newWrapperMap) throws ResourceStoreException {
-        if (!globusResource.isReadable()) {
-            throw new ResourceStoreException("Cannot read file");
-        }
-        try {
-            if (globusResource.getFile().isDirectory()) {
-                File directory = globusResource.getFile();
-                currentRoots.addAll(addCredentials(directory, newWrapperMap));
-                return true;
-            }
-        } catch (IOException e) {
-            // This is ok, it just means the resource is not a
-            // filesystemresources
-            logger.debug("Not a filesystem resource", e);
-        }
-        try {
-            String resourceUri = globusResource.getURL().toExternalForm();
-            T fbo = this.wrapperMap.get(resourceUri);
-            if (fbo == null) {
-                fbo = create(globusResource);
-            }
-            V target = fbo.create(globusResource);
-            newWrapperMap.put(resourceUri, fbo);
-            currentRoots.add(target);
+	private boolean load(GlobusResource resource, Set<V> currentRoots,
+			Map<String, T> newWrapperMap) throws ResourceStoreException {
+		if (!resource.isReadable()) {
+			throw new ResourceStoreException("Cannot read file");
+		}
+		try {
+			if (resource.getFile().isDirectory()) {
+				File directory = resource.getFile();
+				currentRoots.addAll(addCredentials(directory, newWrapperMap));
+				return true;
+			}
+		} catch (IOException e) {
+			// This is ok, it just means the resource is not a
+			// filesystemresources
+			logger.debug("Not a filesystem resource", e);
+		}
+		try {
+			String resourceUri = resource.getURL().toExternalForm();
+			T fbo = this.wrapperMap.get(resourceUri);
+			if (fbo == null) {
+				fbo = create(resource);
+			}
+			V target = fbo.create(resource);
+			newWrapperMap.put(resourceUri, fbo);
+	        currentRoots.add(target);
             return true;
-        } catch (IOException e) {
-            throw new ResourceStoreException(e);
-        }
+		} catch (IOException e) {
+			throw new ResourceStoreException(e);
+		}
 
 	}
 
-    private Set<V> addCredentials(File directory, Map<String, T> newWrapperMap) throws ResourceStoreException {
-        FilenameFilter filter = getDefaultFilenameFilter();
-        String[] children = directory.list(filter);
-        Set<V> roots = new HashSet<V>();
-		if (children == null) {
+	private Set<V> addCredentials(File directory, Map<String, T> newWrapperMap) throws ResourceStoreException {
+		FilenameFilter filter = getDefaultFilenameFilter();
+		String[] children = directory.list(filter);
+		Set<V> roots = new HashSet<V>();
+        if (children == null) {
             return roots;
         }
-        for (String child : children) {
-            File childFile = new File(directory, child);
-            if (childFile.isDirectory()) {
-                roots.addAll(addCredentials(childFile, newWrapperMap));
-            } else {
-                GlobusResource globusResource = new GlobusResource(childFile.getAbsolutePath());
-                String resourceUri = globusResource.toURI();
-                T fbo = this.wrapperMap.get(resourceUri);
-                if (fbo == null) {
-                    fbo = create(new GlobusResource(childFile.getAbsolutePath()));
-                }
-                V target = fbo.create(globusResource);
-                newWrapperMap.put(resourceUri, fbo);
-                roots.add(target);
-            }
-        }
-        return roots;
-    }
+		try {
+			for (String child : children) {
+				File childFile = new File(directory, child);
+				if (childFile.isDirectory()) {
+					roots.addAll(addCredentials(childFile, newWrapperMap));
+				} else {
+					GlobusResource resource = new GlobusResource(childFile.getAbsolutePath());
+					String resourceUri = resource.getURI().toASCIIString();
+					T fbo = this.wrapperMap.get(resourceUri);
+					if (fbo == null) {
+						fbo = create(new GlobusResource(childFile.getAbsolutePath()));
+					}
+					V target = fbo.create(resource);
+					newWrapperMap.put(resourceUri, fbo);
+					roots.add(target);
+				}
+			}
+			return roots;
+		} catch (IOException e) {
+			throw new ResourceStoreException(e);
+		}
+	}
 
-    public abstract T create(GlobusResource globusResource) throws ResourceStoreException;
+	public abstract T create(GlobusResource resource) throws ResourceStoreException;
 
 	public abstract FilenameFilter getDefaultFilenameFilter();
 

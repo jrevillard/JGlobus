@@ -33,9 +33,10 @@ import java.util.Map;
 import javax.security.auth.x500.X500Principal;
 
 import org.globus.gsi.SigningPolicy;
+import org.globus.gsi.util.CertificateIOUtil;
+
 import org.globus.util.GlobusResource;
 import org.globus.util.GlobusPathMatchingResourcePatternResolver;
-
 
 /**
  * FILL ME
@@ -48,12 +49,11 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
     private Map<URI, ResourceSigningPolicy> signingPolicyFileMap = new HashMap<URI, ResourceSigningPolicy>();
     private Map<String, SigningPolicy> policyMap = new HashMap<String, SigningPolicy>();
     private ResourceSigningPolicyStoreParameters parameters;
-    private static Log logger = LogFactory.getLog(ResourceSigningPolicyStore.class.getCanonicalName());
+    private Log logger = LogFactory.getLog(ResourceSigningPolicyStore.class.getCanonicalName());
     private final Map<String, Long> invalidPoliciesCache = new HashMap<String, Long>();
+    private final Map<String, Long> validPoliciesCache = new HashMap<String, Long>();
     private final static long CACHE_TIME_MILLIS = 3600*1000;
-    private String oldLocations = null;
-    private long lastUpdate = 0;
-
+    
     public ResourceSigningPolicyStore(SigningPolicyStoreParameters param) throws InvalidAlgorithmParameterException {
         if (param == null) {
             throw new IllegalArgumentException();
@@ -67,56 +67,99 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
         this.parameters = (ResourceSigningPolicyStoreParameters) param;
     }
 
-    public SigningPolicy getSigningPolicy(X500Principal caPrincipal) throws SigningPolicyStoreException {
+    public synchronized SigningPolicy getSigningPolicy(X500Principal caPrincipal) throws SigningPolicyStoreException {
 
         if (caPrincipal == null) {
             return null;
         }
-        loadPolicies();
-        return this.policyMap.get(caPrincipal.getName());
+        String name = caPrincipal.getName();
+        long now = System.currentTimeMillis();
+        String hash = CertificateIOUtil.nameHash(caPrincipal);
+        Long validCacheTime = validPoliciesCache.get(hash);
+        Long invalidCacheTime = invalidPoliciesCache.get(hash);
+        if ((invalidCacheTime != null) && (now - invalidCacheTime < 10*CACHE_TIME_MILLIS)) {
+            return null;
+        }
+        if ((validCacheTime == null) || (now - validCacheTime >= CACHE_TIME_MILLIS) || !this.policyMap.containsKey(name)) {
+            loadPolicy(hash);
+        }
+        return this.policyMap.get(name);
     }
 
-    private void loadPolicies() throws SigningPolicyStoreException {
+    private synchronized void loadPolicy(String hash) throws SigningPolicyStoreException {
 
         String locations = this.parameters.getTrustRootLocations();
-        
-        long curTime = System.currentTimeMillis();
-        if(locations.equals(this.oldLocations) && (curTime - lastUpdate > CACHE_TIME_MILLIS)) {
-        	return;
-        }
-        
-        Map<String, SigningPolicy> newPolicyMap = new HashMap<String, SigningPolicy>();
-        Map<URI, ResourceSigningPolicy> newPolicyFileMap = new HashMap<URI, ResourceSigningPolicy>();
+        GlobusResource[] resources;
+        resources = globusResolver.getResources(locations);
 
-        GlobusResource[] resources = globusResolver.getResources(locations);
+        long now = System.currentTimeMillis();
+        boolean found_policy = false;
 
+        // Optimization: If we find a hash for this CA, only process that.
+        // Otherwise, we will process all policies.
         for (GlobusResource resource : resources) {
 
-			String filename = resource.getFilename();
-			
-			Long cacheTime = invalidPoliciesCache.get(filename);
-            if ((cacheTime != null) && (cacheTime - curTime < CACHE_TIME_MILLIS)) {
+            String filename = resource.getFilename();
+
+            // Note invalidPoliciesCache contains both filenames and hashes!
+            Long invalidCacheTime = invalidPoliciesCache.get(filename);
+            if ((invalidCacheTime != null) && (now - invalidCacheTime < 10*CACHE_TIME_MILLIS)) {
                 continue;
             }
-			
+
+            if (!filename.startsWith(hash)) {
+                continue;
+            }
+
             if (!resource.isReadable()) {
-                logger.debug("Cannot read: " + filename);
+                logger.debug("Cannot read: " + resource.getFilename());
                 continue;
             }
 
             try {
-                loadSigningPolicy(resource, newPolicyMap, newPolicyFileMap);
+                loadSigningPolicy(resource, policyMap, signingPolicyFileMap);
             } catch (Exception e) {
-                if (!invalidPoliciesCache.containsKey(filename)) {
+                invalidCacheTime = invalidPoliciesCache.get(filename);
+                if ((invalidCacheTime == null) || (now - invalidCacheTime >= 10*CACHE_TIME_MILLIS)) {
                     logger.warn("Failed to load signing policy: " + filename);
                     logger.debug("Failed to load signing policy: " + filename, e);
-                    invalidPoliciesCache.put(filename, curTime);
+                    invalidPoliciesCache.put(filename, now);
+                    invalidPoliciesCache.put(hash, now);
                 }
+                continue;
+            }
+            found_policy = true;
+        }
+        if (found_policy) {
+            if (!validPoliciesCache.containsKey(hash)) {
+                invalidPoliciesCache.put(hash, now);
+            }
+            return;
+        }
+        // Poor-man's implementation.  Note it is much more expensive than a hashed directory
+        for (GlobusResource resource : resources) {
+            String filename = resource.getFilename();
+            Long invalidCacheTime = invalidPoliciesCache.get(filename);
+            if ((invalidCacheTime != null) && (now - invalidCacheTime < 10*CACHE_TIME_MILLIS)) {
+                continue;
+            }
+            try {
+                loadSigningPolicy(resource, policyMap, signingPolicyFileMap);
+            } catch (Exception e) {
+                invalidCacheTime = invalidPoliciesCache.get(filename);
+                if ((invalidCacheTime == null) || (now - invalidCacheTime >= 10*CACHE_TIME_MILLIS)) {
+                    logger.warn("Failed to load signing policy: " + filename);
+                    logger.debug("Failed to load signing policy: " + filename, e);
+                    invalidPoliciesCache.put(filename, now);
+                    invalidPoliciesCache.put(hash, now);
+                }
+                continue;
             }
         }
-        this.policyMap = newPolicyMap;
-        this.signingPolicyFileMap = newPolicyFileMap;
-        this.oldLocations = locations;
+        if (!validPoliciesCache.containsKey(hash)) {
+            invalidPoliciesCache.put(hash, now);
+        }
+
     }
 
     private void loadSigningPolicy(
@@ -145,8 +188,12 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
 
         currentPolicyFileMap.put(uri, filePolicy);
         if (policies != null) {
+            long now = System.currentTimeMillis();
             for (SigningPolicy policy : policies) {
-                policyMapToLoad.put(policy.getCASubjectDN().getName(), policy);
+                X500Principal caPrincipal = policy.getCASubjectDN();
+                policyMapToLoad.put(caPrincipal.getName(), policy);
+                String hash = CertificateIOUtil.nameHash(caPrincipal);
+                validPoliciesCache.put(hash, now);
             }
         }
     }

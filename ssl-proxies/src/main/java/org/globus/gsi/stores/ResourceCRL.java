@@ -17,6 +17,7 @@ package org.globus.gsi.stores;
 
 import org.globus.gsi.util.CertificateLoadUtil;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
@@ -54,21 +55,20 @@ public class ResourceCRL extends AbstractResourceSecurityWrapper<X509CRL> {
     }
 
     @Override
-    protected X509CRL create(GlobusResource globusResource) throws ResourceStoreException {
-    	InputStream inputStream = null;
+    protected X509CRL create(GlobusResource resource) throws ResourceStoreException {
+        InputStream is = null;
         try {
-        	inputStream = globusResource.getInputStream();
-            return CertificateLoadUtil.loadCrl(inputStream);
+            is = resource.getInputStream();
+            return CertificateLoadUtil.loadCrl(is);
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         } catch (GeneralSecurityException e) {
             throw new ResourceStoreException(e);
-        }finally{
-        	try {
-        		if(inputStream != null){
-        			inputStream.close();
-        		}
-			} catch (IOException e) {}
+        } finally {
+            try {
+                if (is != null) is.close();
+            } catch (IOException e) {
+            }
         }
     }
 

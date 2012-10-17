@@ -213,10 +213,10 @@ public class X509Credential {
     }
 
     /**
-     * Save the certificate and the private key to provided output stream (Close the stream)
+     * Save the certificate and the private key to provided output stream (Do NOT close the stream)
      */
     public void save(OutputStream out) throws IOException, CredentialException {
-    	CertificateIOUtil.writeCertificateChainAndPrivateKey(getPrivateKey(), this.certChain, out);
+    	CertificateIOUtil.writeCertificateChainAndPrivateKey(getPrivateKey(), this.certChain, out, false);
     }
 
     public void writeToFile(File file) throws IOException, CredentialException {

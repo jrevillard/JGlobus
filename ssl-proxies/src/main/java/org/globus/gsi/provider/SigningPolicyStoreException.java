@@ -22,7 +22,7 @@ import java.security.cert.CertStoreException;
 public class SigningPolicyStoreException extends CertStoreException {
 	private static final long serialVersionUID = 1L;
 
-	public SigningPolicyStoreException(String msg) {
+    public SigningPolicyStoreException(String msg) {
         super(msg);
     }
 
