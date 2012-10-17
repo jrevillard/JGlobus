@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URI;
 
-import org.apache.commons.io.IOExceptionWithCause;
 
 /**
  * This class provides a way of managing file system resources
