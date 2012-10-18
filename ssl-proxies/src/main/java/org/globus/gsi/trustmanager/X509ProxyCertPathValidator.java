@@ -31,8 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -56,8 +54,6 @@ import org.globus.gsi.util.ProxyCertificateUtil;
  * @since 1.0
  */
 public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
-	
-	private static final Log logger = LogFactory.getLog(X509ProxyCertPathValidator.class);
 
     public static final String BASIC_CONSTRAINT_OID = "2.5.29.19";
     public static final String KEY_USAGE_OID = "2.5.29.15";
@@ -414,7 +410,7 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
         	@SuppressWarnings("unchecked")
 			List<ASN1ObjectIdentifier> e = proxy.getExtensionOIDs();
             for (ASN1ObjectIdentifier oid : e) {
-                proxyExtension = issuer.getExtension(oid);
+                proxyExtension = proxy.getExtension(oid);
                 if (oid.equals(Extension.subjectAlternativeName)
                         || oid.equals(Extension.issuerAlternativeName)) {
                     // No Alt name extensions - 3.2 & 3.5
@@ -450,12 +446,7 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
         int keyUsageBits = keyUsage.intValue();
 
         // these must not be asserted
-        //XXX: bug in BC 1.47? : http://www.bouncycastle.org/jira/browse/BJA-418
-        // Ignore the nonRepudiation bit for the moment!
-        if(((keyUsageBits & KeyUsage.nonRepudiation) == KeyUsage.nonRepudiation)){
-        	logger.warn("Ignoring the nonRepudiation bit for the moment: perhapse BC bug: http://www.bouncycastle.org/jira/browse/BJA-418");
-        }
-        if(((keyUsageBits & KeyUsage.keyCertSign) == KeyUsage.keyCertSign)){
+        if(((keyUsageBits & KeyUsage.nonRepudiation) == KeyUsage.nonRepudiation)||((keyUsageBits & KeyUsage.keyCertSign) == KeyUsage.keyCertSign)){
         	throw new CertPathValidatorException("Proxy violation: Key usage is asserted.");
         }
         

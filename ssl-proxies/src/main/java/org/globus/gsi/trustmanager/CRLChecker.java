@@ -20,7 +20,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.Principal;
 import java.security.SignatureException;
 import java.security.cert.CRL;
 import java.security.cert.CRLException;
