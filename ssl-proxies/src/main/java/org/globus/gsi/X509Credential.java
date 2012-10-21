@@ -125,9 +125,30 @@ public class X509Credential {
     }
 
     public X509Credential(String certFile, String keyFile) throws CredentialException, IOException {
-        loadKey(new FileInputStream(new File(keyFile)));
-        loadCertificate(new FileInputStream(new File(certFile)));
-        validateCredential();
+    	FileInputStream keyFileInputStream = null;
+    	FileInputStream certFileInputStream = null;
+    	try{
+    		keyFileInputStream = new FileInputStream(new File(keyFile));
+	        loadKey(keyFileInputStream);
+	        certFileInputStream = new FileInputStream(new File(certFile));
+	        loadCertificate(certFileInputStream);
+	        validateCredential();
+    	}finally{
+    		if (keyFileInputStream != null) {
+                try {
+                	keyFileInputStream.close();
+                } catch (Exception e) {
+                    logger.warn("Unable to close stream.");
+                }
+            }
+    		if (certFileInputStream != null) {
+                try {
+                	certFileInputStream.close();
+                } catch (Exception e) {
+                    logger.warn("Unable to close stream.");
+                }
+            }
+    	}
     }
 
     public X509Credential(String proxyFile) throws CredentialException {
@@ -569,14 +590,15 @@ public class X509Credential {
         Vector chain = new Vector(3);
         String line;
         BufferedReader reader = null;
-
+        ByteArrayInputStream byteArrayInputStream = null;
         try {
             reader = new BufferedReader(new InputStreamReader(input));
             while ((line = reader.readLine()) != null) {
 
                 if (line.indexOf("BEGIN CERTIFICATE") != -1) {
                     byte[] data = getDecodedPEMObject(reader);
-                    cert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(data));
+                    byteArrayInputStream = new ByteArrayInputStream(data);
+                    cert = CertificateLoadUtil.loadCertificate(byteArrayInputStream);
                     chain.addElement(cert);
                 } else if (line.indexOf("BEGIN RSA PRIVATE KEY") != -1) {
                     byte[] data = getDecodedPEMObject(reader);
@@ -589,6 +611,12 @@ public class X509Credential {
             if (reader != null) {
                 try {
                     reader.close();
+                } catch (IOException e) {
+                }
+            }
+            if (byteArrayInputStream != null) {
+                try {
+                	byteArrayInputStream.close();
                 } catch (IOException e) {
                 }
             }
@@ -620,6 +648,7 @@ public class X509Credential {
 
         String line;
         BufferedReader reader = null;
+        ByteArrayInputStream byteArrayInputStream = null;
         try {
             if (input.markSupported()) {
                 input.reset();
@@ -630,7 +659,8 @@ public class X509Credential {
 
                 if (line.indexOf("BEGIN CERTIFICATE") != -1) {
                     byte[] data = getDecodedPEMObject(reader);
-                    cert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(data));
+                    byteArrayInputStream = new ByteArrayInputStream(data);
+                    cert = CertificateLoadUtil.loadCertificate(byteArrayInputStream);
                     chain.addElement(cert);
                 }
             }
@@ -644,8 +674,14 @@ public class X509Credential {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    logger.debug("error closing reader", e);
-                    // This is ok
+                    logger.debug("error closing reader");
+                }
+            }
+            if (byteArrayInputStream != null) {
+                try {
+                	byteArrayInputStream.close();
+                } catch (IOException e) {
+                    logger.debug("error closing stream");
                 }
             }
         }
