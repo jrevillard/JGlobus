@@ -79,6 +79,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import org.globus.gsi.jsse.SSLConfigurator;
 
 import org.bouncycastle.jce.provider.X509CertificateObject;
+import java.security.NoSuchAlgorithmException;
 
 /*
 import COM.claymoresystems.ptls.SSLConn;
@@ -266,6 +267,11 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 
     /** Limited peer credentials */
     protected Boolean peerLimited = null;
+    
+    private static KeyStore ms_trustStore = null;
+    private static CertStore ms_crlStore = null;
+    private static ResourceSigningPolicyStore ms_sigPolStore = null;
+    
 
     /**
      * @param target expected target name. Can be null.
@@ -291,18 +297,16 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 
 	    // set trust parameters in SSLConfigurator
 
-	    String caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
-            String crlPattern = caCertsLocation + "/*.r*";
-            String sigPolPattern = caCertsLocation + "/*.signing_policy";
-            KeyStore trustStore = KeyStore.getInstance(GlobusProvider.KEYSTORE_TYPE, GlobusProvider.PROVIDER_NAME);
-            trustStore.load(KeyStoreParametersFactory.createTrustStoreParameters(caCertsLocation + "/*.0"));
-	    sslConfigurator.setTrustAnchorStore(trustStore);
+    	    String caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
 
-            CertStore crlStore = CertStore.getInstance(GlobusProvider.CERTSTORE_TYPE, new ResourceCertStoreParameters(null,crlPattern));
-	    sslConfigurator.setCrlStore(crlStore);
+            KeyStore trustStore = GlobusGSSContextImpl.getTrustStore(caCertsLocation);
+            sslConfigurator.setTrustAnchorStore(trustStore);
 
-            ResourceSigningPolicyStore sigPolStore = new ResourceSigningPolicyStore(new ResourceSigningPolicyStoreParameters(sigPolPattern));
-	    sslConfigurator.setPolicyStore(sigPolStore);
+            CertStore crlStore = GlobusGSSContextImpl.getCRLStore(caCertsLocation); 
+            sslConfigurator.setCrlStore(crlStore);
+
+            ResourceSigningPolicyStore sigPolStore = GlobusGSSContextImpl.getSigPolStore(caCertsLocation);
+            sslConfigurator.setPolicyStore(sigPolStore);
 
             // Need to set this so we are able to communicate properly with
             // GT4.0.8 servers that use only SSLv3 (no TLSv1). Thanks to
@@ -339,6 +343,45 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
     }
 */
 
+    private static KeyStore getTrustStore(String caCertsLocation) throws  GeneralSecurityException, IOException
+    {
+        if(GlobusGSSContextImpl.ms_trustStore != null)
+            return GlobusGSSContextImpl.ms_trustStore;
+        
+        String caCertsPattern = caCertsLocation + "/*.0";
+        KeyStore keyStore = KeyStore.getInstance(GlobusProvider.KEYSTORE_TYPE, GlobusProvider.PROVIDER_NAME);
+        keyStore.load(KeyStoreParametersFactory.createTrustStoreParameters(caCertsPattern));
+        
+        GlobusGSSContextImpl.ms_trustStore = keyStore;
+        
+        return keyStore;
+    }
+    
+    private static CertStore getCRLStore(String caCertsLocation) throws GeneralSecurityException, NoSuchAlgorithmException
+    {
+        if(GlobusGSSContextImpl.ms_crlStore != null)
+            return GlobusGSSContextImpl.ms_crlStore;
+        
+        String crlPattern = caCertsLocation + "/*.r*";
+        CertStore crlStore = CertStore.getInstance(GlobusProvider.CERTSTORE_TYPE, new ResourceCertStoreParameters(null,crlPattern));
+        
+        GlobusGSSContextImpl.ms_crlStore = crlStore ;
+        
+        return crlStore;
+    }
+    
+    private static ResourceSigningPolicyStore getSigPolStore(String caCertsLocation) throws GeneralSecurityException
+    {
+        if(GlobusGSSContextImpl.ms_sigPolStore != null)
+            return GlobusGSSContextImpl.ms_sigPolStore;
+        
+        String sigPolPattern = caCertsLocation + "/*.signing_policy";
+        ResourceSigningPolicyStore sigPolStore = new ResourceSigningPolicyStore(new ResourceSigningPolicyStoreParameters(sigPolPattern));
+        
+        GlobusGSSContextImpl.ms_sigPolStore = sigPolStore;
+        
+        return sigPolStore;
+    }
     /*
      * If the result indicates that we have outstanding tasks to do,
      * go ahead and run them in this thread.
@@ -736,12 +779,12 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 		 		new Exception("Unexpected BUFFER_UNDERFLOW;" +
                         " Handshaking status: " + sslEngine.getHandshakeStatus()));
                 }
-		if (result.getStatus() !=
+		/*if (result.getStatus() !=
 			SSLEngineResult.Status.OK) {
                	throw new GlobusGSSException(GSSException.FAILURE,
                                          GlobusGSSException.TOKEN_FAIL,
                                          result.getStatus().toString());
-		}
+		}*/
               } while (inBBuff.hasRemaining());
 
 		return outBBuff;
@@ -786,12 +829,12 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 			// More data needed from peer
 			break;
 		}
-		if (result.getStatus() !=
+		/*if (result.getStatus() !=
 			SSLEngineResult.Status.OK) {
                 	throw new GlobusGSSException(GSSException.FAILURE,
                                              GlobusGSSException.TOKEN_FAIL,
                                          result.getStatus().toString());
-		}
+		}*/
               } while (inBBuff.hasRemaining());
 		return outBBuff;
 	} catch (IllegalArgumentException e) {
@@ -1422,12 +1465,12 @@ done:      do {
 /*DEL
             this.context.setCredential(this.ctxCred.getX509Credential());
 */
-        KeyStore keyStore = KeyStore.getInstance("JKS");
+         KeyStore keyStore = KeyStore.getInstance("JKS");
 	    keyStore.load(null, null);
 	    X509Credential cred = this.ctxCred.getX509Credential();
 
-	    keyStore.setKeyEntry("default", cred.getPrivateKey(),
-			"password".toCharArray(), cred.getCertificateChain());
+	    keyStore.setKeyEntry("default", this.ctxCred.getPrivateKey(),
+			"password".toCharArray(), this.ctxCred.getCertificateChain());
 	    this.sslConfigurator.setCredentialStore(keyStore);
 	    this.sslConfigurator.setCredentialStorePassword("password");
 

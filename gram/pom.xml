@@ -76,17 +76,18 @@
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
+                <dependency>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bcprov-jdk15</artifactId>
+                        <version>1.45</version>
+	                <scope>compile</scope>
+                </dependency>
 		<dependency>
-			<groupId>bouncycastle</groupId>
-			<artifactId>bcprov-jdk15</artifactId>
-			<version>140</version>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>3.0.3.RELEASE</version>
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
-	    <dependency>
-	      <groupId>org.springframework</groupId>
-	      <artifactId>org.springframework.core</artifactId>
-	      <version>3.0.3.RELEASE</version>
-	    </dependency>
 	</dependencies>
 </project>

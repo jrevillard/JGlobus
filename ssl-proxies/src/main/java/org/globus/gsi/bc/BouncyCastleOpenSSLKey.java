@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -51,6 +52,11 @@ public class BouncyCastleOpenSSLKey extends OpenSSLKey {
 		Security.addProvider(new BouncyCastleProvider());
 	}
 
+        /// For serialization 
+        protected BouncyCastleOpenSSLKey() {
+            super();
+        }
+        
 	/**
 	 * Reads a OpenSSL private key from the specified input stream. The private
 	 * key must be PEM encoded and can be encrypted.

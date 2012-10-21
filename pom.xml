@@ -8,6 +8,10 @@
 	<version>2.0-Beta5</version>
 	<modules>
 		<module>gss</module>
+		<module>io</module>
+		<module>gridftp</module>
+		<module>gram</module>
+		<module>myproxy</module>
 		<module>jsse</module>
 		<module>ssl-proxies</module>
 		<module>test-utils</module>
@@ -16,6 +20,10 @@
 	</modules>
 	<name>JGlobus 2.0</name>
 	<packaging>pom</packaging>
+
+	<properties>
+		<skipTests>true</skipTests>
+	</properties>
 
 	<issueManagement>
 		<system>JIRA</system>
@@ -32,7 +40,18 @@
 			<url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo</url>
 		</pluginRepository>
 	</pluginRepositories>
-	<distributionManagement>
+    <distributionManagement>
+        <repository>
+            <id>maven.openmole.org</id>
+            <url>http://maven.openmole.org/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven.openmole.org</id>
+            <url>http://maven.openmole.org/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+<!--	<distributionManagement>
 		<repository>
 			<id>maatg-fr-releases</id>
 			<name>maatG France Releases</name>
@@ -43,7 +62,7 @@
 			<name>maatG France Snapshots</name>
 			<url>http://nexus.maatg.fr/content/repositories/maatg-fr-snapshots</url>
 		</snapshotRepository>
-	</distributionManagement>
+	</distributionManagement>-->
 
 	<build>
 		<plugins>

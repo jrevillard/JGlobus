@@ -55,7 +55,7 @@ import org.bouncycastle.util.encoders.Base64;
 public abstract class OpenSSLKey {
 
     private static final String HEADER = "-----BEGIN RSA PRIVATE KEY-----";
-
+    
     /* Key algorithm: RSA, DSA */
     private String keyAlg;
     /* Current state of this key class */
@@ -82,7 +82,10 @@ public abstract class OpenSSLKey {
 
     // ASN.1 encoded key value
     private byte[] keyData;
-
+    
+    /// For serialization 
+    protected OpenSSLKey() {}
+    
     /**
      * Reads a OpenSSL private key from the specified input stream.
      * The private key must be PEM encoded and can be encrypted.

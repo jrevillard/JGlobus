@@ -58,7 +58,7 @@
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
-      <artifactId>org.springframework.core</artifactId>
+      <artifactId>spring-core</artifactId>
       <version>3.0.3.RELEASE</version>
     </dependency>
     <dependency>
@@ -84,10 +84,6 @@
       <id>globus-snapshots</id>
       <name>Globus Snapshot Repository</name>
       <url>http://repo.globus.org/content/groups/public-snapshots/</url>
-    </repository>
-    <repository>
-      <id>spring-release</id>
-      <url>http://dev.springsprout.org/nexus/content/groups/public/</url>
     </repository>
   </repositories>
 </project>
