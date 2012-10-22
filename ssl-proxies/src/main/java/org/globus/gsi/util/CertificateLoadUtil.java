@@ -272,6 +272,9 @@ public final class CertificateLoadUtil {
 				}
 			}
 		}finally{
+			try{
+				reader.close();
+			}catch (IOException e) {}
 			if(pemReader != null){
 				try{
 					pemReader.close();
