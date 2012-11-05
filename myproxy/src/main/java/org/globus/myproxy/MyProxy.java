@@ -1,3 +1,18 @@
+/*
+ * Copyright 1999-2006 University of Chicago
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.globus.myproxy;
 
 import java.io.ByteArrayInputStream;
@@ -39,6 +54,7 @@ import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.util.encoders.Base64;
 import org.globus.common.CoGProperties;
+
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
@@ -49,7 +65,6 @@ import org.globus.gsi.gssapi.net.GssSocket;
 import org.globus.gsi.gssapi.net.GssSocketFactory;
 import org.globus.gsi.util.CertificateIOUtil;
 import org.globus.gsi.util.CertificateUtil;
-import org.gridforum.jgss.ExtendedGSSContext;
 import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
@@ -57,6 +72,7 @@ import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
+
 
 /**
  * This class provides an API for communicating with MyProxy servers.
@@ -241,8 +257,6 @@ public class MyProxy  {
 
         // Request confidentiality
         this.context.requestConf(true);
-        
-//        ((ExtendedGSSContext)this.context).setOption(GSSConstants.FORCE_SSLV3_AND_CONSTRAIN_CIPHERSUITES_FOR_GRAM, Boolean.TRUE);
         
         IOException exception = null;
         Socket socket = null;
@@ -855,7 +869,7 @@ public class MyProxy  {
      *         The passphrase of the credentials to retrieve.
      * @param  lifetime
      *         The requested lifetime of the retrieved credential (in seconds).
-     * @return GlobusGSSCredential 
+     * @return GSSCredential 
      *         The retrieved delegated credentials.
      * @exception MyProxyException
      *         If an error occurred during the operation.
@@ -883,7 +897,7 @@ public class MyProxy  {
      *         The passphrase of the credentials to retrieve.
      * @param  lifetime
      *         The requested lifetime of the retrieved credential (in seconds).
-     * @return GlobusGSSCredential 
+     * @return GSSCredential 
      *         The retrieved delegated credentials.
      * @exception MyProxyException
      *         If an error occurred during the operation.

@@ -27,15 +27,14 @@
       <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>gridftp</artifactId>
-          <version>2.0-Beta6-SNAPSHOT</version>
+          <version>${project.version}</version>
       </dependency>
       
       <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>gram</artifactId>
-          <version>2.0-Beta6-SNAPSHOT</version>
+          <version>${project.version}</version>
       </dependency>
-
    </dependencies>
   <repositories>
     <repository>

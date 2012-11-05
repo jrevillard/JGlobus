@@ -1,3 +1,18 @@
+/*
+ * Copyright 1999-2006 University of Chicago
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.globus.myproxy;
 
 import org.ietf.jgss.GSSCredential;
@@ -14,8 +29,8 @@ public class GetParams
     private boolean wantTrustroots = false;
     private String credentialName;
     private GSSCredential authzcreds;
-    private List<String> voname;
-    private List<String> vomses;
+    private List voname;
+    private List vomses;
 
     public GetParams() {
 	super(MyProxy.GET_PROXY);
@@ -41,19 +56,19 @@ public class GetParams
         return this.wantTrustroots;
     }
 
-    public void setVoname(List<String> voname) {
+    public void setVoname(List voname) {
         this.voname = voname;
     }
 
-    public List<String> getVoname() {
+    public List getVoname() {
         return this.voname;
     }
 
-    public void setVomses(List<String> vomses) {
+    public void setVomses(List vomses) {
         this.vomses = vomses;
     }
 
-    public List<String> getVomses() {
+    public List getVomses() {
         return this.vomses;
     }
 
@@ -82,12 +97,12 @@ public class GetParams
 	return buf.toString();
     }
 
-    private void add(StringBuffer buf, String prefix, List<String> values) {
+    private void add(StringBuffer buf, String prefix, List values) {
         if (values == null) {
             return;
         }
-        for (Iterator<String> itr = values.iterator(); itr.hasNext(); ) {
-            String value = itr.next();
+        for (Iterator itr = values.iterator(); itr.hasNext(); ) {
+            String value = (String)itr.next();
             add(buf, prefix, value);
         }
     }

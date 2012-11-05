@@ -8,7 +8,6 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>container-test-utils</artifactId>
-  
   <name>Connector test utilities</name>
   <build>
     <pluginManagement>
@@ -51,7 +50,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jsse</artifactId>
-      <version>2.0-Beta6-SNAPSHOT</version>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>ssl-proxies</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
