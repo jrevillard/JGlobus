@@ -15,6 +15,7 @@
 package org.globus.gsi.bc;
 
 import java.io.IOException;
+import java.util.Enumeration;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -23,8 +24,8 @@ import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DERPrintableString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.style.BCStyle;
 
 /**
  * A helper class to deal with {@link X500Name X500Name} object.
@@ -41,7 +42,7 @@ public class X500NameHelper {
      * @param name existing <code>X500Name</code> 
      */
     public X500NameHelper(X500Name name) {
-        this.seq = ASN1Sequence.getInstance(name.toASN1Primitive());
+        this.seq = ASN1Sequence.getInstance(name.getDERObject());
     }
 
     /**
@@ -50,7 +51,12 @@ public class X500NameHelper {
      * @return the <code>X500Name</code> object.
      */
     public X500Name getAsName() {
-        return X500Name.getInstance(GlobusStyle.INSTANCE, this.seq);
+        RDN[] rdns = new RDN[seq.size()];
+        int index = 0;
+        for (Enumeration<?> e = seq.getObjects(); e.hasMoreElements();){
+            rdns[index++] = RDN.getInstance(e.nextElement());
+        }
+        return new X500Name(GlobusStyle.INSTANCE, rdns);
     }
 
     /**
@@ -135,7 +141,12 @@ public class X500NameHelper {
         if (seq == null) {
             return null;
         }
-        return X500Name.getInstance(GlobusStyle.INSTANCE, seq).toString();
+        RDN[] rdns = new RDN[seq.size()];
+        int index = 0;
+        for (Enumeration<?> e = seq.getObjects(); e.hasMoreElements();){
+            rdns[index++] = RDN.getInstance(e.nextElement());
+        }
+        return new X500Name(GlobusStyle.INSTANCE, rdns).toString();
     }
 
     /**

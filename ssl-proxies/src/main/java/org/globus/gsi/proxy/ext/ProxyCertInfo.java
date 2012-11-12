@@ -16,12 +16,12 @@ package org.globus.gsi.proxy.ext;
 
 import java.io.IOException;
 
-import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.globus.gsi.util.CertificateUtil;
@@ -33,7 +33,7 @@ import org.globus.gsi.util.CertificateUtil;
  * ProxyCertInfo ::= SEQUENCE { pCPathLenConstraint      INTEGER (0..MAX) OPTIONAL, proxyPolicy ProxyPolicy }
  * </PRE>
  */
-public class ProxyCertInfo implements ASN1Encodable {
+public class ProxyCertInfo implements DEREncodable {
 
     /** ProxyCertInfo extension OID */
     public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.14");
@@ -108,7 +108,7 @@ public class ProxyCertInfo implements ASN1Encodable {
         } else if (obj instanceof ASN1Sequence) {
             return new ProxyCertInfo((ASN1Sequence) obj);
         } else if (obj instanceof byte[]) {
-            ASN1Primitive derObj;
+            DERObject derObj;
             try {
                 derObj = CertificateUtil.toASN1Primitive((byte[]) obj);
             } catch (IOException e) {
@@ -129,14 +129,14 @@ public class ProxyCertInfo implements ASN1Encodable {
      *
      * @return <code>ASN1Primitive</code> the encoded representation of the extension.
      */
-    public ASN1Primitive toASN1Primitive() {
+    public DERObject getDERObject() {
         ASN1EncodableVector vec = new ASN1EncodableVector();
 
         if (this.pathLenConstraint != null) {
             vec.add(this.pathLenConstraint);
         }
 
-        vec.add(this.proxyPolicy.toASN1Primitive());
+        vec.add(this.proxyPolicy.getDERObject());
 
         return new DERSequence(vec);
     }

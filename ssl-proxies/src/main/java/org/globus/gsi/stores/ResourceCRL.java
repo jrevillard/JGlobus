@@ -17,7 +17,6 @@ package org.globus.gsi.stores;
 
 import org.globus.gsi.util.CertificateLoadUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;

@@ -38,8 +38,8 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
-      <version>1.47</version>
+      <artifactId>bcmail-jdk16</artifactId>
+      <version>1.46</version>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>

@@ -14,6 +14,7 @@
  */
 package org.globus.gsi.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
@@ -37,18 +38,19 @@ import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.TBSCertificateStructure;
+import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.globus.common.CoGProperties;
@@ -136,7 +138,7 @@ public final class CertificateUtil {
             return -1;
         }
         
-        Extension proxyExtension = crt.getExtension(Extension.basicConstraints);
+        X509Extension proxyExtension = crt.getExtension(X509Extension.basicConstraints);
         if (proxyExtension != null) {
             BasicConstraints basicExt = getBasicConstraints(proxyExtension);
             if (basicExt.isCA()) {
@@ -297,7 +299,7 @@ public final class CertificateUtil {
     
     public static CertificateType getCertificateType(X509CertificateHolder crt) throws CertificateException, IOException {
     	if(crt.hasExtensions()){
-	        Extension ext = crt.getExtension(Extension.basicConstraints);
+	        X509Extension ext = crt.getExtension(X509Extension.basicConstraints);
 	        if (ext != null) {
 	            BasicConstraints basicExt = getBasicConstraints(ext);
 	            if (basicExt.isCA()) {
@@ -328,7 +330,7 @@ public final class CertificateUtil {
 			} else if (crt.hasExtensions()) {
 				boolean gsi4 = true;
 				// GSI_4
-				Extension proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OID);
+				X509Extension proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OID);
 				if (proxyCertInfosExtension == null) {
 					// GSI_3
 					proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OLD_OID);
@@ -367,7 +369,7 @@ public final class CertificateUtil {
 						ASN1Set entry = X500NameHelper.getLastNameEntry(x500name);
 						
 						X500NameHelper iss = new X500NameHelper(crt.getIssuer());
-						iss.add(ASN1Set.getInstance(entry.getEncoded()));
+						iss.add(entry);
 						X500Name subject = iss.getAsName();
 						if (!subject.equals(crt.getSubject())) {
 							String err = i18n.getMessage("proxyDNErr");
@@ -390,8 +392,8 @@ public final class CertificateUtil {
      * @return the <code>BasicConstraints</code> object.
      * @throws IOException if something fails.
      */
-    public static BasicConstraints getBasicConstraints(Extension ext) throws IOException{
-        return BasicConstraints.getInstance(ext.getParsedValue().toASN1Primitive().getEncoded());
+    public static BasicConstraints getBasicConstraints(X509Extension ext) throws IOException{
+        return BasicConstraints.getInstance(ext);
     }
 
 
@@ -402,8 +404,14 @@ public final class CertificateUtil {
      * @return the ASN1Primitive.
      * @throws IOException if conversion fails
      */
-    public static ASN1Primitive toASN1Primitive(byte[] data) throws IOException {
-        return  ASN1Primitive.fromByteArray(data);
+    public static DERObject toASN1Primitive(byte[] data) throws IOException {
+    	 ByteArrayInputStream inStream = new ByteArrayInputStream(data);
+         ASN1InputStream derInputStream = new ASN1InputStream(inStream);
+         try{
+        	 return derInputStream.readObject();
+         }finally{
+        	 derInputStream.close();
+         }
     }
 
     /**
@@ -418,7 +426,7 @@ public final class CertificateUtil {
         if (!crt.hasExtensions()) {
             return null;
         }
-        Extension extension = crt.getExtension(Extension.keyUsage);
+        X509Extension extension = crt.getExtension(X509Extension.keyUsage);
         return (extension != null) ? getKeyUsage(extension) : null;
     }
 
@@ -428,7 +436,7 @@ public final class CertificateUtil {
      * @throws IOException if failed to extract the KeyUsage extension value.
      * @see java.security.cert.X509Certificate#getKeyUsage
      */
-    public static KeyUsage getKeyUsage(Extension ext) throws IOException {
+    public static KeyUsage getKeyUsage(X509Extension ext) throws IOException {
         try{
         	return (KeyUsage) KeyUsage.getInstance(ext.getParsedValue());
         }catch (Exception e) {

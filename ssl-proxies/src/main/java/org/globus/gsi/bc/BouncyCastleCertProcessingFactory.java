@@ -35,22 +35,21 @@ import java.util.TimeZone;
 
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERObject;
+import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.Certificate;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.x509.X509Extension;
+import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.jce.provider.X509CertParser;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 import org.bouncycastle.operator.ContentVerifierProvider;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
@@ -58,10 +57,11 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.bc.BcRSAContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequestHolder;
 import org.bouncycastle.pkcs.PKCSException;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
+import org.bouncycastle.x509.util.StreamParsingException;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.VersionUtil;
 import org.globus.gsi.X509Credential;
@@ -108,7 +108,7 @@ public class BouncyCastleCertProcessingFactory {
     public X509Certificate createCertificate(InputStream certRequestInputStream, X509Certificate cert,
         PrivateKey privateKey, int lifetime, GSIConstants.CertificateType certType) throws IOException,
         GeneralSecurityException {
-        return createCertificate(certRequestInputStream, cert, privateKey, lifetime, certType, (Extensions) null,
+        return createCertificate(certRequestInputStream, cert, privateKey, lifetime, certType, (X509Extensions) null,
             null);
     }
 
@@ -119,7 +119,7 @@ public class BouncyCastleCertProcessingFactory {
      *      createCertificate
      */
     public X509Certificate createCertificate(InputStream certRequestInputStream, X509Certificate cert,
-        PrivateKey privateKey, int lifetime, GSIConstants.CertificateType certType, Extensions extSet)
+        PrivateKey privateKey, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet)
         throws IOException, GeneralSecurityException {
         return createCertificate(certRequestInputStream, cert, privateKey, lifetime, certType, extSet, null);
     }
@@ -158,15 +158,15 @@ public class BouncyCastleCertProcessingFactory {
      *                if a security error occurs.
      */
     public X509Certificate createCertificate(InputStream certRequestInputStream, X509Certificate cert,
-        PrivateKey privateKey, int lifetime, GSIConstants.CertificateType certType, Extensions extSet,
+        PrivateKey privateKey, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
         String cnValue) throws IOException, GeneralSecurityException {
 
     	// derin MUST NOT BE CLOSED (i.e myproxy usage)
         @SuppressWarnings("resource")
 		ASN1InputStream derin = new ASN1InputStream(certRequestInputStream);
-        ASN1Primitive reqInfo = derin.readObject();
+        DERObject reqInfo = derin.readObject();
 
-        PKCS10CertificationRequest certReq = new PKCS10CertificationRequest(reqInfo.getEncoded());
+        PKCS10CertificationRequestHolder certReq = new PKCS10CertificationRequestHolder(reqInfo.getEncoded());
 
         boolean rs;
 		try {
@@ -196,7 +196,7 @@ public class BouncyCastleCertProcessingFactory {
      */
     public X509Credential createCredential(X509Certificate[] certs, PrivateKey privateKey, int bits, int lifetime,
         GSIConstants.CertificateType certType) throws GeneralSecurityException {
-        return createCredential(certs, privateKey, bits, lifetime, certType, (Extensions) null, null);
+        return createCredential(certs, privateKey, bits, lifetime, certType, (X509Extensions) null, null);
     }
 
     /**
@@ -206,7 +206,7 @@ public class BouncyCastleCertProcessingFactory {
      *      createCredential
      */
     public X509Credential createCredential(X509Certificate[] certs, PrivateKey privateKey, int bits, int lifetime,
-        GSIConstants.CertificateType certType, Extensions extSet) throws GeneralSecurityException {
+        GSIConstants.CertificateType certType, X509Extensions extSet) throws GeneralSecurityException {
         return createCredential(certs, privateKey, bits, lifetime, certType, extSet, null);
     }
 
@@ -245,7 +245,7 @@ public class BouncyCastleCertProcessingFactory {
      *                if a security error occurs.
      */
     public X509Credential createCredential(X509Certificate[] certs, PrivateKey privateKey, int bits, int lifetime,
-        GSIConstants.CertificateType certType, Extensions extSet, String cnValue) throws GeneralSecurityException {
+        GSIConstants.CertificateType certType, X509Extensions extSet, String cnValue) throws GeneralSecurityException {
 
         X509Certificate[] bcCerts = getX509CertificateObjectChain(certs);
 
@@ -272,7 +272,7 @@ public class BouncyCastleCertProcessingFactory {
      */
     public X509Credential createCredential(X509Certificate[] certs, PrivateKey privateKey, int bits, int lifetime,
         GSIConstants.DelegationType delegType) throws GeneralSecurityException {
-        return createCredential(certs, privateKey, bits, lifetime, delegType, (Extensions) null, null);
+        return createCredential(certs, privateKey, bits, lifetime, delegType, (X509Extensions) null, null);
     }
 
     /**
@@ -283,7 +283,7 @@ public class BouncyCastleCertProcessingFactory {
      *      createCredential
      */
     public X509Credential createCredential(X509Certificate[] certs, PrivateKey privateKey, int bits, int lifetime,
-        GSIConstants.DelegationType delegType, Extensions extSet) throws GeneralSecurityException {
+        GSIConstants.DelegationType delegType, X509Extensions extSet) throws GeneralSecurityException {
         return createCredential(certs, privateKey, bits, lifetime, delegType, extSet, null);
     }
 
@@ -293,7 +293,7 @@ public class BouncyCastleCertProcessingFactory {
      * @see #createCredential(X509Certificate[], PrivateKey, int, int, GSIConstants.CertificateType, Extensions, String)
      */
     public X509Credential createCredential(X509Certificate[] certs, PrivateKey privateKey, int bits, int lifetime,
-       GSIConstants.DelegationType delegType, Extensions extSet, String cnValue) throws GeneralSecurityException {
+       GSIConstants.DelegationType delegType, X509Extensions extSet, String cnValue) throws GeneralSecurityException {
 
         X509Certificate[] bcCerts = getX509CertificateObjectChain(certs);
 
@@ -365,7 +365,7 @@ public class BouncyCastleCertProcessingFactory {
      *                if a security error occurs.
      */
     public X509Certificate createProxyCertificate(X509Certificate issuerCert_, PrivateKey issuerKey,
-        PublicKey publicKey, int lifetime, GSIConstants.CertificateType certType, Extensions extSet,
+        PublicKey publicKey, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
         String cnValue) throws GeneralSecurityException {
     	
     	try {
@@ -376,7 +376,7 @@ public class BouncyCastleCertProcessingFactory {
     }
     
     public X509Certificate createProxyCertificate(X509Certificate issuerCert_, PrivateKey issuerKey,
-    		SubjectPublicKeyInfo subjectPublicKeyInfo, int lifetime, GSIConstants.CertificateType certType, Extensions extSet,
+    		SubjectPublicKeyInfo subjectPublicKeyInfo, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
             String cnValue) throws GeneralSecurityException {
         	
 //    	X509Certificate issuerCert = issuerCert_;
@@ -546,7 +546,7 @@ public class BouncyCastleCertProcessingFactory {
 
         X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
 
-        Extension x509Ext = null;
+        X509Extension x509Ext = null;
         BigInteger serialNum = null;
         String delegDN = null;
 
@@ -555,15 +555,18 @@ public class BouncyCastleCertProcessingFactory {
             delegDN = String.valueOf(Math.abs(rand.nextInt()));
             serialNum = new BigInteger(20, rand);
 
-
+            DERObjectIdentifier extOID = null;
             if (extSet != null) {
                 x509Ext = extSet.getExtension(ProxyCertInfo.OID);
+                extOID = ProxyCertInfo.OID;
                 if (x509Ext == null) {
                     x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
+                    extOID = ProxyCertInfo.OLD_OID;
                 }
             }
 
             if (x509Ext == null) {
+            	extOID = null;
                 // create ProxyCertInfo extension
                 ProxyPolicy policy = null;
                 if (ProxyCertificateUtil.isLimitedProxy(certType)) {
@@ -584,14 +587,14 @@ public class BouncyCastleCertProcessingFactory {
 
                 ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
                 try {
-					x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
-				
 	                if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
 	                    // RFC compliant OID
 	                    x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
+	                    extOID = ProxyCertInfo.OID;
 	                } else {
 	                    // old OID
 	                    x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
+	                    extOID = ProxyCertInfo.OLD_OID;
 	                }
                 } catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -601,24 +604,24 @@ public class BouncyCastleCertProcessingFactory {
 
             try {
                 // add ProxyCertInfo extension to the new cert
-                certGen.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getParsedValue());
+                certGen.addExtension(extOID.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
 
              // handle KeyUsage in issuer cert
 	            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
 	            if (crt.hasExtensions()) {
-	                Extension ext;
+	                X509Extension ext;
 	
 	                // handle key usage ext
-	                ext = crt.getExtension(Extension.keyUsage);
+	                ext = crt.getExtension(X509Extension.keyUsage);
 	                if (ext != null) {
 	
 	                    // TBD: handle this better
-	                    if (extSet != null && (extSet.getExtension(Extension.keyUsage) != null)) {
+	                    if (extSet != null && (extSet.getExtension(X509Extension.keyUsage) != null)) {
 	                        String err = i18n.getMessage("keyUsageExt");
 	                        throw new GeneralSecurityException(err);
 	                    }
 	
-	                    DERBitString bits = (DERBitString) ext.getParsedValue().toASN1Primitive();
+	                    DERBitString bits = (DERBitString) ext.getParsedValue().getDERObject();
 	
 	                    byte[] bytes = bits.getBytes();
 	
@@ -633,7 +636,7 @@ public class BouncyCastleCertProcessingFactory {
 	
 	                    bits = new DERBitString(bytes, bits.getPadBits());
 	
-	                    certGen.addExtension(Extension.keyUsage, ext.isCritical(), bits);
+	                    certGen.addExtension(X509Extension.keyUsage.getId(), ext.isCritical(), bits);
 	                }
 	            }
 
@@ -653,7 +656,7 @@ public class BouncyCastleCertProcessingFactory {
             throw new IllegalArgumentException(err);
         }
 
-     // add specified extensions
+        // add specified extensions
         if (extSet != null) {
             Enumeration<?> oids = extSet.oids();
             while (oids.hasMoreElements()) {
@@ -663,17 +666,14 @@ public class BouncyCastleCertProcessingFactory {
                     continue;
                 }
                 x509Ext = extSet.getExtension(oid);
-                if(Extension.basicConstraints.equals(x509Ext.getExtnId())){
-                	BasicConstraints.getInstance(x509Ext.getExtnValue().getOctets());
-                }
-                certGen.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getParsedValue());
+                certGen.addExtension(oid.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
             }
         }
 
         X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
-      X500NameHelper issuer = new X500NameHelper(issuerDN);
-      X500NameHelper subject = new X500NameHelper(issuerDN);
-      subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
+        X500NameHelper issuer = new X500NameHelper(issuerDN);
+        X500NameHelper subject = new X500NameHelper(issuerDN);
+        subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
 
 
         certGen.setSubjectDN(CertificateUtil.toPrincipal(subject.getAsName().toString()));
@@ -724,11 +724,13 @@ public class BouncyCastleCertProcessingFactory {
      */
     public X509Certificate loadCertificate(InputStream in) throws IOException, GeneralSecurityException {
         //derin MUST NOT BE CLOSED (c.f myproxy usage)
-    	@SuppressWarnings("resource")
-		ASN1InputStream derin = new ASN1InputStream(in);
-        ASN1Primitive certInfo = derin.readObject();
-        ASN1Sequence seq = ASN1Sequence.getInstance(certInfo);
-        return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate(new X509CertificateHolder(Certificate.getInstance(seq)));
+        X509CertParser x509CertParser = new X509CertParser();
+        x509CertParser.engineInit(in);
+        try {
+			return (X509Certificate) x509CertParser.engineRead();
+		} catch (StreamParsingException e) {
+			throw new IOException(e);
+		}
     }
 
     /**
@@ -785,7 +787,7 @@ public class BouncyCastleCertProcessingFactory {
     public byte[] createCertificateRequest(X500Name subjectDN, String sigAlgName, KeyPair keyPair) throws GeneralSecurityException {
 		try {
 			PKCS10CertificationRequestBuilder pkcs10CertificationRequestBuilder = new PKCS10CertificationRequestBuilder(subjectDN, new SubjectPublicKeyInfo((ASN1Sequence)ASN1Sequence.fromByteArray(keyPair.getPublic().getEncoded())));
-			PKCS10CertificationRequest certReq = pkcs10CertificationRequestBuilder.build(new JcaContentSignerBuilder(sigAlgName).setProvider("BC").build(keyPair.getPrivate()));
+			PKCS10CertificationRequestHolder certReq = pkcs10CertificationRequestBuilder.build(new JcaContentSignerBuilder(sigAlgName).setProvider("BC").build(keyPair.getPrivate()));
 			boolean rs = certReq.isSignatureValid(new JcaContentVerifierProviderBuilder().setProvider("BC").build(keyPair.getPublic()));
 			if (!rs) {
 	            String err = i18n.getMessage("certReqVerification");

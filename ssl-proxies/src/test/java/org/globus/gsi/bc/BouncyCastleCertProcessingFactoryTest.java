@@ -17,7 +17,7 @@ package org.globus.gsi.bc;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.Set;
 
 import junit.framework.Test;
@@ -25,13 +25,14 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERObject;
+import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.X509Extension;
+import org.bouncycastle.asn1.x509.X509Extensions;
 import org.globus.gsi.GSIConstants.CertificateType;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.proxy.ext.ProxyCertInfo;
@@ -68,7 +69,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
                      512,
                      60 * 60,
                      CertificateType.GSI_3_RESTRICTED_PROXY,
-                     (Extensions)null,
+                     (X509Extensions)null,
                      null);
         fail("Expected to fail");
     } catch (IllegalArgumentException e) {
@@ -81,7 +82,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     ClassLoader loader = BouncyCastleCertProcessingFactoryTest.class.getClassLoader();
     X509Credential cred = new X509Credential(loader.getResource(proxyFile).getPath());
 
-    Extension ext = null;
+    X509Extension ext = null;
     
     String oid = "1.2.3.4";
     String expectedValue = "foo";
@@ -90,19 +91,19 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     String policyOid = "1.2.3.4.5.6.7.8.9";
     String policyValue = "bar";
     
-    ArrayList<Extension> list = new ArrayList<Extension>();
-    ext = new Extension(new ASN1ObjectIdentifier(oid), critical, new DERUTF8String(expectedValue).getEncoded());
-    list.add(ext);
+    Hashtable<DERObjectIdentifier,X509Extension> hashExtensions = new Hashtable<DERObjectIdentifier, X509Extension>();
+    ext = new X509Extension(critical, new DEROctetString(new DERUTF8String(expectedValue)));
+    hashExtensions.put(new ASN1ObjectIdentifier(oid), ext);
 
-    ext = new Extension(Extension.basicConstraints, false,  new BasicConstraints(15).getEncoded());
-    list.add(ext);
+    ext = new X509Extension(false,  new DEROctetString(new BasicConstraints(15).getEncoded()));
+    hashExtensions.put(X509Extension.basicConstraints, ext);
     
     ProxyPolicy policy = new ProxyPolicy(policyOid, policyValue.getBytes());
     ext = new ProxyCertInfoExtension(new ProxyCertInfo(policy));
-    list.add(ext);
+    hashExtensions.put(ProxyCertInfo.OID, ext);
     
     
-    Extensions extSet = new Extensions(list.toArray(new Extension[list.size()]));
+    X509Extensions extSet = new X509Extensions(hashExtensions);
     
     X509Credential newCred = 
         factory.createCredential(cred.getCertificateChain(),
@@ -133,7 +134,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     
     ClassLoader loader = BouncyCastleCertProcessingFactoryTest.class.getClassLoader();
     X509Credential cred = new X509Credential(loader.getResource(proxyFile).getFile());
-    Extension ext = null;
+    X509Extension ext = null;
     
     String oid1 = "1.2.3.4";
     String expectedValue1 = "foo";
@@ -144,13 +145,13 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     String expectedValue2 = "bar";
     boolean critical2 = true;
     
-    ArrayList<Extension> list = new ArrayList<Extension>();
-    ext = new Extension(new ASN1ObjectIdentifier(oid1), critical1, new DERUTF8String(expectedValue1).getEncoded());
-    list.add(ext);
-    ext = new Extension(new ASN1ObjectIdentifier(oid2), critical2, new DERUTF8String(expectedValue2).getEncoded());
-    list.add(ext);
+    Hashtable<DERObjectIdentifier,X509Extension> hashExtensions = new Hashtable<DERObjectIdentifier, X509Extension>();
+    ext = new X509Extension(critical1, new DEROctetString(new DERUTF8String(expectedValue1).getEncoded()));
+    hashExtensions.put(new ASN1ObjectIdentifier(oid1), ext);
+    ext = new X509Extension(critical2, new DEROctetString(new DERUTF8String(expectedValue2).getEncoded()));
+    hashExtensions.put(new ASN1ObjectIdentifier(oid2), ext);
     
-    Extensions extSet = new Extensions(list.toArray(new Extension[list.size()]));
+    X509Extensions extSet = new X509Extensions(hashExtensions);
 
     X509Credential newCred = 
         factory.createCredential(cred.getCertificateChain(),
@@ -190,10 +191,14 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     assertTrue(exts.contains(oid));
     }
     
-    private static ASN1Object toASN1Object(byte[] data) throws IOException {
+    private static DERObject toASN1Object(byte[] data) throws IOException {
         ByteArrayInputStream inStream = new ByteArrayInputStream(data);
         ASN1InputStream DIS = new ASN1InputStream(inStream);
-        return DIS.readObject();
+        try{
+        	return DIS.readObject();
+        }finally{
+        	DIS.close();
+        }
     }
 }
 

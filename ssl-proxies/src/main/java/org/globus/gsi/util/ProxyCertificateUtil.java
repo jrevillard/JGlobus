@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 
-import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.GSIConstants.CertificateType;
@@ -150,15 +150,15 @@ public final class ProxyCertificateUtil {
     	if(!crt.hasExtensions()){
     		return null;
     	}
-		Extension ext = crt.getExtension(ProxyCertInfo.OID);
+		X509Extension ext = crt.getExtension(ProxyCertInfo.OID);
 		if (ext == null) {
 			ext = crt.getExtension(ProxyCertInfo.OLD_OID);
 		}
         return (ext != null) ? getProxyCertInfo(ext) : null;
     }
 
-    public static ProxyCertInfo getProxyCertInfo(Extension ext) {
-        byte[] value = ext.getExtnValue().getOctets();
+    public static ProxyCertInfo getProxyCertInfo(X509Extension ext) {
+        byte[] value = ext.getValue().getOctets();
         return ProxyCertInfo.getInstance(value);
     }
 

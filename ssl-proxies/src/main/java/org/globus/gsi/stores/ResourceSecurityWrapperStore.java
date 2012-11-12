@@ -103,10 +103,14 @@ public abstract class ResourceSecurityWrapperStore<T extends AbstractResourceSec
             for (GlobusResource globusResource : globusResources){
                 URI uri =globusResource.getURI();
                 if (!globusResource.isReadable()) {
-                    getLog().warn("Cannot read: " + uri.toASCIIString());
                     continue;
                 }
-                changed = load(globusResource, updatedList, newWrapperMap);
+                try{
+                	changed = load(globusResource, updatedList, newWrapperMap);
+                }catch(ResourceStoreException e){
+                	logger.debug("Unable to load: " + uri + ": "+ e.getMessage());
+                	throw e;
+                }
             }
         }
         catch (IOException e) {

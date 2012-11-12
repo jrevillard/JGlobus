@@ -237,12 +237,12 @@ public class GlobusStyle extends BCStyle{
         	RDN rdn2 = rdns[rdns.length-1];
         	Set<ASN1ObjectIdentifier> asn1ObjectIdentifiers = DefaultSymbols.keySet();
         	for (ASN1ObjectIdentifier asn1ObjectIdentifier : asn1ObjectIdentifiers) {
-				if(asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(((ASN1Set)rdn1.toASN1Primitive()).getObjectAt(0)).getType())){
+				if(asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(((ASN1Set)rdn1.getDERObject()).getObjectAt(0)).getType())){
 					//Revert
 					revert = true;
 					break;
 				}
-				if(asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(((ASN1Set)rdn2.toASN1Primitive()).getObjectAt(0)).getType())){
+				if(asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(((ASN1Set)rdn2.getDERObject()).getObjectAt(0)).getType())){
 					//Do not revert;
 					revert = false;
 					break;

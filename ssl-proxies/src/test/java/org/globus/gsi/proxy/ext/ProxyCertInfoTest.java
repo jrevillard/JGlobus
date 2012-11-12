@@ -24,8 +24,8 @@ import org.globus.gsi.proxy.ext.ProxyCertInfo;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OutputStream;
-import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DERObject;
 
 import junit.framework.TestCase;
 
@@ -59,11 +59,13 @@ public class ProxyCertInfoTest extends TestCase {
 	ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 	ASN1OutputStream dOut = new ASN1OutputStream(bOut);
 	dOut.writeObject(info);
-
+	dOut.close();
+	
 	ByteArrayInputStream bIn = 
 	    new ByteArrayInputStream(bOut.toByteArray());
 	ASN1InputStream dIn = new ASN1InputStream(bIn);
-	ASN1Object obj = dIn.readObject();
+	DERObject obj = dIn.readObject();
+	dIn.close();
 	
 	assertTrue(obj instanceof ASN1Sequence);
 	
@@ -75,20 +77,16 @@ public class ProxyCertInfoTest extends TestCase {
 	assertEquals(testOid, testInfo.getProxyPolicy().getPolicyLanguage());
     }
         
-    public void testConstraintsCheck() throws Exception {
-	
-	ProxyPolicy policy; 
+    public void testConstraintsCheck() throws Exception { 
 
 	try {
-	    policy = new ProxyPolicy(ProxyPolicy.IMPERSONATION,
-				     testPolicy);
+		new ProxyPolicy(ProxyPolicy.IMPERSONATION, testPolicy);
 	    fail("Did not throw exception as expected");
 	} catch (IllegalArgumentException e) {
 	}
 
 	try {
-	    policy = new ProxyPolicy(ProxyPolicy.INDEPENDENT,
-				     testPolicy);
+		new ProxyPolicy(ProxyPolicy.INDEPENDENT, testPolicy);
 	    fail("Did not throw exception as expected");
 	} catch (IllegalArgumentException e) {
 	}
@@ -108,12 +106,14 @@ public class ProxyCertInfoTest extends TestCase {
 	ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 	ASN1OutputStream dOut = new ASN1OutputStream(bOut);
 	dOut.writeObject(info);
+	dOut.close();
 	
 	ByteArrayInputStream bIn = 
 	    new ByteArrayInputStream(bOut.toByteArray());
 	ASN1InputStream dIn = new ASN1InputStream(bIn);
-	ASN1Object obj = dIn.readObject();
-
+	DERObject obj = dIn.readObject();
+	dIn.close();
+	
 	ProxyCertInfo testInfo = new ProxyCertInfo((ASN1Sequence)obj);
 
 	

@@ -24,8 +24,6 @@ import org.globus.gsi.trustmanager.SigningPolicyChecker;
 import org.globus.gsi.trustmanager.UnsupportedCriticalExtensionChecker;
 import org.globus.gsi.trustmanager.X509ProxyCertPathValidator;
 
-import org.globus.gsi.X509Credential;
-
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.logging.Log;
