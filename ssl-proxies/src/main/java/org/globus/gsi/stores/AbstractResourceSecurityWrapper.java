@@ -45,11 +45,11 @@ public abstract class AbstractResourceSecurityWrapper<T> implements
 	private long lastModified = -1;
 	private String alias;
 	private boolean inMemory = false;
-	
+
 	protected AbstractResourceSecurityWrapper(boolean inMemory) {
 		this.inMemory = inMemory;
 	}
-	
+
 	protected void init(String locationPattern) throws ResourceStoreException {
 		init(globusResolver.getResource(locationPattern));
 	}
