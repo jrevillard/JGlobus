@@ -172,7 +172,7 @@ public final class CertificateLoadUtil {
             throw new IllegalArgumentException("Private Key file is null");
         }
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        PrivateKey privateKey = readPrivateKey(reader, passwordFinder);
+        PrivateKey privateKey = loadPrivateKey(reader, passwordFinder);
         if(privateKey == null){
         	throw new GeneralSecurityException("No private key data");
         }
@@ -197,7 +197,7 @@ public final class CertificateLoadUtil {
         	inputStream = new NotClosableInputStream(inputStream);
         }
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        PrivateKey privateKey = readPrivateKey(reader, passwordFinder);
+        PrivateKey privateKey = loadPrivateKey(reader, passwordFinder);
         if(privateKey == null){
         	throw new GeneralSecurityException("No private key data");
         }
@@ -257,7 +257,7 @@ public final class CertificateLoadUtil {
      *         reader or the reader is closed.
      * @throws IOException              if I/O error occurs
      */
-    public static PrivateKey readPrivateKey(BufferedReader reader, PasswordFinder passwordFinder) throws IOException {
+    public static PrivateKey loadPrivateKey(BufferedReader reader, PasswordFinder passwordFinder) throws IOException {
     	if (reader == null) {
 			throw new IllegalArgumentException("The reader must not be null.");
 		}
