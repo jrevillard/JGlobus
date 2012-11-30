@@ -430,8 +430,26 @@ public class X509Credential {
      *                if one of the certificates in the chain expired or if path validation fails.
      */
     public void verify() throws CredentialException {
+    	verify(null);    	
+    }
+    	
+    	
+    /**
+     * Verifies the validity of the credentials. 
+     * 
+     * @param caCertsLocation
+     * 				The directory where to find the CA certificates. If <code>null</code>, path validation is performed using trusted
+     * 				certificates in default locations.
+     * @throws CredentialException
+     * 				if one of the certificates in the chain expired or if path validation fails.
+     */
+    public void verify(String caCertsLocation) throws CredentialException {
         try {
-            String caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
+        	if(caCertsLocation == null){
+            	caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
+        	}else{
+        		caCertsLocation = "file:" + caCertsLocation;
+        	}
 
             KeyStore keyStore = X509Credential.getTrustStore(caCertsLocation);
             CertStore crlStore = X509Credential.getCRLStore(caCertsLocation); 
