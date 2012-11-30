@@ -14,7 +14,9 @@
  */
 package org.globus.gsi.util;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -22,13 +24,18 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.security.GeneralSecurityException;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.Security;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CRL;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509CRL;
 import java.security.cert.X509CertSelector;
@@ -46,6 +53,7 @@ import org.bouncycastle.openssl.PasswordFinder;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.io.pem.PemHeader;
 import org.bouncycastle.util.io.pem.PemObject;
+import org.globus.gsi.X509Credential;
 
 /**
  * Contains various security-related utility methods.
@@ -126,7 +134,7 @@ public final class CertificateLoadUtil {
             throw new IllegalArgumentException("Certificate file is null");
         }
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        X509Certificate[] x509Certificates = readCertificates(reader);
+        X509Certificate[] x509Certificates = loadCertificates(reader);
         if(x509Certificates == null){
         	throw new GeneralSecurityException("No certificate data");
         }
@@ -151,11 +159,161 @@ public final class CertificateLoadUtil {
         	inputStream = new NotClosableInputStream(inputStream);
         }
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        X509Certificate[] x509Certificates = readCertificates(reader);
+        X509Certificate[] x509Certificates = loadCertificates(reader);
         if(x509Certificates == null){
         	throw new GeneralSecurityException("No certificate data");
         }
         return x509Certificates;
+    }
+
+    /**
+     * Loads the PEM certificates from the specified reader.
+     * <p/>
+     * This function does close the input reader.
+     *
+     * @param reader the stream from which load the certificate.
+     * @return the loaded certificate or null if there was no data in the
+     *         reader or the reader is closed.
+     * @throws IOException              if I/O error occurs
+     */
+    public static X509Certificate[] loadCertificates(BufferedReader reader) throws IOException {
+    	if (reader == null) {
+			throw new IllegalArgumentException("The reader must not be null.");
+		}
+    	MyPEMReader pemReader = null;
+    	try {
+	    	if(!reader.ready()){
+	    		//No data;
+	    		return null;
+	    	}
+			pemReader = new MyPEMReader(reader);
+			Object pemObject = null;
+			ArrayList<X509Certificate> certificates = new ArrayList<X509Certificate>(3);
+			while ((pemObject = pemReader.readObject()) != null) {
+				if(pemObject instanceof X509Certificate){
+					certificates.add((X509Certificate)pemObject);
+				}
+			}
+			if(!certificates.isEmpty()){
+				return certificates.toArray(new X509Certificate[certificates.size()]);
+			}
+		}finally{
+			if(pemReader != null){
+				try{
+					pemReader.close();
+				}catch (IOException e) {}
+			}
+		}
+    	throw new IOException("Certificate not well formatted");
+    }
+    
+    /**
+     * Loads a Java KeyStore from the specified file and return an {@link X509Credential} from it.
+     * <p/>
+     * This function does close the input stream.
+     * 
+     * @param keystorePath the Keytore path.
+     * @param storePasswd keystore password (can be <code>null</code>)
+     * @param keyPasswd private key password (can be <code>null</code>)
+     * @param keyAlias private key alias or <code>null</code>. In case of <code>null</code>, alias will be autodetected,
+	 * however this will work only it the keystore contains exactly one key entry.
+     * @param type type of the keystore, "JKS" or "PKCS12". <code>null</code> value is forbidden,
+     * @return The {@link X509Credential} loaded from the Keystore.
+     * @throws IOException if the keystore can not be read
+     * @throws KeyStoreException if the keystore can not be parsed or if passwords are incorrect
+     */
+    public static X509Credential loadKeystore(String keystorePath, char[] storePasswd, char[] keyPasswd, String keyAlias, String type) throws IOException, KeyStoreException {
+    	InputStream inputStream = new BufferedInputStream(new FileInputStream(keystorePath));
+    	return loadKeystore(inputStream, storePasswd, keyPasswd, keyAlias, type);
+    }
+
+    /**
+     * Loads a Java KeyStore from the specified input stream and return an {@link X509Credential} from it.
+     * <p/>
+     * This function does close the input stream.
+     * 
+     * @param inputStream the stream from which load the Keytore.
+     * @param storePasswd keystore password (can be <code>null</code>)
+     * @param keyPasswd private key password (can be <code>null</code>)
+     * @param keyAlias private key alias or <code>null</code>. In case of <code>null</code>, alias will be autodetected,
+	 * however this will work only it the keystore contains exactly one key entry.
+     * @param type type of the keystore, "JKS" or "PKCS12". <code>null</code> value is forbidden,
+     * @return The {@link X509Credential} loaded from the Keystore.
+     * @throws IOException if the keystore can not be read
+     * @throws KeyStoreException if the keystore can not be parsed or if passwords are incorrect
+     */
+    public static X509Credential loadKeystore(InputStream inputStream, char[] storePasswd, char[] keyPasswd, String keyAlias, String type) throws IOException, KeyStoreException {
+    	if (inputStream == null) {
+			throw new IllegalArgumentException("The inputStream must not be null.");
+		}
+    	if (type == null) {
+			throw new IllegalArgumentException("The Keystore type must not be null: PKCS12 or JKS");
+		}
+    	try{
+    		KeyStore ks;
+	    	if (type.equalsIgnoreCase("PKCS12")){
+				try {
+					ks = KeyStore.getInstance(type, BouncyCastleProvider.PROVIDER_NAME);
+				} catch (NoSuchProviderException e) {
+					throw new IllegalStateException("Bouncy Castle provider is not available :BUG!", e);
+				}
+	    	}else{
+				ks = KeyStore.getInstance(type);
+	    	}
+	    	ks.load(inputStream, storePasswd);
+	    	if(keyAlias == null){
+		    	Enumeration<String> aliases = ks.aliases();
+				String ret = null;
+				while (aliases.hasMoreElements()){
+					String alias = aliases.nextElement();
+					if (ks.isKeyEntry(alias)){
+						if (ret == null){
+							ret = alias;
+						}else{
+							throw new KeyStoreException("Key alias was not " +
+									"provided and the keystore contains more then one key entry: " 
+									+ alias + " and " + ret + " at least.");
+						}
+					}
+				}
+				if (ret == null){
+					throw new KeyStoreException("The keystore doesn't contain any key entry");
+				}
+				keyAlias = ret;
+	    	}else{
+	    		if (!ks.containsAlias(keyAlias)){
+	    			throw new KeyStoreException("Key alias '" + keyAlias + "' does not exist in the keystore");
+	    		}
+	    	}
+	    	
+    		Key key = ks.getKey(keyAlias, keyPasswd);
+			if (key == null){
+				throw new KeyStoreException("Key alias '" + keyAlias + "' is not an alias of a key entry, but an alias of a certificate entry");
+			}
+			if (!(key instanceof PrivateKey)){
+				throw new KeyStoreException("Key under the alias '" + keyAlias + "' is not a PrivateKey but " + key.getClass());
+			}
+			PrivateKey privateKey = (PrivateKey) key;
+	    	
+			Certificate[] certificates = ks.getCertificateChain(keyAlias);
+			if (certificates == null){
+				throw new KeyStoreException("There is no certificate associated with the private for the alias '" + keyAlias + "'");
+			}
+			X509Certificate[] x509Certificates = new X509Certificate[certificates.length];
+			for (int i = 0; i < x509Certificates.length; i++) {
+				x509Certificates[i] = (X509Certificate) certificates[i];
+			}
+			return new X509Credential(privateKey, x509Certificates);
+	    } catch (UnrecoverableKeyException e){
+			throw new KeyStoreException("Key's password seems to be incorrect", e);
+		} catch (NoSuchAlgorithmException e){
+			throw new KeyStoreException("Key is encrypted or uses an unsupported algorithm", e);
+		} catch (CertificateException e) {
+			throw new KeyStoreException("Keystore certificate is invalid", e);
+		} finally {
+			inputStream.close();
+		}
+		
     }
     
     /**
@@ -202,48 +360,6 @@ public final class CertificateLoadUtil {
         	throw new GeneralSecurityException("No private key data");
         }
         return privateKey;
-    }
-
-
-    /**
-     * Loads the PEM certificates from the specified reader.
-     * <p/>
-     * This function does close the input reader.
-     *
-     * @param reader the stream from which load the certificate.
-     * @return the loaded certificate or null if there was no data in the
-     *         reader or the reader is closed.
-     * @throws IOException              if I/O error occurs
-     */
-    public static X509Certificate[] readCertificates(BufferedReader reader) throws IOException {
-    	if (reader == null) {
-			throw new IllegalArgumentException("The reader must not be null.");
-		}
-    	MyPEMReader pemReader = null;
-    	try {
-	    	if(!reader.ready()){
-	    		//No data;
-	    		return null;
-	    	}
-			pemReader = new MyPEMReader(reader);
-			Object pemObject = null;
-			ArrayList<X509Certificate> certificates = new ArrayList<X509Certificate>(3);
-			while ((pemObject = pemReader.readObject()) != null) {
-				if(pemObject instanceof X509Certificate){
-					certificates.add((X509Certificate)pemObject);
-				}
-			}
-			if(!certificates.isEmpty()){
-				return certificates.toArray(new X509Certificate[certificates.size()]);
-			}
-		}finally{
-			if(pemReader != null){
-				try{
-					pemReader.close();
-				}catch (IOException e) {}
-			}
-		}
-    	throw new IOException("Certificate not well formatted");
     }
     
     /**

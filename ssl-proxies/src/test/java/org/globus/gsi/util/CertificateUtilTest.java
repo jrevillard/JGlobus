@@ -115,7 +115,7 @@ public class CertificateUtilTest {
         BufferedReader reader =
                 new BufferedReader(new StringReader(this.validCert1));
         X509Certificate[] cert =
-                CertificateLoadUtil.readCertificates(reader);
+                CertificateLoadUtil.loadCertificates(reader);
         assert (cert != null);
         assert (cert.length == 1);
 
@@ -123,7 +123,7 @@ public class CertificateUtilTest {
 
         boolean expected = false;
         try {
-            cert = CertificateLoadUtil.readCertificates(reader);
+            cert = CertificateLoadUtil.loadCertificates(reader);
         } catch (IOException e) {
 
             if ((e.getMessage().indexOf(
@@ -137,7 +137,7 @@ public class CertificateUtilTest {
 
         expected = false;
         try {
-            cert = CertificateLoadUtil.readCertificates(reader);
+            cert = CertificateLoadUtil.loadCertificates(reader);
         } catch (IOException e) {
 
             if ((e.getMessage().indexOf(
