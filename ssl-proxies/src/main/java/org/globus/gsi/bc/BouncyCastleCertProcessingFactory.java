@@ -46,10 +46,10 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
-import org.bouncycastle.jce.provider.X509CertParser;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 import org.bouncycastle.operator.ContentVerifierProvider;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
@@ -61,7 +61,6 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestHolder;
 import org.bouncycastle.pkcs.PKCSException;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
-import org.bouncycastle.x509.util.StreamParsingException;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.VersionUtil;
 import org.globus.gsi.X509Credential;
@@ -724,13 +723,11 @@ public class BouncyCastleCertProcessingFactory {
      */
     public X509Certificate loadCertificate(InputStream in) throws IOException, GeneralSecurityException {
         //derin MUST NOT BE CLOSED (c.f myproxy usage)
-        X509CertParser x509CertParser = new X509CertParser();
-        x509CertParser.engineInit(in);
-        try {
-			return (X509Certificate) x509CertParser.engineRead();
-		} catch (StreamParsingException e) {
-			throw new IOException(e);
-		}
+    	@SuppressWarnings("resource")
+		ASN1InputStream derin = new ASN1InputStream(in);
+        DERObject certInfo = derin.readObject();
+        ASN1Sequence seq = ASN1Sequence.getInstance(certInfo);
+        return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate(new X509CertificateHolder(seq.getEncoded()));
     }
 
     /**
