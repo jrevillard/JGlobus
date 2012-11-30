@@ -139,7 +139,7 @@ public class ChangePassPhrase {
 				pemObjectGenerator = new PKCS8Generator(key);
 				((PKCS8Generator) pemObjectGenerator).setPassword(pwd1.toCharArray());
 			} else {
-				pemObjectGenerator = new MiscPEMGenerator(key, key.getAlgorithm(), pwd1.toCharArray(),
+				pemObjectGenerator = new MiscPEMGenerator(key, "DES-EDE3-CBC", pwd1.toCharArray(),
 						new SecureRandom(), new BouncyCastleProvider());
 			}
 
