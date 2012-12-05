@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
@@ -46,17 +45,12 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.jce.provider.X509CertificateObject;
-import org.globus.common.CoGProperties;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.ProviderLoader;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
 import org.globus.gsi.jsse.SSLConfigurator;
-import org.globus.gsi.provider.GlobusProvider;
-import org.globus.gsi.provider.KeyStoreParametersFactory;
-import org.globus.gsi.stores.ResourceCertStoreParameters;
 import org.globus.gsi.stores.ResourceSigningPolicyStore;
-import org.globus.gsi.stores.ResourceSigningPolicyStoreParameters;
 import org.globus.gsi.stores.Stores;
 import org.globus.gsi.util.CertificateLoadUtil;
 import org.globus.gsi.util.CertificateUtil;
@@ -252,9 +246,21 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
     /**
      * @param target expected target name. Can be null.
      * @param cred credential. Cannot be null. Might be anonymous.
+     * @throws GSSException 
      */
     public GlobusGSSContextImpl(GSSName target,
-                                GlobusGSSCredentialImpl cred)
+                                GlobusGSSCredentialImpl cred) throws GSSException{
+    	this(target, cred, null);
+    }
+    
+    /**
+     * @param target expected target name. Can be null.
+     * @param cred credential. Cannot be null. Might be anonymous.
+     * @param caCertsDir CA certificates directories
+     * @throws GSSException
+     */
+    public GlobusGSSContextImpl(GSSName target,
+                                GlobusGSSCredentialImpl cred, String caCertsDir)
         throws GSSException {
 
         if (cred == null) {
@@ -271,16 +277,26 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 
             this.sslConfigurator = new SSLConfigurator();
 
-	    // set trust parameters in SSLConfigurator
-
-            KeyStore trustStore = Stores.getDefaultTrustStore();
-            sslConfigurator.setTrustAnchorStore(trustStore);
-
-            CertStore crlStore = Stores.getDefaultCRLStore(); 
-            sslConfigurator.setCrlStore(crlStore);
-
-            ResourceSigningPolicyStore sigPolStore = Stores.getDefaultSigningPolicyStore();
-            sslConfigurator.setPolicyStore(sigPolStore);
+            // set trust parameters in SSLConfigurator
+            if(caCertsDir == null){
+	            KeyStore trustStore = Stores.getDefaultTrustStore();
+	            sslConfigurator.setTrustAnchorStore(trustStore);
+	
+	            CertStore crlStore = Stores.getDefaultCRLStore(); 
+	            sslConfigurator.setCrlStore(crlStore);
+	
+	            ResourceSigningPolicyStore sigPolStore = Stores.getDefaultSigningPolicyStore();
+	            sslConfigurator.setPolicyStore(sigPolStore);
+            }else{
+            	KeyStore trustStore = Stores.getTrustStore("file:" + caCertsDir + "/" + Stores.getDefaultCAFilesPattern());
+	            sslConfigurator.setTrustAnchorStore(trustStore);
+	
+	            CertStore crlStore = Stores.getCRLStore("file:" + caCertsDir + "/" + Stores.getDefaultCRLFilesPattern()); 
+	            sslConfigurator.setCrlStore(crlStore);
+	
+	            ResourceSigningPolicyStore sigPolStore = Stores.getSigningPolicyStore("file:" + caCertsDir + "/" + Stores.getDefaultSigningPolicyFilesPattern());
+	            sslConfigurator.setPolicyStore(sigPolStore);
+            }
 
             // Need to set this so we are able to communicate properly with
             // GT4.0.8 servers that use only SSLv3 (no TLSv1). Thanks to
