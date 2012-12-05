@@ -1,14 +1,12 @@
 package org.globus.gsi;
 
 import org.globus.gsi.stores.ResourceCertStoreParameters;
+import org.globus.gsi.stores.Stores;
 
 import org.globus.gsi.provider.GlobusProvider;
 
 import org.globus.gsi.provider.simple.SimpleMemoryCertStoreParams;
 import org.globus.gsi.provider.simple.SimpleMemoryProvider;
-
-
-import java.security.cert.CertStoreParameters;
 
 import java.security.cert.CertStore;
 
@@ -38,8 +36,7 @@ public class TrustedCertificatesUtil {
         CertStore store = null;        
         if (tc == null) {
             String caCertPattern = "file:" + CoGProperties.getDefault().getCaCertLocations() + "/*.0";
-            CertStoreParameters params = new ResourceCertStoreParameters(caCertPattern,null);
-            store = CertStore.getInstance(GlobusProvider.CERTSTORE_TYPE, params);
+            store = Stores.getCACertStore(caCertPattern);
         } else {
             SimpleMemoryCertStoreParams params = new SimpleMemoryCertStoreParams(tc.getCertificates(), null);
             params.setCerts(tc.getCertificates());

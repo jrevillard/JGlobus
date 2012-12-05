@@ -54,6 +54,9 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
     private final Map<String, Long> validPoliciesCache = new HashMap<String, Long>();
     private final static long CACHE_TIME_MILLIS = 3600*1000;
     
+    /**
+     * Please use the {@link Stores} class to generate Key/Cert stores
+     */
     public ResourceSigningPolicyStore(SigningPolicyStoreParameters param) throws InvalidAlgorithmParameterException {
         if (param == null) {
             throw new IllegalArgumentException();
