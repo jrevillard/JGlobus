@@ -253,9 +253,31 @@ public class X509Credential {
      * 
      * @return strength of the key in bits. Returns -1 if unable to determine it.
      */
-    public int getStrength() {
-    	//TODO
-        return -1;
+    public int getStrength() throws CredentialException {
+        return getStrength(null);
+    }
+
+    /**
+     * Returns strength of the private/public key in bits.
+     * 
+     * @return strength of the key in bits. Returns -1 if unable to determine it.
+     */
+    public int getStrength(String password) throws CredentialException {
+        if (opensslKey == null) {
+            return -1;
+        }
+        if (this.opensslKey.isEncrypted()) {
+            if (password == null) {
+                throw new CredentialException("Key encrypted, password required");
+            } else {
+                try {
+                    this.opensslKey.decrypt(password);
+                } catch (GeneralSecurityException exp) {
+                    throw new CredentialException(exp.getMessage(), exp);
+                }
+            }
+        }
+        return ((RSAPrivateKey)opensslKey.getPrivateKey()).getModulus().bitLength();
     }
 
     /**
@@ -370,7 +392,7 @@ public class X509Credential {
             pathLength = -1;
         }
         return pathLength;
-    }    
+    }
     
     /**
      * Verifies the validity of the credentials. All certificate path validation is performed using trusted

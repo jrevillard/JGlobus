@@ -14,59 +14,82 @@
  */
 package org.globus.gsi.gssapi;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import org.globus.gsi.util.CertificateUtil;
+import org.globus.gsi.util.ProxyCertificateUtil;
+
+
+import org.ietf.jgss.GSSCredential;
+import org.ietf.jgss.GSSException;
+import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.GSSName;
+import org.ietf.jgss.Oid;
+import org.ietf.jgss.MessageProp;
+import org.ietf.jgss.ChannelBinding;
+
+import org.gridforum.jgss.ExtendedGSSContext;
+import org.gridforum.jgss.ExtendedGSSCredential;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.cert.CertStore;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Date;
+import java.util.Calendar;
 import java.util.Map;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.security.KeyPair;
+import java.security.GeneralSecurityException;
+import java.security.interfaces.RSAPublicKey;
+import java.security.interfaces.RSAPrivateKey;
+
+import org.globus.gsi.ProviderLoader;
+import org.globus.gsi.stores.ResourceSigningPolicyStore;
+
+import java.security.cert.CertStore;
+import java.security.cert.CertificateFactory;
+import java.security.KeyStore;
+
+import org.globus.gsi.GSIConstants;
+import org.globus.gsi.TrustedCertificates;
+import org.globus.gsi.X509Credential;
+import org.globus.gsi.util.CertificateLoadUtil;
+import org.globus.gsi.bc.BouncyCastleUtil;
+import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
+import org.globus.util.I18n;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import org.globus.gsi.jsse.SSLConfigurator;
+
+import org.bouncycastle.jce.provider.X509CertificateObject;
+
+/*
+import COM.claymoresystems.ptls.SSLConn;
+import COM.claymoresystems.ptls.SSLRecord;
+import COM.claymoresystems.ptls.SSLDebug;
+import COM.claymoresystems.ptls.SSLCipherSuite;
+import COM.claymoresystems.ptls.SSLCipherState;
+import COM.claymoresystems.ptls.SSLHandshake;
+import COM.claymoresystems.sslg.SSLPolicyInt;
+import COM.claymoresystems.sslg.CertVerifyPolicyInt;
+import COM.claymoresystems.cert.X509Cert;
+import COM.claymoresystems.util.Util;
+*/
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.bouncycastle.jce.provider.X509CertificateObject;
-import org.globus.gsi.GSIConstants;
-import org.globus.gsi.ProviderLoader;
-import org.globus.gsi.TrustedCertificates;
-import org.globus.gsi.X509Credential;
-import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
-import org.globus.gsi.jsse.SSLConfigurator;
-import org.globus.gsi.stores.ResourceSigningPolicyStore;
+
 import org.globus.gsi.stores.Stores;
-import org.globus.gsi.util.CertificateLoadUtil;
-import org.globus.gsi.util.CertificateUtil;
-import org.globus.gsi.util.ProxyCertificateUtil;
-import org.globus.util.I18n;
-import org.gridforum.jgss.ExtendedGSSContext;
-import org.gridforum.jgss.ExtendedGSSCredential;
-import org.ietf.jgss.ChannelBinding;
-import org.ietf.jgss.GSSContext;
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.MessageProp;
-import org.ietf.jgss.Oid;
 
 /**
  * Implementation of SSL/GSI mechanism for Java GSS-API. The implementation
