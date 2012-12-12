@@ -60,7 +60,6 @@ import org.globus.gsi.GSIConstants;
 import org.globus.gsi.TrustedCertificates;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.util.CertificateLoadUtil;
-import org.globus.gsi.bc.BouncyCastleUtil;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
 import org.globus.util.I18n;
 

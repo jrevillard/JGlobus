@@ -26,6 +26,7 @@ import java.security.PrivateKey;
 import java.security.cert.CertStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
 import java.util.Date;
 
 import org.apache.commons.logging.Log;
@@ -263,21 +264,14 @@ public class X509Credential {
      * @return strength of the key in bits. Returns -1 if unable to determine it.
      */
     public int getStrength(String password) throws CredentialException {
-        if (opensslKey == null) {
-            return -1;
+        getPrivateKey(password);
+        if("RSA".equals(privateKey.getAlgorithm())){
+        	return ((RSAPrivateKey)privateKey).getModulus().bitLength();      	
+        }else if("DSA".equals(privateKey.getAlgorithm())){
+        	return -1;
+        }else{
+        	return -1;
         }
-        if (this.opensslKey.isEncrypted()) {
-            if (password == null) {
-                throw new CredentialException("Key encrypted, password required");
-            } else {
-                try {
-                    this.opensslKey.decrypt(password);
-                } catch (GeneralSecurityException exp) {
-                    throw new CredentialException(exp.getMessage(), exp);
-                }
-            }
-        }
-        return ((RSAPrivateKey)opensslKey.getPrivateKey()).getModulus().bitLength();
     }
 
     /**
