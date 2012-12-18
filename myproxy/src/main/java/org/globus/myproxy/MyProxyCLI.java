@@ -849,6 +849,7 @@ public class MyProxyCLI {
              } else {
                  if (trusted_retrievers == null) {
                 	 trusted_retrievers = args[i];
+                	 useEmptyPwd = true;
                  } else {
                      error("-Z already specified.");
                  }
