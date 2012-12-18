@@ -30,6 +30,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.openssl.PEMWriter;
 
 /**
@@ -39,6 +40,10 @@ public final class CertificateIOUtil {
 	private static Log logger = LogFactory.getLog(CertificateIOUtil.class.getCanonicalName());
 	
 	private static MessageDigest md5;
+
+    private CertificateIOUtil() {
+        //This should not be instantiated
+    }
 	
     private static void init() {
         if (md5 == null) {
@@ -49,8 +54,9 @@ public final class CertificateIOUtil {
             }
         }
     }
-    
-	/**
+
+
+    /**
      * Returns equivalent of:
      * openssl x509 -in "cert-file" -hash -noout
      *
@@ -59,13 +65,36 @@ public final class CertificateIOUtil {
      */
     public static String nameHash(X500Principal subjectDN) {
         try {
-            return hash(subjectDN.getEncoded());
+            return hash(encodePrincipal(subjectDN));
         } catch (Exception e) {
             logger.error("", e);
             return null;
         }
     }
-    
+
+    /**
+     * Returns equivalent of: openssl x509 -in "cert-file" -hash -noout
+     *
+     * @param subjectDN
+     * @return hash for certificate names
+     */
+    public static String nameHash(X500Name subjectDN) {
+        try {
+            return hash(encodePrincipal(subjectDN));
+        } catch (Exception e) {
+            logger.error("", e);
+            return null;
+        }
+    }
+
+    public static byte[] encodePrincipal(X500Principal subject) throws IOException {
+        return subject.getEncoded();
+    }
+
+    public static byte[] encodePrincipal(X500Name subject) throws IOException {
+        return subject.getDEREncoded();
+    }
+
     private static String hash(byte[] data) {
         init();
         if (md5 == null) {
@@ -250,3 +279,4 @@ public final class CertificateIOUtil {
 		}
 	}
 }
+
