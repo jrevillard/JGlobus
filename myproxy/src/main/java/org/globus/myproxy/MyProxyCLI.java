@@ -171,11 +171,13 @@ public class MyProxyCLI {
         "\t\tAllow specified entity to retrieve credential\n" +
         "\t-R | -renewable_by <dn>\n" +
         "\t\tAllow specified entity to renew credential\n" +
+        "\t-Z | --retrievable_by_cert <dn>\n" +
+        "\t\tAllow specified entity to retrieve credential w/o passphrase\n" +
         "\t-x | -regex_dn_match\n" +
-        "\t\tSpecifies that the DN used by  options -r and -R\n" +
+        "\t\tSpecifies that the DN used by  options -r, -R and -Z\n" +
         "\t\twill be matched as a regular expression\n " +
         "\t-X | -match_cn_only\n" +
-        "\t\tSpecifies  that  the  DN  used by options -r and -R\n" +
+        "\t\tSpecifies  that  the  DN  used by options -r, -R and -Z\n" +
         "\t\twill be matched against the Common Name (CN) of the\n" +
         "\t\tsubject\n" +
         "\t-n | -no_passphrase\n" +
@@ -745,6 +747,7 @@ public class MyProxyCLI {
         int exprType = MATCH_CN_ONLY;
         String retrievers = null;
         String renewers = null;
+        String trusted_retrievers = null;
         boolean anonRetrievers = false;
         boolean anonRenewers = false;
         boolean useEmptyPwd = false;
@@ -838,6 +841,18 @@ public class MyProxyCLI {
                         error("-R already specified.");
                     }
                 }
+            } else if (args[i].equals("-Z") ||
+                    args[i].equalsIgnoreCase("-retrievable_by_cert")) {
+             ++i;
+             if (i == args.length) {
+                 error("Error: -Z requires an argument");
+             } else {
+                 if (trusted_retrievers == null) {
+                	 trusted_retrievers = args[i];
+                 } else {
+                     error("-Z already specified.");
+                 }
+             }
             } else if (!storeKey &&
                        (args[i].equals("-n") ||
                         args[i].equalsIgnoreCase("-no_passphrase"))) {
@@ -919,6 +934,10 @@ public class MyProxyCLI {
             renewers = "*";
         }
         
+        if (trusted_retrievers != null && exprType == MATCH_CN_ONLY) {
+        	trusted_retrievers = "*/CN=" + trusted_retrievers;
+        }
+        
         if (storeKey) {
 
             StoreParams storeRequest = new StoreParams();
@@ -928,7 +947,8 @@ public class MyProxyCLI {
             storeRequest.setCredentialDescription(credDesc);
             storeRequest.setRenewer(renewers);
             storeRequest.setRetriever(retrievers);
-
+            storeRequest.setTrustedRetriever(trusted_retrievers);
+            
             try {
                 userKey = CertificateLoadUtil.loadPrivateKey(userKeyFile, null);
             } catch(IOException e) {
@@ -972,6 +992,7 @@ public class MyProxyCLI {
             initRequest.setCredentialDescription(credDesc);
             initRequest.setRenewer(renewers);
             initRequest.setRetriever(retrievers);
+            initRequest.setTrustedRetriever(trusted_retrievers);
 
             if (!useEmptyPwd) {
                 String prompt = "Enter MyProxy Pass Phrase: ";
