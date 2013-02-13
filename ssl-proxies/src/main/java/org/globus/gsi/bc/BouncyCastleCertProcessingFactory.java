@@ -19,15 +19,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.security.spec.RSAPublicKeySpec;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
 import java.util.Random;
@@ -38,7 +37,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERObject;
-import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.KeyUsage;
@@ -46,9 +45,9 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
-import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 import org.bouncycastle.operator.ContentVerifierProvider;
@@ -60,7 +59,6 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestHolder;
 import org.bouncycastle.pkcs.PKCSException;
-import org.bouncycastle.x509.X509V3CertificateGenerator;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.VersionUtil;
 import org.globus.gsi.X509Credential;
@@ -378,234 +376,108 @@ public class BouncyCastleCertProcessingFactory {
     		SubjectPublicKeyInfo subjectPublicKeyInfo, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
             String cnValue) throws GeneralSecurityException {
         	
-//    	X509Certificate issuerCert = issuerCert_;
-//        if (!(issuerCert_ instanceof X509CertificateObject)) {
-//            issuerCert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(issuerCert.getEncoded()));
-//        }
-//        
-//        BigInteger serialNum = null;
-//        String delegDN = null;
-//        boolean gt3_4 = false;
-//
-//        if (ProxyCertificateUtil.isGsi3Proxy(certType) || ProxyCertificateUtil.isGsi4Proxy(certType)) {
-//        	gt3_4 =true;
-//            Random rand = new Random();
-//            delegDN = String.valueOf(Math.abs(rand.nextInt()));
-//            serialNum = new BigInteger(20, rand);
-//        } else if (certType == GSIConstants.CertificateType.GSI_2_LIMITED_PROXY) {
-//            delegDN = "limited proxy";
-//            serialNum = issuerCert.getSerialNumber();
-//        } else if (certType == GSIConstants.CertificateType.GSI_2_PROXY) {
-//            delegDN = "proxy";
-//            serialNum = issuerCert.getSerialNumber();
-//        } else {
-//            String err = i18n.getMessage("unsupportedProxy", certType);
-//            throw new IllegalArgumentException(err);
-//        }
-//
-//        X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
-//        X500NameHelper issuer = new X500NameHelper(issuerDN);
-//        X500NameHelper subject = new X500NameHelper(issuerDN);
-//        subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
-//
-//        GregorianCalendar date = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
-//        /* Allow for a five minute clock skew here. */
-//        date.add(Calendar.MINUTE, -5);
-//        Date notBefore = date.getTime();
-//
-//        /* If hours = 0, then cert lifetime is set to user cert */
-//        Date notAfter = null;
-//        if (lifetime <= 0) {
-//        	notAfter = issuerCert.getNotAfter();
-//        } else {
-//            date.add(Calendar.MINUTE, 5);
-//            date.add(Calendar.SECOND, lifetime);
-//            notAfter = date.getTime();
-//        }
-//        try {
-//        	//Swap the RDNs in order to have them in the needed order.
-//        	RDN[] rdns = issuer.getAsName().getRDNs();
-//            GlobusStyle.swap(rdns);
-//        	X500Name realIssuer = new X500Name(BCStyle.INSTANCE, rdns);
-//        	
-//            rdns = subject.getAsName().getRDNs();
-//            GlobusStyle.swap(rdns);
-//        	X500Name realSubject = new X500Name(BCStyle.INSTANCE, rdns);
-//        	
-//	        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(realSubject, serialNum, notBefore, notAfter, realIssuer, subjectPublicKeyInfo);
-//	        
-//	        Extension x509Ext = null;        
-//	        if (gt3_4) {
-//	            if (extSet != null) {
-//	                x509Ext = extSet.getExtension(ProxyCertInfo.OID);
-//	                if (x509Ext == null) {
-//	                    x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
-//	                }
-//	            }
-//	
-//	            if (x509Ext == null) {
-//	                // create ProxyCertInfo extension
-//	                ProxyPolicy policy = null;
-//	                if (ProxyCertificateUtil.isLimitedProxy(certType)) {
-//	                    policy = new ProxyPolicy(ProxyPolicy.LIMITED);
-//	                } else if (ProxyCertificateUtil.isIndependentProxy(certType)) {
-//	                    policy = new ProxyPolicy(ProxyPolicy.INDEPENDENT);
-//	                } else if (ProxyCertificateUtil.isImpersonationProxy(certType)) {
-//	                    // since limited has already been checked, this should work.
-//	                    policy = new ProxyPolicy(ProxyPolicy.IMPERSONATION);
-//	                } else if ((certType == GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY)
-//	                    || (certType == GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY)) {
-//	                    String err = i18n.getMessage("restrictProxy");
-//	                    throw new IllegalArgumentException(err);
-//	                } else {
-//	                    String err = i18n.getMessage("invalidProxyType");
-//	                    throw new IllegalArgumentException(err);
-//	                }
-//	
-//	                ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
-//	                x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
-//	                if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
-//	                    // RFC compliant OID
-//	                    x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
-//	                } else {
-//	                    // old OID
-//	                    x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
-//	                }
-//	            }
-//	
-//	            // add ProxyCertInfo extension to the new cert
-//	        	certBuilder.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getParsedValue());
-//	
-//	            // handle KeyUsage in issuer cert
-//	            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
-//	            if (crt.hasExtensions()) {
-//	                Extension ext;
-//	
-//	                // handle key usage ext
-//	                ext = crt.getExtension(Extension.keyUsage);
-//	                if (ext != null) {
-//	
-//	                    // TBD: handle this better
-//	                    if (extSet != null && (extSet.getExtension(Extension.keyUsage) != null)) {
-//	                        String err = i18n.getMessage("keyUsageExt");
-//	                        throw new GeneralSecurityException(err);
-//	                    }
-//	
-//	                    DERBitString bits = (DERBitString) ext.getParsedValue().toASN1Primitive();
-//	
-//	                    byte[] bytes = bits.getBytes();
-//	
-//	                    // make sure they are disabled
-//	                    if ((bytes[0] & KeyUsage.nonRepudiation) != 0) {
-//	                        bytes[0] ^= KeyUsage.nonRepudiation;
-//	                    }
-//	
-//	                    if ((bytes[0] & KeyUsage.keyCertSign) != 0) {
-//	                        bytes[0] ^= KeyUsage.keyCertSign;
-//	                    }
-//	
-//	                    bits = new DERBitString(bytes, bits.getPadBits());
-//	
-//	                    certBuilder.addExtension(Extension.keyUsage, ext.isCritical(), bits);
-//	                }
-//	            }
-//	
-//	        }
-//	
-//	        // add specified extensions
-//	        if (extSet != null) {
-//	            Enumeration<?> oids = extSet.oids();
-//	            while (oids.hasMoreElements()) {
-//	                ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) oids.nextElement();
-//	                // skip ProxyCertInfo extension
-//	                if (oid.equals(ProxyCertInfo.OID) || oid.equals(ProxyCertInfo.OLD_OID)) {
-//	                    continue;
-//	                }
-//	                x509Ext = extSet.getExtension(oid);
-//	                if(Extension.basicConstraints.equals(x509Ext.getExtnId())){
-//	                	BasicConstraints.getInstance(x509Ext.getExtnValue().getOctets());
-//	                }
-//	                certBuilder.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getParsedValue());
-//	            }
-//	        }
-//	        
-//	        return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate(certBuilder.build(new JcaContentSignerBuilder(issuerCert.getSigAlgName()).setProvider("BC").build(issuerKey)));
-//        } catch (IOException e) {
-//            // but this should not happen
-//            throw new GeneralSecurityException(e);
-//        } catch (OperatorCreationException e) {
-//        	throw new GeneralSecurityException(e);
-//		}
-        
-        
-        X509Certificate issuerCert = issuerCert_;
+    	X509Certificate issuerCert = issuerCert_;
         if (!(issuerCert_ instanceof X509CertificateObject)) {
             issuerCert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(issuerCert.getEncoded()));
         }
-
-        X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
-
-        X509Extension x509Ext = null;
+        
         BigInteger serialNum = null;
         String delegDN = null;
+        boolean gt3_4 = false;
 
         if (ProxyCertificateUtil.isGsi3Proxy(certType) || ProxyCertificateUtil.isGsi4Proxy(certType)) {
+        	gt3_4 =true;
             Random rand = new Random();
             delegDN = String.valueOf(Math.abs(rand.nextInt()));
             serialNum = new BigInteger(20, rand);
+        } else if (certType == GSIConstants.CertificateType.GSI_2_LIMITED_PROXY) {
+            delegDN = "limited proxy";
+            serialNum = issuerCert.getSerialNumber();
+        } else if (certType == GSIConstants.CertificateType.GSI_2_PROXY) {
+            delegDN = "proxy";
+            serialNum = issuerCert.getSerialNumber();
+        } else {
+            String err = i18n.getMessage("unsupportedProxy", certType);
+            throw new IllegalArgumentException(err);
+        }
 
-            DERObjectIdentifier extOID = null;
-            if (extSet != null) {
-                x509Ext = extSet.getExtension(ProxyCertInfo.OID);
-                extOID = ProxyCertInfo.OID;
-                if (x509Ext == null) {
-                    x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
-                    extOID = ProxyCertInfo.OLD_OID;
-                }
-            }
+        X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
+        X500NameHelper issuer = new X500NameHelper(issuerDN);
+        X500NameHelper subject = new X500NameHelper(issuerDN);
+        subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
 
-            if (x509Ext == null) {
-            	extOID = null;
-                // create ProxyCertInfo extension
-                ProxyPolicy policy = null;
-                if (ProxyCertificateUtil.isLimitedProxy(certType)) {
-                    policy = new ProxyPolicy(ProxyPolicy.LIMITED);
-                } else if (ProxyCertificateUtil.isIndependentProxy(certType)) {
-                    policy = new ProxyPolicy(ProxyPolicy.INDEPENDENT);
-                } else if (ProxyCertificateUtil.isImpersonationProxy(certType)) {
-                    // since limited has already been checked, this should work.
-                    policy = new ProxyPolicy(ProxyPolicy.IMPERSONATION);
-                } else if ((certType == GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY)
-                    || (certType == GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY)) {
-                    String err = i18n.getMessage("restrictProxy");
-                    throw new IllegalArgumentException(err);
-                } else {
-                    String err = i18n.getMessage("invalidProxyType");
-                    throw new IllegalArgumentException(err);
-                }
+        GregorianCalendar date = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+        /* Allow for a five minute clock skew here. */
+        date.add(Calendar.MINUTE, -5);
+        Date notBefore = date.getTime();
 
-                ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
-                try {
-	                if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
-	                    // RFC compliant OID
-	                    x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
-	                    extOID = ProxyCertInfo.OID;
-	                } else {
-	                    // old OID
-	                    x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
-	                    extOID = ProxyCertInfo.OLD_OID;
-	                }
-                } catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+        /* If hours = 0, then cert lifetime is set to user cert */
+        Date notAfter = null;
+        if (lifetime <= 0) {
+        	notAfter = issuerCert.getNotAfter();
+        } else {
+            date.add(Calendar.MINUTE, 5);
+            date.add(Calendar.SECOND, lifetime);
+            notAfter = date.getTime();
+        }
+        try {
+        	//Swap the RDNs in order to have them in the needed order.
+        	RDN[] rdns = issuer.getAsName().getRDNs();
+            GlobusStyle.swap(rdns);
+        	X500Name realIssuer = new X500Name(BCStyle.INSTANCE, rdns);
+        	
+            rdns = subject.getAsName().getRDNs();
+            GlobusStyle.swap(rdns);
+        	X500Name realSubject = new X500Name(BCStyle.INSTANCE, rdns);
+        	
+	        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(realSubject, serialNum, notBefore, notAfter, realIssuer, subjectPublicKeyInfo);
+	        
+	        X509Extension x509Ext = null;        
+	        if (gt3_4) {
+	        	ASN1ObjectIdentifier extOID = null;
+				if (extSet != null) {
+					x509Ext = extSet.getExtension(ProxyCertInfo.OID);
+					extOID = ProxyCertInfo.OID;
+					if (x509Ext == null) {
+						x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
+						extOID = ProxyCertInfo.OLD_OID;
+					}
 				}
-            }
+	
+				if (x509Ext == null) {
+					extOID = null;
+					// create ProxyCertInfo extension
+					ProxyPolicy policy = null;
+					if (ProxyCertificateUtil.isLimitedProxy(certType)) {
+						policy = new ProxyPolicy(ProxyPolicy.LIMITED);
+					} else if (ProxyCertificateUtil.isIndependentProxy(certType)) {
+						policy = new ProxyPolicy(ProxyPolicy.INDEPENDENT);
+					} else if (ProxyCertificateUtil.isImpersonationProxy(certType)) {
+						// since limited has already been checked, this should work.
+						policy = new ProxyPolicy(ProxyPolicy.IMPERSONATION);
+					} else if ((certType == GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY)
+							|| (certType == GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY)) {
+						throw new IllegalArgumentException("Proxy restricted");
+					} else {
+						throw new IllegalArgumentException("Invalid Proxy Type");
+					}
 
-            try {
-                // add ProxyCertInfo extension to the new cert
-                certGen.addExtension(extOID.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
-
-             // handle KeyUsage in issuer cert
+					ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
+					if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
+						// RFC compliant OID
+						x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
+						extOID = ProxyCertInfo.OID;
+					} else {
+						// old OID
+						x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
+						extOID = ProxyCertInfo.OLD_OID;
+					}
+				}
+	
+	            // add ProxyCertInfo extension to the new cert
+	        	certBuilder.addExtension(extOID, x509Ext.isCritical(), x509Ext.getParsedValue());
+	
+	            // handle KeyUsage in issuer cert
 	            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
 	            if (crt.hasExtensions()) {
 	                X509Extension ext;
@@ -620,7 +492,7 @@ public class BouncyCastleCertProcessingFactory {
 	                        throw new GeneralSecurityException(err);
 	                    }
 	
-	                    DERBitString bits = (DERBitString) ext.getParsedValue().getDERObject();
+	                    DERBitString bits = (DERBitString) ext.getParsedValue().toASN1Object();
 	
 	                    byte[] bytes = bits.getBytes();
 	
@@ -635,80 +507,206 @@ public class BouncyCastleCertProcessingFactory {
 	
 	                    bits = new DERBitString(bytes, bits.getPadBits());
 	
-	                    certGen.addExtension(X509Extension.keyUsage.getId(), ext.isCritical(), bits);
+	                    certBuilder.addExtension(X509Extension.keyUsage, ext.isCritical(), bits);
 	                }
 	            }
-
-            } catch (IOException e) {
-                // but this should not happen
-                throw new GeneralSecurityException(e.getMessage());
-            }
-
-        } else if (certType == GSIConstants.CertificateType.GSI_2_LIMITED_PROXY) {
-            delegDN = "limited proxy";
-            serialNum = issuerCert.getSerialNumber();
-        } else if (certType == GSIConstants.CertificateType.GSI_2_PROXY) {
-            delegDN = "proxy";
-            serialNum = issuerCert.getSerialNumber();
-        } else {
-            String err = i18n.getMessage("unsupportedProxy", certType);
-            throw new IllegalArgumentException(err);
-        }
-
-        // add specified extensions
-        if (extSet != null) {
-            Enumeration<?> oids = extSet.oids();
-            while (oids.hasMoreElements()) {
-                ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) oids.nextElement();
-                // skip ProxyCertInfo extension
-                if (oid.equals(ProxyCertInfo.OID) || oid.equals(ProxyCertInfo.OLD_OID)) {
-                    continue;
-                }
-                x509Ext = extSet.getExtension(oid);
-                certGen.addExtension(oid.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
-            }
-        }
-
-        X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
-        X500NameHelper issuer = new X500NameHelper(issuerDN);
-        X500NameHelper subject = new X500NameHelper(issuerDN);
-        subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
-
-
-        certGen.setSubjectDN(CertificateUtil.toPrincipal(subject.getAsName().toString()));
-        certGen.setIssuerDN(CertificateUtil.toPrincipal(issuer.getAsName().toString()));
-
-        certGen.setSerialNumber(serialNum);
-        
-        AsymmetricKeyParameter asymmetricKeyParameter;
-		try {
-			asymmetricKeyParameter = PublicKeyFactory.createKey(subjectPublicKeyInfo);
-		} catch (IOException e) {
-			throw new GeneralSecurityException(e);
+	
+	        }
+	
+	        // add specified extensions
+			if (extSet != null) {
+				Enumeration<?> oids = extSet.oids();
+				while (oids.hasMoreElements()) {
+					ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) oids.nextElement();
+					// skip ProxyCertInfo extension
+					if (oid.equals(ProxyCertInfo.OID) || oid.equals(ProxyCertInfo.OLD_OID)) {
+						continue;
+					}
+					x509Ext = extSet.getExtension(oid);
+					certBuilder.addExtension(oid, x509Ext.isCritical(), x509Ext.getParsedValue());
+				}
+			}
+	        
+	        return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate(certBuilder.build(new JcaContentSignerBuilder(issuerCert.getSigAlgName()).setProvider("BC").build(issuerKey)));
+        } catch (IOException e) {
+            // but this should not happen
+            throw new GeneralSecurityException(e);
+        } catch (OperatorCreationException e) {
+        	throw new GeneralSecurityException(e);
 		}
-		RSAPublicKeySpec rsaSpec = new RSAPublicKeySpec(((RSAKeyParameters)asymmetricKeyParameter).getModulus(), ((RSAKeyParameters)asymmetricKeyParameter).getExponent());
-		KeyFactory kf = KeyFactory.getInstance("RSA");
-		PublicKey publicKey = kf.generatePublic(rsaSpec);
-        
-        certGen.setPublicKey(publicKey);
-        certGen.setSignatureAlgorithm(issuerCert.getSigAlgName());
-
-        GregorianCalendar date = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
-        /* Allow for a five minute clock skew here. */
-        date.add(Calendar.MINUTE, -5);
-        certGen.setNotBefore(date.getTime());
-
-        /* If hours = 0, then cert lifetime is set to user cert */
-        if (lifetime <= 0) {
-            certGen.setNotAfter(issuerCert.getNotAfter());
-        } else {
-            date.add(Calendar.MINUTE, 5);
-            date.add(Calendar.SECOND, lifetime);
-            certGen.setNotAfter(date.getTime());
-        }
-
-        
-        return certGen.generateX509Certificate(issuerKey);
+//        
+//        
+//        X509Certificate issuerCert = issuerCert_;
+//        if (!(issuerCert_ instanceof X509CertificateObject)) {
+//            issuerCert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(issuerCert.getEncoded()));
+//        }
+//
+//        X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
+//
+//        X509Extension x509Ext = null;
+//        BigInteger serialNum = null;
+//        String delegDN = null;
+//
+//        if (ProxyCertificateUtil.isGsi3Proxy(certType) || ProxyCertificateUtil.isGsi4Proxy(certType)) {
+//            Random rand = new Random();
+//            delegDN = String.valueOf(Math.abs(rand.nextInt()));
+//            serialNum = new BigInteger(20, rand);
+//
+//            DERObjectIdentifier extOID = null;
+//            if (extSet != null) {
+//                x509Ext = extSet.getExtension(ProxyCertInfo.OID);
+//                extOID = ProxyCertInfo.OID;
+//                if (x509Ext == null) {
+//                    x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
+//                    extOID = ProxyCertInfo.OLD_OID;
+//                }
+//            }
+//
+//            if (x509Ext == null) {
+//            	extOID = null;
+//                // create ProxyCertInfo extension
+//                ProxyPolicy policy = null;
+//                if (ProxyCertificateUtil.isLimitedProxy(certType)) {
+//                    policy = new ProxyPolicy(ProxyPolicy.LIMITED);
+//                } else if (ProxyCertificateUtil.isIndependentProxy(certType)) {
+//                    policy = new ProxyPolicy(ProxyPolicy.INDEPENDENT);
+//                } else if (ProxyCertificateUtil.isImpersonationProxy(certType)) {
+//                    // since limited has already been checked, this should work.
+//                    policy = new ProxyPolicy(ProxyPolicy.IMPERSONATION);
+//                } else if ((certType == GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY)
+//                    || (certType == GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY)) {
+//                    String err = i18n.getMessage("restrictProxy");
+//                    throw new IllegalArgumentException(err);
+//                } else {
+//                    String err = i18n.getMessage("invalidProxyType");
+//                    throw new IllegalArgumentException(err);
+//                }
+//
+//                ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
+//                try {
+//	                if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
+//	                    // RFC compliant OID
+//	                    x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
+//	                    extOID = ProxyCertInfo.OID;
+//	                } else {
+//	                    // old OID
+//	                    x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
+//	                    extOID = ProxyCertInfo.OLD_OID;
+//	                }
+//                } catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//            }
+//
+//            try {
+//                // add ProxyCertInfo extension to the new cert
+//                certGen.addExtension(extOID.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
+//
+//             // handle KeyUsage in issuer cert
+//	            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
+//	            if (crt.hasExtensions()) {
+//	                X509Extension ext;
+//	
+//	                // handle key usage ext
+//	                ext = crt.getExtension(X509Extension.keyUsage);
+//	                if (ext != null) {
+//	
+//	                    // TBD: handle this better
+//	                    if (extSet != null && (extSet.getExtension(X509Extension.keyUsage) != null)) {
+//	                        String err = i18n.getMessage("keyUsageExt");
+//	                        throw new GeneralSecurityException(err);
+//	                    }
+//	
+//	                    DERBitString bits = (DERBitString) ext.getParsedValue().getDERObject();
+//	
+//	                    byte[] bytes = bits.getBytes();
+//	
+//	                    // make sure they are disabled
+//	                    if ((bytes[0] & KeyUsage.nonRepudiation) != 0) {
+//	                        bytes[0] ^= KeyUsage.nonRepudiation;
+//	                    }
+//	
+//	                    if ((bytes[0] & KeyUsage.keyCertSign) != 0) {
+//	                        bytes[0] ^= KeyUsage.keyCertSign;
+//	                    }
+//	
+//	                    bits = new DERBitString(bytes, bits.getPadBits());
+//	
+//	                    certGen.addExtension(X509Extension.keyUsage.getId(), ext.isCritical(), bits);
+//	                }
+//	            }
+//
+//            } catch (IOException e) {
+//                // but this should not happen
+//                throw new GeneralSecurityException(e.getMessage());
+//            }
+//
+//        } else if (certType == GSIConstants.CertificateType.GSI_2_LIMITED_PROXY) {
+//            delegDN = "limited proxy";
+//            serialNum = issuerCert.getSerialNumber();
+//        } else if (certType == GSIConstants.CertificateType.GSI_2_PROXY) {
+//            delegDN = "proxy";
+//            serialNum = issuerCert.getSerialNumber();
+//        } else {
+//            String err = i18n.getMessage("unsupportedProxy", certType);
+//            throw new IllegalArgumentException(err);
+//        }
+//
+//        // add specified extensions
+//        if (extSet != null) {
+//            Enumeration<?> oids = extSet.oids();
+//            while (oids.hasMoreElements()) {
+//                ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) oids.nextElement();
+//                // skip ProxyCertInfo extension
+//                if (oid.equals(ProxyCertInfo.OID) || oid.equals(ProxyCertInfo.OLD_OID)) {
+//                    continue;
+//                }
+//                x509Ext = extSet.getExtension(oid);
+//                certGen.addExtension(oid.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
+//            }
+//        }
+//
+//        X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
+//        X500NameHelper issuer = new X500NameHelper(issuerDN);
+//        X500NameHelper subject = new X500NameHelper(issuerDN);
+//        subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
+//
+//
+//        certGen.setSubjectDN(CertificateUtil.toPrincipal(subject.getAsName().toString()));
+//        certGen.setIssuerDN(CertificateUtil.toPrincipal(issuer.getAsName().toString()));
+//
+//        certGen.setSerialNumber(serialNum);
+//        
+//        AsymmetricKeyParameter asymmetricKeyParameter;
+//		try {
+//			asymmetricKeyParameter = PublicKeyFactory.createKey(subjectPublicKeyInfo);
+//		} catch (IOException e) {
+//			throw new GeneralSecurityException(e);
+//		}
+//		RSAPublicKeySpec rsaSpec = new RSAPublicKeySpec(((RSAKeyParameters)asymmetricKeyParameter).getModulus(), ((RSAKeyParameters)asymmetricKeyParameter).getExponent());
+//		KeyFactory kf = KeyFactory.getInstance("RSA");
+//		PublicKey publicKey = kf.generatePublic(rsaSpec);
+//        
+//        certGen.setPublicKey(publicKey);
+//        certGen.setSignatureAlgorithm(issuerCert.getSigAlgName());
+//
+//        GregorianCalendar date = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+//        /* Allow for a five minute clock skew here. */
+//        date.add(Calendar.MINUTE, -5);
+//        certGen.setNotBefore(date.getTime());
+//
+//        /* If hours = 0, then cert lifetime is set to user cert */
+//        if (lifetime <= 0) {
+//            certGen.setNotAfter(issuerCert.getNotAfter());
+//        } else {
+//            date.add(Calendar.MINUTE, 5);
+//            date.add(Calendar.SECOND, lifetime);
+//            certGen.setNotAfter(date.getTime());
+//        }
+//
+//        
+//        return certGen.generateX509Certificate(issuerKey);
     }
 
     /**
