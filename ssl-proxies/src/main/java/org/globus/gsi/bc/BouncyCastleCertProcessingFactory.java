@@ -17,6 +17,7 @@ package org.globus.gsi.bc;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -32,24 +33,38 @@ import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.TimeZone;
 
+import javax.security.auth.x500.X500Principal;
+
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.x509.TBSCertificateStructure;
+import org.bouncycastle.asn1.x509.Time;
+import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
+import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.X509Extensions;
+import org.bouncycastle.asn1.x509.X509ExtensionsGenerator;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.jce.X509Principal;
 import org.bouncycastle.jce.provider.X509CertificateObject;
+import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.ContentVerifierProvider;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -366,7 +381,7 @@ public class BouncyCastleCertProcessingFactory {
         String cnValue) throws GeneralSecurityException {
     	
     	try {
-			return createProxyCertificate(issuerCert_, issuerKey, new SubjectPublicKeyInfo((ASN1Sequence)ASN1Sequence.fromByteArray(publicKey.getEncoded())), lifetime, certType, extSet, cnValue);
+			return createProxyCertificate(issuerCert_, issuerKey, SubjectPublicKeyInfo.getInstance(ASN1Sequence.fromByteArray(publicKey.getEncoded())), lifetime, certType, extSet, cnValue);
 		} catch (IOException e) {
 			throw new GeneralSecurityException(e.getMessage());
 		}
@@ -421,16 +436,13 @@ public class BouncyCastleCertProcessingFactory {
             notAfter = date.getTime();
         }
         try {
-        	//Swap the RDNs in order to have them in the needed order.
         	RDN[] rdns = issuer.getAsName().getRDNs();
-            GlobusStyle.swap(rdns);
         	X500Name realIssuer = new X500Name(BCStyle.INSTANCE, rdns);
         	
             rdns = subject.getAsName().getRDNs();
-            GlobusStyle.swap(rdns);
         	X500Name realSubject = new X500Name(BCStyle.INSTANCE, rdns);
         	
-	        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(realSubject, serialNum, notBefore, notAfter, realIssuer, subjectPublicKeyInfo);
+        	MyX509v3CertificateBuilder certBuilder = new MyX509v3CertificateBuilder(realIssuer, serialNum, notBefore, notAfter, realSubject, subjectPublicKeyInfo);
 	        
 	        X509Extension x509Ext = null;        
 	        if (gt3_4) {
@@ -527,186 +539,24 @@ public class BouncyCastleCertProcessingFactory {
 				}
 			}
 	        
-	        return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate(certBuilder.build(new JcaContentSignerBuilder(issuerCert.getSigAlgName()).setProvider("BC").build(issuerKey)));
+			ContentSigner contentSigner = new JcaContentSignerBuilder("SHA1withRSA").setProvider("BC").build(issuerKey);
+			X509CertificateHolder x509CertificateHolder = certBuilder.build(contentSigner);
+			
+//			try {
+//				ContentVerifierProvider contentVerifierProvider = new JcaContentVerifierProviderBuilder().setProvider("BC").build(issuerCert);
+//				if (!x509CertificateHolder.isSignatureValid(contentVerifierProvider)){
+//				    throw new GeneralSecurityException("signature invalid");
+//				}
+//			} catch (CertException e) {
+//				throw new GeneralSecurityException(e);
+//			}			
+	        return new JcaX509CertificateConverter().setProvider("BC").getCertificate(x509CertificateHolder);
         } catch (IOException e) {
             // but this should not happen
             throw new GeneralSecurityException(e);
         } catch (OperatorCreationException e) {
         	throw new GeneralSecurityException(e);
 		}
-//        
-//        
-//        X509Certificate issuerCert = issuerCert_;
-//        if (!(issuerCert_ instanceof X509CertificateObject)) {
-//            issuerCert = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(issuerCert.getEncoded()));
-//        }
-//
-//        X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
-//
-//        X509Extension x509Ext = null;
-//        BigInteger serialNum = null;
-//        String delegDN = null;
-//
-//        if (ProxyCertificateUtil.isGsi3Proxy(certType) || ProxyCertificateUtil.isGsi4Proxy(certType)) {
-//            Random rand = new Random();
-//            delegDN = String.valueOf(Math.abs(rand.nextInt()));
-//            serialNum = new BigInteger(20, rand);
-//
-//            DERObjectIdentifier extOID = null;
-//            if (extSet != null) {
-//                x509Ext = extSet.getExtension(ProxyCertInfo.OID);
-//                extOID = ProxyCertInfo.OID;
-//                if (x509Ext == null) {
-//                    x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
-//                    extOID = ProxyCertInfo.OLD_OID;
-//                }
-//            }
-//
-//            if (x509Ext == null) {
-//            	extOID = null;
-//                // create ProxyCertInfo extension
-//                ProxyPolicy policy = null;
-//                if (ProxyCertificateUtil.isLimitedProxy(certType)) {
-//                    policy = new ProxyPolicy(ProxyPolicy.LIMITED);
-//                } else if (ProxyCertificateUtil.isIndependentProxy(certType)) {
-//                    policy = new ProxyPolicy(ProxyPolicy.INDEPENDENT);
-//                } else if (ProxyCertificateUtil.isImpersonationProxy(certType)) {
-//                    // since limited has already been checked, this should work.
-//                    policy = new ProxyPolicy(ProxyPolicy.IMPERSONATION);
-//                } else if ((certType == GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY)
-//                    || (certType == GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY)) {
-//                    String err = i18n.getMessage("restrictProxy");
-//                    throw new IllegalArgumentException(err);
-//                } else {
-//                    String err = i18n.getMessage("invalidProxyType");
-//                    throw new IllegalArgumentException(err);
-//                }
-//
-//                ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
-//                try {
-//	                if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
-//	                    // RFC compliant OID
-//	                    x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
-//	                    extOID = ProxyCertInfo.OID;
-//	                } else {
-//	                    // old OID
-//	                    x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
-//	                    extOID = ProxyCertInfo.OLD_OID;
-//	                }
-//                } catch (IOException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//            }
-//
-//            try {
-//                // add ProxyCertInfo extension to the new cert
-//                certGen.addExtension(extOID.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
-//
-//             // handle KeyUsage in issuer cert
-//	            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
-//	            if (crt.hasExtensions()) {
-//	                X509Extension ext;
-//	
-//	                // handle key usage ext
-//	                ext = crt.getExtension(X509Extension.keyUsage);
-//	                if (ext != null) {
-//	
-//	                    // TBD: handle this better
-//	                    if (extSet != null && (extSet.getExtension(X509Extension.keyUsage) != null)) {
-//	                        String err = i18n.getMessage("keyUsageExt");
-//	                        throw new GeneralSecurityException(err);
-//	                    }
-//	
-//	                    DERBitString bits = (DERBitString) ext.getParsedValue().getDERObject();
-//	
-//	                    byte[] bytes = bits.getBytes();
-//	
-//	                    // make sure they are disabled
-//	                    if ((bytes[0] & KeyUsage.nonRepudiation) != 0) {
-//	                        bytes[0] ^= KeyUsage.nonRepudiation;
-//	                    }
-//	
-//	                    if ((bytes[0] & KeyUsage.keyCertSign) != 0) {
-//	                        bytes[0] ^= KeyUsage.keyCertSign;
-//	                    }
-//	
-//	                    bits = new DERBitString(bytes, bits.getPadBits());
-//	
-//	                    certGen.addExtension(X509Extension.keyUsage.getId(), ext.isCritical(), bits);
-//	                }
-//	            }
-//
-//            } catch (IOException e) {
-//                // but this should not happen
-//                throw new GeneralSecurityException(e.getMessage());
-//            }
-//
-//        } else if (certType == GSIConstants.CertificateType.GSI_2_LIMITED_PROXY) {
-//            delegDN = "limited proxy";
-//            serialNum = issuerCert.getSerialNumber();
-//        } else if (certType == GSIConstants.CertificateType.GSI_2_PROXY) {
-//            delegDN = "proxy";
-//            serialNum = issuerCert.getSerialNumber();
-//        } else {
-//            String err = i18n.getMessage("unsupportedProxy", certType);
-//            throw new IllegalArgumentException(err);
-//        }
-//
-//        // add specified extensions
-//        if (extSet != null) {
-//            Enumeration<?> oids = extSet.oids();
-//            while (oids.hasMoreElements()) {
-//                ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) oids.nextElement();
-//                // skip ProxyCertInfo extension
-//                if (oid.equals(ProxyCertInfo.OID) || oid.equals(ProxyCertInfo.OLD_OID)) {
-//                    continue;
-//                }
-//                x509Ext = extSet.getExtension(oid);
-//                certGen.addExtension(oid.getId(), x509Ext.isCritical(), x509Ext.getParsedValue());
-//            }
-//        }
-//
-//        X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
-//        X500NameHelper issuer = new X500NameHelper(issuerDN);
-//        X500NameHelper subject = new X500NameHelper(issuerDN);
-//        subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
-//
-//
-//        certGen.setSubjectDN(CertificateUtil.toPrincipal(subject.getAsName().toString()));
-//        certGen.setIssuerDN(CertificateUtil.toPrincipal(issuer.getAsName().toString()));
-//
-//        certGen.setSerialNumber(serialNum);
-//        
-//        AsymmetricKeyParameter asymmetricKeyParameter;
-//		try {
-//			asymmetricKeyParameter = PublicKeyFactory.createKey(subjectPublicKeyInfo);
-//		} catch (IOException e) {
-//			throw new GeneralSecurityException(e);
-//		}
-//		RSAPublicKeySpec rsaSpec = new RSAPublicKeySpec(((RSAKeyParameters)asymmetricKeyParameter).getModulus(), ((RSAKeyParameters)asymmetricKeyParameter).getExponent());
-//		KeyFactory kf = KeyFactory.getInstance("RSA");
-//		PublicKey publicKey = kf.generatePublic(rsaSpec);
-//        
-//        certGen.setPublicKey(publicKey);
-//        certGen.setSignatureAlgorithm(issuerCert.getSigAlgName());
-//
-//        GregorianCalendar date = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
-//        /* Allow for a five minute clock skew here. */
-//        date.add(Calendar.MINUTE, -5);
-//        certGen.setNotBefore(date.getTime());
-//
-//        /* If hours = 0, then cert lifetime is set to user cert */
-//        if (lifetime <= 0) {
-//            certGen.setNotAfter(issuerCert.getNotAfter());
-//        } else {
-//            date.add(Calendar.MINUTE, 5);
-//            date.add(Calendar.SECOND, lifetime);
-//            certGen.setNotAfter(date.getTime());
-//        }
-//
-//        
-//        return certGen.generateX509Certificate(issuerKey);
     }
 
     /**
@@ -868,4 +718,144 @@ public class BouncyCastleCertProcessingFactory {
         }
         return bcCerts;
     }
+    
+    /**
+     * FIXME:
+	 * This class is a copy of {@link X509v3CertificateBuilder}. The modification is in the constructor in order to
+	 * fill the Subject and Issuer using a {@link X509Principal} instead of a {@link X500Name}. The hash produced server
+	 * side is different in both cases (i.e: MyProxy server).
+	 */
+	public class MyX509v3CertificateBuilder
+	{
+	    private V3TBSCertificateGenerator   tbsGen;
+	    private X509ExtensionsGenerator     extGenerator;
+	
+	    /**
+	     * Create a builder for a version 3 certificate.
+	     *
+	     * @param issuer the certificate issuer
+	     * @param serial the certificate serial number
+	     * @param notBefore the date before which the certificate is not valid
+	     * @param notAfter the date after which the certificate is not valid
+	     * @param subject the certificate subject
+	     * @param publicKeyInfo the info structure for the public key to be associated with this certificate.
+	     */
+	    public MyX509v3CertificateBuilder(X500Name issuer, BigInteger serial, Date notBefore, Date notAfter, X500Name subject, SubjectPublicKeyInfo publicKeyInfo)
+	    {
+	        tbsGen = new V3TBSCertificateGenerator();
+	        tbsGen.setSerialNumber(new DERInteger(serial));
+	        X500Principal originalIssuer = new X500Principal(issuer.toString());
+	        X509Principal x509NameIssuer = null;
+			try {
+				x509NameIssuer = new X509Principal(originalIssuer.getEncoded());
+			} catch (IOException e) {
+				throw new IllegalStateException("cannot construct certificate x509NameIssuer");
+			}
+	        tbsGen.setIssuer(x509NameIssuer);
+	        tbsGen.setStartDate(new Time(notBefore));
+	        tbsGen.setEndDate(new Time(notAfter));
+	        X500Principal originalSubject = new X500Principal(subject.toString());
+	        X509Principal x509NameSubject = null;
+			try {
+				x509NameSubject = new X509Principal(originalSubject.getEncoded());
+			} catch (IOException e) {
+				throw new IllegalStateException("cannot construct certificate x509NameSubject");
+			}
+	        tbsGen.setSubject(x509NameSubject);
+	        tbsGen.setSubjectPublicKeyInfo(publicKeyInfo);
+	
+	        extGenerator = new X509ExtensionsGenerator();
+	    }
+	
+	    /**
+	     * Add a given extension field for the standard extensions tag (tag 3)
+	     *
+	     * @param oid the OID defining the extension type.
+	     * @param isCritical true if the extension is critical, false otherwise.
+	     * @param value the ASN.1 structure that forms the extension's value.
+	     * @return this builder object.
+	     */
+	    public MyX509v3CertificateBuilder addExtension(
+	        ASN1ObjectIdentifier oid,
+	        boolean isCritical,
+	        ASN1Encodable value)
+	    {
+	        extGenerator.addExtension(oid, isCritical, value);
+	
+	        return this;
+	    }
+	
+	    /**
+	     * Add a given extension field for the standard extensions tag (tag 3)
+	     * copying the extension value from another certificate.
+	     *
+	     * @param oid the OID defining the extension type.
+	     * @param isCritical true if the copied extension is to be marked as critical, false otherwise.
+	     * @param certHolder the holder for the certificate that the extension is to be copied from.
+	     * @return this builder object.
+	     */
+	    public MyX509v3CertificateBuilder copyAndAddExtension(
+	        ASN1ObjectIdentifier oid,
+	        boolean isCritical,
+	        X509CertificateHolder certHolder)
+	    {
+	        X509CertificateStructure cert = certHolder.toASN1Structure();
+	
+	        X509Extension extension = cert.getTBSCertificate().getExtensions().getExtension(oid);
+	
+	        if (extension == null)
+	        {
+	            throw new NullPointerException("extension " + oid + " not present");
+	        }
+	
+	        extGenerator.addExtension(oid, isCritical, extension.getValue().getOctets());
+	
+	        return this;
+	    }
+	
+	    /**
+	     * Generate an X.509 certificate, based on the current issuer and subject
+	     * using the passed in signer.
+	     *
+	     * @param signer the content signer to be used to generate the signature validating the certificate.
+	     * @return a holder containing the resulting signed certificate.
+	     */
+	    public X509CertificateHolder build(
+	        ContentSigner signer)
+	    {
+	        tbsGen.setSignature(signer.getAlgorithmIdentifier());
+	
+	        if (!extGenerator.isEmpty())
+	        {
+	            tbsGen.setExtensions(extGenerator.generate());
+	        }
+	        TBSCertificateStructure tbsCert = tbsGen.generateTBSCertificate();
+	        try {
+				return new X509CertificateHolder(generateStructure(tbsCert, signer.getAlgorithmIdentifier(), generateSig(signer, tbsCert)));
+			} catch (IOException e) {
+				throw new IllegalStateException("cannot produce certificate signature");
+			}
+	      
+	    }
+	    
+	    private byte[] generateSig(ContentSigner signer, ASN1Encodable tbsObj) throws IOException   {
+	            OutputStream sOut = signer.getOutputStream();
+
+	            sOut.write(tbsObj.getDEREncoded());
+
+	            sOut.close();
+
+	            return signer.getSignature();
+	        }
+
+        private X509CertificateStructure generateStructure(TBSCertificateStructure tbsCert, AlgorithmIdentifier sigAlgId, byte[] signature) {
+            ASN1EncodableVector v = new ASN1EncodableVector();
+
+            v.add(tbsCert);
+            v.add(sigAlgId);
+            v.add(new DERBitString(signature));
+
+            return X509CertificateStructure.getInstance(new DERSequence(v));
+        }
+	}
 }
