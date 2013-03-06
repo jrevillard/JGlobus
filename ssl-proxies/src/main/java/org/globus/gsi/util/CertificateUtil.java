@@ -312,7 +312,8 @@ public final class CertificateUtil {
 
         X500Name x500name = crt.getSubject();
         //Needed to put the RDN array in the expected order.
-		RDN[] rdns = new X500Name(GlobusStyle.INSTANCE, CertificateUtil.toGlobusID(x500name.toString())).getRDNs();
+        RDN[] rdns = x500name.getRDNs();
+		GlobusStyle.swap(rdns);
 		AttributeTypeAndValue attributeTypeAndValue;
 		if(rdns[0].isMultiValued()){
 			AttributeTypeAndValue[] attributeTypeAndValues = rdns[0].getTypesAndValues();
