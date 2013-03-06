@@ -32,6 +32,7 @@ import java.util.Date;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.PasswordException;
 import org.bouncycastle.openssl.PasswordFinder;
 import org.globus.common.CoGProperties;
@@ -125,6 +126,12 @@ public class X509Credential {
     		this.privateKey = CertificateLoadUtil.loadPrivateKey(keyFile, null);
     	}catch (PasswordException e) {
 			// Ok, the keystore needs a password, we will decrypt it later.
+    	}catch (PEMException e) {
+    		if("no PasswordFinder specified".equals(e.getMessage())){
+    			// Ok, the keystore needs a password, we will decrypt it later.
+    		}else{
+    			throw new CredentialException("Cannot understand the private key format.", e);
+    		}
 		} catch (IOException e) {
 			throw new CredentialException("No Private Key found", e);
 		} catch (GeneralSecurityException e) {
@@ -270,7 +277,7 @@ public class X509Credential {
         }else if("DSA".equals(privateKey.getAlgorithm())){
         	return -1;
         }else{
-        	return -1;
+        	return -2;
         }
     }
 
