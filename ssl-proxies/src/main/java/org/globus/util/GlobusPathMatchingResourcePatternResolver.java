@@ -3,9 +3,11 @@ package org.globus.util;
 import org.apache.commons.codec.net.URLCodec;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Vector;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.lang.reflect.Array;
 import java.net.URL;
 import java.net.MalformedURLException;
 
@@ -104,6 +106,7 @@ public class GlobusPathMatchingResourcePatternResolver {
      */
     private String antToRegexConverter(String antStyleLocationPattern) {
     	String regexStyleLocationPattern = antStyleLocationPattern.replaceAll("\\\\", "/");  // Escape \ in Windows OS path
+    	regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("\\+", "\\\\+"); // replace + with \\+ (the + is a path can produce "Dangling meta character '+' near index xx"
         regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("\\.", "\\\\."); // replace . with \\.
         regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("//", "/");//Solution for known test cases with // issue at org.globus.gsi.proxy.ProxyPathValidatorTest line 536, Needs Review
         regexStyleLocationPattern = regexStyleLocationPattern.replace('?', '.'); // replace ? with .
