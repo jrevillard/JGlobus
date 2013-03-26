@@ -23,6 +23,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -63,6 +64,7 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.jce.X509Principal;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.ContentVerifierProvider;
@@ -377,11 +379,19 @@ public class BouncyCastleCertProcessingFactory {
      *                if a security error occurs.
      */
     public X509Certificate createProxyCertificate(X509Certificate issuerCert_, PrivateKey issuerKey,
+            PublicKey publicKey, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
+            String cnValue) throws GeneralSecurityException {
+
+    		return createProxyCertificate(issuerCert_, issuerKey, publicKey, lifetime, certType, extSet, cnValue, new BouncyCastleProvider());
+
+        }
+    
+    public X509Certificate createProxyCertificate(X509Certificate issuerCert_, PrivateKey issuerKey,
         PublicKey publicKey, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
-        String cnValue) throws GeneralSecurityException {
+        String cnValue, Provider securityProvider) throws GeneralSecurityException {
     	
     	try {
-			return createProxyCertificate(issuerCert_, issuerKey, SubjectPublicKeyInfo.getInstance(ASN1Sequence.fromByteArray(publicKey.getEncoded())), lifetime, certType, extSet, cnValue);
+			return createProxyCertificate(issuerCert_, issuerKey, SubjectPublicKeyInfo.getInstance(ASN1Sequence.fromByteArray(publicKey.getEncoded())), lifetime, certType, extSet, cnValue, securityProvider);
 		} catch (IOException e) {
 			throw new GeneralSecurityException(e.getMessage());
 		}
@@ -390,6 +400,12 @@ public class BouncyCastleCertProcessingFactory {
     public X509Certificate createProxyCertificate(X509Certificate issuerCert_, PrivateKey issuerKey,
     		SubjectPublicKeyInfo subjectPublicKeyInfo, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
             String cnValue) throws GeneralSecurityException {
+    	return createProxyCertificate(issuerCert_, issuerKey, subjectPublicKeyInfo, lifetime, certType, extSet, cnValue, new BouncyCastleProvider());
+    }
+    
+    public X509Certificate createProxyCertificate(X509Certificate issuerCert_, PrivateKey issuerKey,
+    		SubjectPublicKeyInfo subjectPublicKeyInfo, int lifetime, GSIConstants.CertificateType certType, X509Extensions extSet,
+            String cnValue, Provider securityProvider) throws GeneralSecurityException {
         	
     	X509Certificate issuerCert = issuerCert_;
         if (!(issuerCert_ instanceof X509CertificateObject)) {
@@ -539,11 +555,11 @@ public class BouncyCastleCertProcessingFactory {
 				}
 			}
 	        
-			ContentSigner contentSigner = new JcaContentSignerBuilder("SHA1withRSA").setProvider("BC").build(issuerKey);
+			ContentSigner contentSigner = new JcaContentSignerBuilder("SHA1withRSA").setProvider(securityProvider).build(issuerKey);
 			X509CertificateHolder x509CertificateHolder = certBuilder.build(contentSigner);
 			
 //			try {
-//				ContentVerifierProvider contentVerifierProvider = new JcaContentVerifierProviderBuilder().setProvider("BC").build(issuerCert);
+//				ContentVerifierProvider contentVerifierProvider = new JcaContentVerifierProviderBuilder().setProvider(securityProvider).build(issuerCert);
 //				if (!x509CertificateHolder.isSignatureValid(contentVerifierProvider)){
 //				    throw new GeneralSecurityException("signature invalid");
 //				}
