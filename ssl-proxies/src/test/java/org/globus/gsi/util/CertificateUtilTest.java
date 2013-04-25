@@ -14,6 +14,8 @@
  */
 package org.globus.gsi.util;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import org.globus.gsi.testutils.FileSetupUtil;
@@ -23,13 +25,14 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
-import java.security.cert.CRLException;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.security.auth.x500.X500Principal;
 
 /**
  * FILL ME
@@ -199,6 +202,93 @@ public class CertificateUtilTest {
         }
 
         assertTrue(worked);
+    }
+
+    @Test
+    public void testToGlobusIdForString()
+    {
+        String dn =
+            CertificateUtil.toGlobusID("DC=org, DC=DOEGrids, OU=Certificate Authorities, CN=DOEGrids CA 1");
+        assertThat(dn, is("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1"));
+    }
+
+    @Test
+    public void testToGlobusIdForReverseString()
+    {
+        String dn =
+            CertificateUtil.toGlobusID("CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org");
+        assertThat(dn, is("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1"));
+    }
+
+    @Test
+    public void testToGlobusIdForX500Principal()
+    {
+        String dn = CertificateUtil.toGlobusID(
+            new X500Principal("CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org"));
+        assertThat(dn, is("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1"));
+    }
+
+    @Test
+    public void testToPrincipal()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
+    }
+
+    @Test
+    public void testToPrincipalWithSlashInAttribute()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("/DC=org/DC=DOEGrids/OU=Certificate / Authorities/CN=DOEGrids CA 1");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, OU=Certificate / Authorities, DC=DOEGrids, DC=org")));
+    }
+
+    @Test
+    public void testToPrincipalWithEmptyAttribute()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("/DC=org/DC=DOEGrids//CN=DOEGrids CA 1");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, DC=DOEGrids, DC=org")));
+    }
+
+    @Test
+    public void testToPrincipalWithEmptyString()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("");
+        assertThat(principal, is(new X500Principal("")));
+    }
+
+//    @Test
+//    public void testToPrincipalWithWhiteSpace()
+//    {
+//        X500Principal principal =
+//            CertificateUtil.toPrincipal(" /DC=org/ DC=DOEGrids/OU=Certificate Authorities / CN=DOEGrids CA 1   ");
+//        assertThat(principal, is(new X500Principal(
+//            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
+//    }
+
+    @Test
+    public void testToPrincipalWithRdnUnknownToJre()
+    {
+        String dn = "/DC=org/DC=terena/DC=tcs/C=FI/PostalCode=02101/ST=Uusimaa/L=Espoo/STREET=P.O. Box " +
+            "405/O=CSC/OU=satellite.csc.fi/CN=liuske.csc.fi";
+        X500Principal principal = CertificateUtil.toPrincipal(dn);
+        String newDn = CertificateUtil.toGlobusID(principal);
+        assertThat(newDn, is(dn));
+    }
+
+    @Test
+    public void testToPrincipalWithUrl() {
+        String dn = "/C=US/ST=UT/L=Salt Lake City/O=The USERTRUST Network"
+                + "/OU=http://www.usertrust.com/CN=UTN-USERFirst-Client Authentication and Email";
+        X500Principal principal = CertificateUtil.toPrincipal(dn);
+        String newDn = CertificateUtil.toGlobusID(principal);
+        assertThat(newDn, is(dn));
     }
 
     @After

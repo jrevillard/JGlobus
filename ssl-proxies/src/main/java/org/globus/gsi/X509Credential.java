@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -55,8 +56,9 @@ import org.globus.gsi.util.ProxyCertificateUtil;
  */
 // COMMENT: Added methods from GlobusCredential
 // COMMENT: Do we need the getDefaultCred functionality?
-public class X509Credential {
+public class X509Credential implements Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private static Log logger = LogFactory.getLog(X509Credential.class.getCanonicalName());
     private PrivateKey privateKey;
     private final String privateKeyFile;
@@ -65,7 +67,7 @@ public class X509Credential {
     
     private static X509Credential defaultCred;
     private static long credentialLastModified = -1;
-    // indicates if default credential was explicitly set
+    // indicates if default credential was explicitely set
     // and if so - if the credential expired it try
     // to load the proxy from a file.
     private static boolean credentialSet = false;
@@ -206,7 +208,7 @@ public class X509Credential {
     	}
         return this.privateKey;
     }
-    
+
     public boolean isEncryptedKey() {
         return (this.privateKey == null);
     }

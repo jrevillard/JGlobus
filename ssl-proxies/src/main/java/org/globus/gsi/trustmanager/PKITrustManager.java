@@ -31,8 +31,12 @@ import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertPathValidatorResult;
 import java.security.cert.CertPathValidatorSpi;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Vector;
 
 
 import javax.net.ssl.X509TrustManager;
@@ -89,11 +93,9 @@ public class PKITrustManager implements X509TrustManager {
         try {
             this.result = this.validator.engineValidate(certPath, parameters);
         } catch (CertPathValidatorException exception) {
-        	logger.error("Pathvalidation failed", exception);
-            throw new CertificateException("Pathvalidation failed", exception);
+            throw new CertificateException("Path validation failed: " + exception.getMessage(), exception);
         } catch (InvalidAlgorithmParameterException exception) {
-        	logger.error("Pathvalidation failed", exception);
-            throw new CertificateException("Pathvalidation failed", exception);
+            throw new CertificateException("Path validation failed: " + exception.getMessage(), exception);
         }
     }
 

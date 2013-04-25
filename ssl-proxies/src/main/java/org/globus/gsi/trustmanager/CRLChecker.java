@@ -15,6 +15,8 @@
 
 package org.globus.gsi.trustmanager;
 
+import org.globus.gsi.util.KeyStoreUtil;
+
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -38,7 +40,6 @@ import java.util.Iterator;
 import javax.security.auth.x500.X500Principal;
 
 import org.globus.gsi.GSIConstants;
-import org.globus.gsi.util.KeyStoreUtil;
 
 /**
  * This checks to see if the certificate is in a CRL.

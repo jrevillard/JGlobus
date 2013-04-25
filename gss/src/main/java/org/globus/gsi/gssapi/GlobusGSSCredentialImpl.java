@@ -34,8 +34,7 @@ import org.ietf.jgss.Oid;
  * An implementation of <code>GlobusGSSCredential</code>.
  */
 public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
-                                                Serializable {   
-
+                                                Serializable {
 	private static final long serialVersionUID = 1L;
 	private int usage = 0;
     private X509Credential cred;
@@ -68,6 +67,7 @@ public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
 	this.name = new GlobusGSSName(cred.getIdentity());
     }
 
+    @Override
     public int hashCode() {
 	if (this.cred == null) {
 	    return this.usage;
@@ -76,10 +76,12 @@ public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
 	}
     }
 
+    @Override
     public boolean equals(Object obj) {
 	if (obj instanceof GlobusGSSCredentialImpl) {
 	    GlobusGSSCredentialImpl other = (GlobusGSSCredentialImpl)obj;
-	    return (other.usage == this.usage && other.cred == this.cred);
+	    return other.usage == this.usage &&
+                    (other.cred == this.cred || this.cred != null && this.cred.equals(other.cred));
 	}
 	return false;
     }
@@ -257,7 +259,7 @@ public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
     public PrivateKey getPrivateKey()
 	throws GSSException {
         try {
-	    return (this.cred == null) ? null : (PrivateKey)this.cred.getPrivateKey();
+	    return (this.cred == null) ? null : this.cred.getPrivateKey();
 	} catch (CredentialException e) {
             throw new GlobusGSSException(GSSException.FAILURE, e);
         }

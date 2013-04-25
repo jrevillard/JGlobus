@@ -32,7 +32,9 @@ import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -76,13 +78,43 @@ public final class CertificateUtil {
     private static Log logger;
 
     private static I18n i18n = I18n.getI18n("org.globus.gsi.errors", CertificateUtil.class.getClassLoader());
-
-
     static {
         Security.addProvider(new BouncyCastleProvider());
         setProvider("BC");
         logger = LogFactory.getLog(CertificateLoadUtil.class.getCanonicalName());
         installSecureRandomProvider();
+    }
+    
+    private static final Map<String, String> PRINCIPAL_KEYWORD_MAP = new HashMap<String, String>();
+    
+    static {   
+        
+        // Taken from BouncyCastle 2.46
+    	PRINCIPAL_KEYWORD_MAP.put("SN", GlobusStyle.SERIALNUMBER.getId());
+    	PRINCIPAL_KEYWORD_MAP.put("E", GlobusStyle.EmailAddress.getId());
+    	PRINCIPAL_KEYWORD_MAP.put("EMAIL", GlobusStyle.EmailAddress.getId());
+    	PRINCIPAL_KEYWORD_MAP.put("UNSTRUCTUREDADDRESS", GlobusStyle.UnstructuredAddress.getId());
+    	PRINCIPAL_KEYWORD_MAP.put("UNSTRUCTUREDNAME", GlobusStyle.UnstructuredName.getId());
+        PRINCIPAL_KEYWORD_MAP.put("UNIQUEIDENTIFIER", GlobusStyle.UNIQUE_IDENTIFIER.getId());
+        PRINCIPAL_KEYWORD_MAP.put("DN", GlobusStyle.DN_QUALIFIER.getId());
+        PRINCIPAL_KEYWORD_MAP.put("PSEUDONYM", GlobusStyle.PSEUDONYM.getId());
+        PRINCIPAL_KEYWORD_MAP.put("POSTALADDRESS", GlobusStyle.POSTAL_ADDRESS.getId());
+        PRINCIPAL_KEYWORD_MAP.put("NAMEOFBIRTH", GlobusStyle.NAME_AT_BIRTH.getId());
+        PRINCIPAL_KEYWORD_MAP.put("COUNTRYOFCITIZENSHIP", GlobusStyle.COUNTRY_OF_CITIZENSHIP.getId());
+        PRINCIPAL_KEYWORD_MAP.put("COUNTRYOFRESIDENCE", GlobusStyle.COUNTRY_OF_RESIDENCE.getId());
+        PRINCIPAL_KEYWORD_MAP.put("GENDER", GlobusStyle.GENDER.getId());
+        PRINCIPAL_KEYWORD_MAP.put("PLACEOFBIRTH", GlobusStyle.PLACE_OF_BIRTH.getId());
+        PRINCIPAL_KEYWORD_MAP.put("DATEOFBIRTH", GlobusStyle.DATE_OF_BIRTH.getId());
+        PRINCIPAL_KEYWORD_MAP.put("POSTALCODE", GlobusStyle.POSTAL_CODE.getId());
+        PRINCIPAL_KEYWORD_MAP.put("BUSINESSCATEGORY", GlobusStyle.BUSINESS_CATEGORY.getId());
+        PRINCIPAL_KEYWORD_MAP.put("TELEPHONENUMBER", GlobusStyle.TELEPHONE_NUMBER.getId());
+        PRINCIPAL_KEYWORD_MAP.put("NAME", GlobusStyle.NAME.getId());
+
+        // Taken from CANL library
+        PRINCIPAL_KEYWORD_MAP.put("S", GlobusStyle.ST.getId());
+        PRINCIPAL_KEYWORD_MAP.put("DNQUALIFIER", GlobusStyle.DN_QUALIFIER.getId());
+        PRINCIPAL_KEYWORD_MAP.put("IP", GlobusStyle.IP.getId());
+
     }
 
     private CertificateUtil() {
@@ -556,8 +588,8 @@ public final class CertificateUtil {
         if (globusID == null) {
             return null;
         }
-    	X500Name globusX500Name = new X500Name(GlobusStyle.INSTANCE, globusID.trim());
-        return new X500Principal(new X500Name(BCStyle.INSTANCE, globusX500Name.getRDNs()).toString());
+    	X500Name globusX500Name = new X500Name(GlobusStyle.INSTANCE, globusID);
+        return new X500Principal(new X500Name(BCStyle.INSTANCE, globusX500Name.getRDNs()).toString(), PRINCIPAL_KEYWORD_MAP);
     }
 
     // JGLOBUS-91 

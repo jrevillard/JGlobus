@@ -85,7 +85,7 @@ public class TrustedCertificates implements Serializable {
      * <caHash>.signing_policy in the same directory as the trusted 
      * certificates.
      */
-    public static String SIGNING_POLICY_FILE_SUFFIX = ".signing_policy";
+    public final static String SIGNING_POLICY_FILE_SUFFIX = ".signing_policy";
     
     private static KeyStore ms_trustStore = null;
     private static CertStore ms_crlStore = null;
@@ -211,10 +211,6 @@ public class TrustedCertificates implements Serializable {
                 file.charAt(length-1) <= '9') return true;
             return false;
         }
-    }
-
-    public void refresh() {
-        reload(null);
     }
 
     public synchronized void reload(String locations) {
@@ -355,7 +351,7 @@ public class TrustedCertificates implements Serializable {
         if (trustedCertificates == null) {
             trustedCertificates = new DefaultTrustedCertificates();
         }
-        trustedCertificates.refresh();
+
         return trustedCertificates;
     }
     
