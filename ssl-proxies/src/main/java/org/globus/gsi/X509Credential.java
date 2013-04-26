@@ -20,7 +20,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -56,9 +55,8 @@ import org.globus.gsi.util.ProxyCertificateUtil;
  */
 // COMMENT: Added methods from GlobusCredential
 // COMMENT: Do we need the getDefaultCred functionality?
-public class X509Credential implements Serializable {
+public class X509Credential {
 
-	private static final long serialVersionUID = 1L;
 	private static Log logger = LogFactory.getLog(X509Credential.class.getCanonicalName());
     private PrivateKey privateKey;
     private final String privateKeyFile;

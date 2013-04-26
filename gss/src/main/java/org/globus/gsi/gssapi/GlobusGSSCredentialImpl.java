@@ -14,28 +14,29 @@
  */
 package org.globus.gsi.gssapi;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
-
-import org.globus.gsi.CredentialException;
-import org.globus.gsi.X509Credential;
 import org.globus.util.Util;
-import org.gridforum.jgss.ExtendedGSSCredential;
+
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 
+import org.gridforum.jgss.ExtendedGSSCredential;
+
+import java.security.cert.X509Certificate;
+import java.security.PrivateKey;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.File;
+import java.io.FileOutputStream;
+
+import org.globus.gsi.X509Credential;
+import org.globus.gsi.CredentialException;
+
 /**
  * An implementation of <code>GlobusGSSCredential</code>.
  */
-public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
-                                                Serializable {
-	private static final long serialVersionUID = 1L;
+public class GlobusGSSCredentialImpl implements ExtendedGSSCredential {
+	
 	private int usage = 0;
     private X509Credential cred;
     private GSSName name;
@@ -81,7 +82,7 @@ public class GlobusGSSCredentialImpl implements ExtendedGSSCredential,
 	if (obj instanceof GlobusGSSCredentialImpl) {
 	    GlobusGSSCredentialImpl other = (GlobusGSSCredentialImpl)obj;
 	    return other.usage == this.usage &&
-                    (other.cred == this.cred || this.cred != null && this.cred.equals(other.cred));
+                    (this.cred != null && this.cred.equals(other.cred));
 	}
 	return false;
     }
