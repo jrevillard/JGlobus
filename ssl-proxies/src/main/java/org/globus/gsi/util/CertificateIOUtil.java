@@ -94,7 +94,7 @@ public final class CertificateIOUtil {
         return subject.getDEREncoded();
     }
 
-    private static String hash(byte[] data) {
+    private synchronized static String hash(byte[] data) {
         init();
         if (md5 == null) {
             return null;

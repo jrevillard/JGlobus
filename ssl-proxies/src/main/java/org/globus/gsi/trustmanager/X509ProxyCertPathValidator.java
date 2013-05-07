@@ -32,11 +32,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.globus.gsi.CertificateRevocationLists;
 import org.globus.gsi.GSIConstants.CertificateType;
 import org.globus.gsi.X509ProxyCertPathParameters;
 import org.globus.gsi.X509ProxyCertPathValidatorResult;
@@ -208,10 +208,10 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
     }
 
     private CertificateType getCertificateType(X509CertificateHolder certificateHolder) throws CertPathValidatorException {
-        CertificateType certificateType;
+        CertificateType issuerCertType;
         try {
 
-        	certificateType = CertificateUtil.getCertificateType(certificateHolder);
+        	issuerCertType = CertificateUtil.getCertificateType(certificateHolder);
         } catch (CertificateException e) {
             throw new CertPathValidatorException(
                     "Error obtaining certificate type", e);
@@ -219,7 +219,7 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
             throw new CertPathValidatorException(
                     "Error obtaining certificate type", e);
         }
-        return certificateType;
+        return issuerCertType;
     }
 
     private int validateCert(X509CertificateHolder certHolder, CertificateType certType, X509CertificateHolder issuerCertHolder, CertificateType issuerCertType,
@@ -374,13 +374,21 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
         }
     }
 
+
     // COMMENT enable the checkers again when ProxyPathValidator starts working!
     protected List<CertificateChecker> getCertificateCheckers() {
         List<CertificateChecker> checkers = new ArrayList<CertificateChecker>();
         checkers.add(new DateValidityChecker());
         checkers.add(new UnsupportedCriticalExtensionChecker());
         checkers.add(new IdentityChecker(this));
-        checkers.add(new CRLChecker(this.certStore, this.keyStore, true));
+        // NOTE: the (possible) refresh of the CRLs happens when we call getDefault.
+        // Hence, we must recreate crlsList for each call to checkCertificate
+        // Sadly, this also means that the amount of work necessary for checkCertificate
+        // can be arbitrarily large (if the CRL is indeed refreshed).
+        //
+        // Note we DO NOT use this.certStore by default!  TODO: This differs from the unit test
+        CertificateRevocationLists crlsList = CertificateRevocationLists.getDefaultCertificateRevocationLists();
+        checkers.add(new CRLChecker(crlsList, this.keyStore, true));
         checkers.add(new SigningPolicyChecker(this.policyStore));
         return checkers;
     }
@@ -426,6 +434,7 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
                     }
                 } else if (oid.equals(X509Extension.keyUsage)) {
                     proxyKeyUsage = proxyExtension;
+
                     checkKeyUsage(issuer, proxyExtension);
                 }
             }
@@ -448,40 +457,6 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
         // these must not be asserted
         if(((keyUsageBits & KeyUsage.nonRepudiation) == KeyUsage.nonRepudiation)||((keyUsageBits & KeyUsage.keyCertSign) == KeyUsage.keyCertSign)){
         	throw new CertPathValidatorException("Proxy violation: Key usage is asserted.");
-        }
-        
-        DERBitString issuerKeyUsage = CertificateUtil.getKeyUsage(issuer);
-        if (issuerKeyUsage != null) {
-        	int issuerKeyUsageBits = keyUsage.getBytes()[0] & 0xff;
-        	/* do not check KeyUsage.nonRepudiation and KeyUsage.keyCertSign */
-            if (((issuerKeyUsageBits & KeyUsage.digitalSignature) != KeyUsage.digitalSignature)&&((keyUsageBits & KeyUsage.digitalSignature) == KeyUsage.digitalSignature))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
-            if (((issuerKeyUsageBits & KeyUsage.keyEncipherment) != KeyUsage.keyEncipherment)&&((keyUsageBits & KeyUsage.keyEncipherment) == KeyUsage.keyEncipherment))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
-            if (((issuerKeyUsageBits & KeyUsage.dataEncipherment) != KeyUsage.dataEncipherment)&&((keyUsageBits & KeyUsage.dataEncipherment) == KeyUsage.dataEncipherment))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
-            if (((issuerKeyUsageBits & KeyUsage.keyAgreement) != KeyUsage.keyAgreement)&&((keyUsageBits & KeyUsage.keyAgreement) == KeyUsage.keyAgreement))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
-            if (((issuerKeyUsageBits & KeyUsage.cRLSign) != KeyUsage.cRLSign)&&((keyUsageBits & KeyUsage.cRLSign) == KeyUsage.cRLSign))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
-            if (((issuerKeyUsageBits & KeyUsage.encipherOnly) != KeyUsage.encipherOnly)&&((keyUsageBits & KeyUsage.encipherOnly) == KeyUsage.encipherOnly))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
-            if (((issuerKeyUsageBits & KeyUsage.decipherOnly) != KeyUsage.decipherOnly)&&((keyUsageBits & KeyUsage.decipherOnly) == KeyUsage.decipherOnly))
-            {
-            	throw new CertPathValidatorException("Proxy violation: Issuer key usage is incorrect");
-            }
         }
     }
 
