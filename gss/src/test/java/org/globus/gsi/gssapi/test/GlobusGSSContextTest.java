@@ -72,6 +72,7 @@ public class GlobusGSSContextTest extends TestCase {
             serverContext = null;
         }
 
+	X509Credential.setDefaultCredential(null);
 
 	GSSManager manager = getGSSManager();
 
