@@ -27,10 +27,13 @@ import java.security.Provider;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.TimeZone;
 
@@ -45,6 +48,10 @@ import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.pkcs.Attribute;
+import org.bouncycastle.asn1.pkcs.CertificationRequest;
+import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
@@ -596,7 +603,7 @@ public class BouncyCastleCertProcessingFactory {
 
     /**
      * Creates a certificate request from the specified subject DN and a key pair. The
-     * <I>"MD5WithRSAEncryption"</I> is used as the signing algorithm of the certificate request.
+     * <I>"SHA1WithRSAEncryption"</I> is used as the signing algorithm of the certificate request.
      * 
      * @param subject
      *            the subject of the certificate request
@@ -608,7 +615,7 @@ public class BouncyCastleCertProcessingFactory {
      */
     public byte[] createCertificateRequest(String subject, KeyPair keyPair) throws GeneralSecurityException {
         X500Name name = new X500Name(subject);
-        return createCertificateRequest(name, "MD5WithRSAEncryption", keyPair);
+        return createCertificateRequest(name, "SHA1WithRSAEncryption", keyPair);
     }
 
     /**
@@ -647,7 +654,7 @@ public class BouncyCastleCertProcessingFactory {
      */
     public byte[] createCertificateRequest(X500Name subjectDN, String sigAlgName, KeyPair keyPair) throws GeneralSecurityException {
 		try {
-			PKCS10CertificationRequestBuilder pkcs10CertificationRequestBuilder = new PKCS10CertificationRequestBuilder(subjectDN, new SubjectPublicKeyInfo((ASN1Sequence)ASN1Sequence.fromByteArray(keyPair.getPublic().getEncoded())));
+			MyPKCS10CertificationRequestBuilder pkcs10CertificationRequestBuilder = new MyPKCS10CertificationRequestBuilder(subjectDN, new SubjectPublicKeyInfo((ASN1Sequence)ASN1Sequence.fromByteArray(keyPair.getPublic().getEncoded())));
 			PKCS10CertificationRequestHolder certReq = pkcs10CertificationRequestBuilder.build(new JcaContentSignerBuilder(sigAlgName).setProvider("BC").build(keyPair.getPrivate()));
 			boolean rs = certReq.isSignatureValid(new JcaContentVerifierProviderBuilder().setProvider("BC").build(keyPair.getPublic()));
 			if (!rs) {
@@ -760,6 +767,7 @@ public class BouncyCastleCertProcessingFactory {
 	    {
 	        tbsGen = new V3TBSCertificateGenerator();
 	        tbsGen.setSerialNumber(new DERInteger(serial));
+	        //---- MODIF ---			
 	        X500Principal originalIssuer = new X500Principal(issuer.toString());
 	        X509Principal x509NameIssuer = null;
 			try {
@@ -767,9 +775,11 @@ public class BouncyCastleCertProcessingFactory {
 			} catch (IOException e) {
 				throw new IllegalStateException("cannot construct certificate x509NameIssuer");
 			}
+			//---- END MODIF ---
 	        tbsGen.setIssuer(x509NameIssuer);
 	        tbsGen.setStartDate(new Time(notBefore));
 	        tbsGen.setEndDate(new Time(notAfter));
+	        //---- MODIF ---
 	        X500Principal originalSubject = new X500Principal(subject.toString());
 	        X509Principal x509NameSubject = null;
 			try {
@@ -777,6 +787,7 @@ public class BouncyCastleCertProcessingFactory {
 			} catch (IOException e) {
 				throw new IllegalStateException("cannot construct certificate x509NameSubject");
 			}
+			//---- END MODIF ---
 	        tbsGen.setSubject(x509NameSubject);
 	        tbsGen.setSubjectPublicKeyInfo(publicKeyInfo);
 	
@@ -874,4 +885,111 @@ public class BouncyCastleCertProcessingFactory {
             return X509CertificateStructure.getInstance(new DERSequence(v));
         }
 	}
+	
+    /**
+     * FIXME:
+	 * This class is a copy of {@link PKCS10CertificationRequestBuilder}. The modification is in the constructor in order to
+	 * fill the Subject and Issuer using a {@link X509Principal} instead of a {@link X500Name}. The hash produced server
+	 * side is different in both cases (i.e: MyProxy server).
+	 */
+	public class MyPKCS10CertificationRequestBuilder
+	{
+	    private SubjectPublicKeyInfo publicKeyInfo;
+	    private X500Name subject;
+	    private List<Attribute> attributes = new ArrayList<Attribute>();
+
+	    /**
+	     * Basic constructor.
+	     *
+	     * @param subject the X.500 Name defining the certificate subject this request is for.
+	     * @param publicKeyInfo the info structure for the public key to be associated with this subject.
+	     */
+	    public MyPKCS10CertificationRequestBuilder(X500Name subject, SubjectPublicKeyInfo publicKeyInfo)
+	    {
+	        this.subject = subject;
+	        this.publicKeyInfo = publicKeyInfo;
+	    }
+
+	    /**
+	     * Add an attribute to the certification request we are building.
+	     *
+	     * @param attrType the OID giving the type of the attribute.
+	     * @param attrValue the ASN.1 structure that forms the value of the attribute.
+	     * @return this builder object.
+	     */
+	    public MyPKCS10CertificationRequestBuilder addAttribute(ASN1ObjectIdentifier attrType, ASN1Encodable attrValue)
+	    {
+	        attributes.add(new Attribute(attrType, new DERSet(attrValue)));
+
+	        return this;
+	    }
+
+	    /**
+	     * Add an attribute with multiple values to the certification request we are building.
+	     *
+	     * @param attrType the OID giving the type of the attribute.
+	     * @param attrValues an array of ASN.1 structures that form the value of the attribute.
+	     * @return this builder object.
+	     */
+	    public MyPKCS10CertificationRequestBuilder addAttribute(ASN1ObjectIdentifier attrType, ASN1Encodable[] attrValues)
+	    {
+	        attributes.add(new Attribute(attrType, new DERSet(attrValues)));
+
+	        return this;
+	    }
+
+	    /**
+	     * Generate an PKCS#10 request based on the past in signer.
+	     *
+	     * @param signer the content signer to be used to generate the signature validating the certificate.
+	     * @return a holder containing the resulting PKCS#10 certification request.
+	     */
+	    public PKCS10CertificationRequestHolder build(
+	        ContentSigner signer)
+	    {
+	        CertificationRequestInfo info;
+
+	        //---- MODIF ---
+	        X500Principal originalSubject = new X500Principal(subject.toString());
+	        X509Principal x509NameSubject = null;
+			try {
+				x509NameSubject = new X509Principal(originalSubject.getEncoded());
+			} catch (IOException e) {
+				throw new IllegalStateException("cannot construct certificate x509NameSubject");
+			}
+			//---- END MODIF ---
+	        
+	        if (attributes.isEmpty())
+	        {
+	            info = new CertificationRequestInfo(x509NameSubject, publicKeyInfo, null);
+	        }
+	        else
+	        {
+	            ASN1EncodableVector v = new ASN1EncodableVector();
+
+	            for (Iterator<Attribute> it = attributes.iterator(); it.hasNext();)
+	            {
+	                v.add(Attribute.getInstance(it.next()));
+	            }
+
+	            info = new CertificationRequestInfo(x509NameSubject, publicKeyInfo, new DERSet(v));
+	        }
+
+	        try
+	        {
+	            OutputStream sOut = signer.getOutputStream();
+
+	            sOut.write(info.getDEREncoded());
+
+	            sOut.close();
+
+	            return new PKCS10CertificationRequestHolder(new CertificationRequest(info, signer.getAlgorithmIdentifier(), new DERBitString(signer.getSignature())));
+	        }
+	        catch (IOException e)
+	        {
+	            throw new IllegalStateException("cannot produce certification request signature");
+	        }
+	    }
+	}
+
 }
