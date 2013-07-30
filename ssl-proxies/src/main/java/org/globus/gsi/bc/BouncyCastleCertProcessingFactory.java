@@ -511,42 +511,41 @@ public class BouncyCastleCertProcessingFactory {
 	
 	            // add ProxyCertInfo extension to the new cert
 	        	certBuilder.addExtension(extOID, x509Ext.isCritical(), x509Ext.getParsedValue());
-	
-	            // handle KeyUsage in issuer cert
-	            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
-	            if (crt.hasExtensions()) {
-	                X509Extension ext;
-	
-	                // handle key usage ext
-	                ext = crt.getExtension(X509Extension.keyUsage);
-	                if (ext != null) {
-	
-	                    // TBD: handle this better
-	                    if (extSet != null && (extSet.getExtension(X509Extension.keyUsage) != null)) {
-	                        String err = i18n.getMessage("keyUsageExt");
-	                        throw new GeneralSecurityException(err);
-	                    }
-	
-	                    DERBitString bits = (DERBitString) ext.getParsedValue().toASN1Object();
-	
-	                    byte[] bytes = bits.getBytes();
-	
-	                    // make sure they are disabled
-	                    if ((bytes[0] & KeyUsage.nonRepudiation) != 0) {
-	                        bytes[0] ^= KeyUsage.nonRepudiation;
-	                    }
-	
-	                    if ((bytes[0] & KeyUsage.keyCertSign) != 0) {
-	                        bytes[0] ^= KeyUsage.keyCertSign;
-	                    }
-	
-	                    bits = new DERBitString(bytes, bits.getPadBits());
-	
-	                    certBuilder.addExtension(X509Extension.keyUsage, ext.isCritical(), bits);
-	                }
-	            }
-	
 	        }
+	        
+	        // handle KeyUsage in issuer cert
+            X509CertificateHolder crt = new X509CertificateHolder(issuerCert.getEncoded());
+            if (crt.hasExtensions()) {
+                X509Extension ext;
+
+                // handle key usage ext
+                ext = crt.getExtension(X509Extension.keyUsage);
+                if (ext != null) {
+
+                    // TBD: handle this better
+                    if (extSet != null && (extSet.getExtension(X509Extension.keyUsage) != null)) {
+                        String err = i18n.getMessage("keyUsageExt");
+                        throw new GeneralSecurityException(err);
+                    }
+
+                    DERBitString bits = (DERBitString) ext.getParsedValue().toASN1Object();
+
+                    byte[] bytes = bits.getBytes();
+
+                    // make sure they are disabled
+                    if ((bytes[0] & KeyUsage.nonRepudiation) != 0) {
+                        bytes[0] ^= KeyUsage.nonRepudiation;
+                    }
+
+                    if ((bytes[0] & KeyUsage.keyCertSign) != 0) {
+                        bytes[0] ^= KeyUsage.keyCertSign;
+                    }
+
+                    bits = new DERBitString(bytes, bits.getPadBits());
+
+                    certBuilder.addExtension(X509Extension.keyUsage, ext.isCritical(), bits);
+                }
+            }
 	
 	        // add specified extensions
 			if (extSet != null) {
