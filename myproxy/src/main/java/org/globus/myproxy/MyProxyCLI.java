@@ -902,10 +902,6 @@ public class MyProxyCLI {
             if (anonRetrievers) {
                 error("Error: Only one -a or -r option may be specified.");
             }
-            if (useEmptyPwd) {
-                error("Error: -r in incompatible with -n. " +
-                      "A passphrase is required for credential retrieval.");
-            }
         }
         
         if (anonRetrievers) {
