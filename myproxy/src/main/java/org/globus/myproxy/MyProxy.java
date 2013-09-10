@@ -54,7 +54,6 @@ import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.util.encoders.Base64;
 import org.globus.common.CoGProperties;
-
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
@@ -257,7 +256,7 @@ public class MyProxy  {
 
         // Request confidentiality
         this.context.requestConf(true);
-        
+
         IOException exception = null;
         Socket socket = null;
         String goodAddr = "";
@@ -922,7 +921,7 @@ public class MyProxy  {
      *         Can be set to null if no local credentials.
      * @param  params
      *         The parameters for the get operation.
-     * @return GlobusGSSCredential 
+     * @return GSSCredential 
      *         The retrieved delegated credentials.
      * @exception MyProxyException
      *         If an error occurred during the operation.
@@ -1312,42 +1311,45 @@ public class MyProxy  {
                         authzdata[1] =
                             tmp.substring(pos+1).trim();
                     }
-                }
-            }
-            if (authzdata == null) {
-                throw new MyProxyException("Unable to parse authorization challenge from server.");
-            }
-            if (authzdata[0].equals("X509_certificate")) {
-                GlobusGSSCredentialImpl pkiCred =
-                    (GlobusGSSCredentialImpl)authzcreds;
-                try {
-                    Signature sig = Signature.getInstance("SHA1withRSA");
-                    sig.initSign(pkiCred.getPrivateKey());
-                    sig.update(authzdata[1].getBytes());
-                    byte[] sigbytes = sig.sign();
-                    X509Certificate [] certs =
-                        pkiCred.getCertificateChain();
-                    ByteArrayOutputStream buffer =
-                        new ByteArrayOutputStream(2048);
-                    buffer.write(2); // AUTHORIZETYPE_CERT
-                    buffer.write(0); buffer.write(0); buffer.write(0); // pad
-                    DataOutputStream dos = new DataOutputStream(buffer);
-                    dos.writeInt(sigbytes.length);
-                    dos.flush();
-                    buffer.write(sigbytes);
-                    buffer.write((byte)certs.length);
-                    for (int i=0; i<certs.length; i++) {
-                        buffer.write(certs[i].getEncoded());
+                    if (authzdata == null) {
+                        throw new MyProxyException("Unable to parse authorization challenge from server.");
                     }
-                    out.write(buffer.toByteArray());
-                    out.flush();
-                } catch(Exception e) {
-                    throw new MyProxyException("Authz response failed.", e);
+                    if (authzdata[0].equals("X509_certificate")) {
+                        GlobusGSSCredentialImpl pkiCred =
+                            (GlobusGSSCredentialImpl)authzcreds;
+                        try {
+                            Signature sig = Signature.getInstance("SHA1withRSA");
+                            sig.initSign(pkiCred.getPrivateKey());
+                            sig.update(authzdata[1].getBytes());
+                            byte[] sigbytes = sig.sign();
+                            X509Certificate [] certs =
+                                pkiCred.getCertificateChain();
+                            ByteArrayOutputStream buffer =
+                                new ByteArrayOutputStream(2048);
+                            buffer.write(2); // AUTHORIZETYPE_CERT
+                            buffer.write(0); buffer.write(0); buffer.write(0); // pad
+                            DataOutputStream dos = new DataOutputStream(buffer);
+                            dos.writeInt(sigbytes.length);
+                            dos.flush();
+                            buffer.write(sigbytes);
+                            buffer.write((byte)certs.length);
+                            for (int i=0; i<certs.length; i++) {
+                                buffer.write(certs[i].getEncoded());
+                            }
+                            out.write(buffer.toByteArray());
+                            out.flush();
+                        } catch(Exception e) {
+                            throw new MyProxyException("Authz response failed.", e);
+                        }
+                    } else {
+                        authzdata = null;
+                        continue;
+                    }
                 }
-                return handleReply(in, out, authzcreds, wantTrustroots);
-            } else {
-                throw new MyProxyException("Unable to respond to server's authentication challenge. Unimplemented method: " + authzdata[0]);
             }
+ 
+            return handleReply(in, out, authzcreds, wantTrustroots);
+ 
         }
 
         if (wantTrustroots == true) {

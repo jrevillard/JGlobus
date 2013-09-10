@@ -150,7 +150,7 @@ public class CoGProperties extends Properties {
     public static void fixSpace(Properties p) {
 	// this will get rid off the trailing spaces
 	String key, value;
-	Enumeration e = p.keys();
+	Enumeration<?> e = p.keys();
 	while(e.hasMoreElements()) {
 	    key   = e.nextElement().toString();
 	    value = p.getProperty(key);

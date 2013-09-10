@@ -44,7 +44,7 @@ public final class CertificateIOUtil {
     private CertificateIOUtil() {
         //This should not be instantiated
     }
-	
+
     private static void init() {
         if (md5 == null) {
             try {
@@ -112,7 +112,7 @@ public final class CertificateIOUtil {
 
         return Long.toHexString(ret);
     }
-    
+
     private static long fixByte(byte b) {
         return (b < 0) ? (long) (b + 256) : (long) b;
     }

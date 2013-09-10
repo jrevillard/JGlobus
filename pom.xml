@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.jglobus</groupId>
-	<artifactId>jglobus-all</artifactId>
+	<artifactId>parent</artifactId>
 	<version>2.0-Beta6-SNAPSHOT</version>
 	<modules>
 		<module>test-utils</module>
@@ -32,25 +32,25 @@
 
 	<scm>
 		<connection>scm:git:git@github.com:jglobus/JGlobus.git</connection>
+		<developerConnection>scm:git:git@github.com:jglobus/JGlobus.git</developerConnection>
 		<url>scm:git:git@github.com:jglobus/JGlobus.git</url>
-		<tag>dev</tag>
 	</scm>
-	<pluginRepositories>
-		<pluginRepository>
-			<id>onejar-maven-plugin.googlecode.com</id>
-			<url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo</url>
-		</pluginRepository>
-	</pluginRepositories>
+
+	<!-- Sonatype repo integration -->
+	<!--parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent-->
+
 	<distributionManagement>
 		<repository>
-			<id>maatg-fr-releases</id>
-			<name>maatG France Releases</name>
-			<url>http://nexus.maatg.fr/content/repositories/maatg-fr-releases</url>
+			<id>globus.release.repository</id>
+			<url>http://repo.globus.org/content/repositories/releases/</url>
 		</repository>
 		<snapshotRepository>
-			<id>maatg-fr-snapshots</id>
-			<name>maatG France Snapshots</name>
-			<url>http://nexus.maatg.fr/content/repositories/maatg-fr-snapshots</url>
+			<id>globus.snapshot.repository</id>
+			<url>http://repo.globus.org/content/repositories/snapshots/</url>
 		</snapshotRepository>
 	</distributionManagement>
 	<build>
@@ -74,6 +74,15 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+			<!-- See: http://jira.codehaus.org/browse/MRELEASE-579
+			     We need at least this version of the release plugin in order
+			     to have functioning git integration with branches
+			     -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.2</version>
 			</plugin>
 		</plugins>
 	</build>

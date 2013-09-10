@@ -382,6 +382,7 @@ public final class CertificateUtil {
 		}
 		return certType;
     }
+
     private static GSIConstants.CertificateType processCriticalExtension(X509Extension ext, boolean gsi4) {
         GSIConstants.CertificateType type;
         ProxyCertInfo proxyCertExt =

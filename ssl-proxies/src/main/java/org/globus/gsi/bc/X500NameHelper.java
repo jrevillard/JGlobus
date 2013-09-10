@@ -85,10 +85,10 @@ public class X500NameHelper {
     public void add(ASN1Set entry) {
         ASN1EncodableVector v = new ASN1EncodableVector();
         int size = seq.size();
-        v.add(entry);
         for (int i = 0; i < size; i++) {
             v.add(seq.getObjectAt(i));
         }
+        v.add(entry);
         seq = new DERSequence(v);
     }
 

@@ -165,5 +165,6 @@ public class ProxyCertInfo implements DEREncodable {
         }
         return Integer.MAX_VALUE;
     }
+
 }
 

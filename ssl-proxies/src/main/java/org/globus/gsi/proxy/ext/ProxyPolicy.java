@@ -130,7 +130,7 @@ public class ProxyPolicy implements DEREncodable {
     /**
      * Returns the DER-encoded ASN.1 representation of proxy policy.
      *
-     * @return <code>DERObject</code> the encoded representation of the proxy
+     * @return <code>ASN1Primitive</code> the encoded representation of the proxy
      *         policy.
      */
     public DERObject getDERObject() {

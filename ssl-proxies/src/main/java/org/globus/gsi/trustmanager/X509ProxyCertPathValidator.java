@@ -152,58 +152,78 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
 
         X509Certificate cert = (X509Certificate) certificates.get(0);
         X509CertificateHolder certHolder;
+        CertificateType certType;
 		try {
 			certHolder = new X509CertificateHolder(cert.getEncoded());
-		} catch (CertificateEncodingException e) {
-			throw new CertPathValidatorException(e);
-		} catch (IOException e) {
-			throw new CertPathValidatorException(e);
-		}
-        CertificateType certType = getCertificateType(certHolder);
-        
-        // validate the first certificate in chain
-        checkCertificate(cert, certType);
+		    certType = getCertificateType(certHolder);
+		    
+		    // validate the first certificate in chain
+		    checkCertificate(cert, certType);
 
-        boolean isProxy = ProxyCertificateUtil.isProxy(certType);
-        if (isProxy) {
-            proxyDepth++;
-        }
+		    boolean isProxy = ProxyCertificateUtil.isProxy(certType);
+		    if (isProxy) {
+		        proxyDepth++;
+		    }
+		} catch (CertificateEncodingException e) {
+			throw new CertPathValidatorException("Path validation failed for " + cert.getSubjectDN() + ": " + e.getMessage(),
+                    e, certPath, 0);
+		} catch (IOException e) {
+			throw new CertPathValidatorException("Path validation failed for " + cert.getSubjectDN() + ": " + e.getMessage(),
+                    e, certPath, 0);
+		}
 
         for (int i = 1; i < certificates.size(); i++) {
 
             boolean certIsProxy = ProxyCertificateUtil.isProxy(certType);
             X509Certificate issuerCert = (X509Certificate) certificates.get(i);
-            X509CertificateHolder issuersCertHolder;
+            X509CertificateHolder issuerCertHolder;
 			try {
-				issuersCertHolder = new X509CertificateHolder(issuerCert.getEncoded());
+				issuerCertHolder = new X509CertificateHolder(issuerCert.getEncoded());
 			} catch (CertificateEncodingException e) {
-				throw new CertPathValidatorException(e);
+				throw new CertPathValidatorException("Path validation failed for " + issuerCert.getSubjectDN() + ": " + e.getMessage(),
+                            e, certPath, i);
 			} catch (IOException e) {
-				throw new CertPathValidatorException(e);
+				throw new CertPathValidatorException("Path validation failed for " + issuerCert.getSubjectDN() + ": " + e.getMessage(),
+                            e, certPath, i);
 			}
-            CertificateType issuerCertType = getCertificateType(issuersCertHolder);
+            CertificateType issuerCertType = getCertificateType(issuerCertHolder);
 
-            proxyDepth = validateCert(certHolder, certType, issuersCertHolder, issuerCertType, proxyDepth, i, certIsProxy);
+            proxyDepth = validateCert(certHolder, certType, issuerCertHolder, issuerCertType, proxyDepth, i, certIsProxy);
 
             if (certIsProxy) {
-                checkProxyConstraints(certPath, certHolder, certType, issuersCertHolder, i);
+				try {
+                	checkProxyConstraints(certPath, certHolder, certType, issuerCertHolder, i);
+				} catch (CertPathValidatorException e) {
+                    throw new CertPathValidatorException("Path validation failed for " + cert.getSubjectDN() + ": " + e.getMessage(),
+                            e, certPath, i - 1);
+                }
             } else {
                 try {
-                    checkKeyUsage(issuersCertHolder);
+                    checkKeyUsage(issuerCertHolder);
                 } catch (IOException e) {
-                    throw new CertPathValidatorException("Key usage check failed on " + issuerCert.getSubjectX500Principal(), e);
+                    throw new CertPathValidatorException("Key usage check failed on " + issuerCert.getSubjectDN() + ": " + e.getMessage(),
+                            e, certPath, i);
+                } catch (CertPathValidatorException e) {
+                    throw new CertPathValidatorException("Path validation failed for " + issuerCert.getSubjectDN() + ": " + e.getMessage(),
+                            e, certPath, i);
                 }
             }
 
-            checkCertificate(issuerCert, issuerCertType);
+            try {
+                checkCertificate(issuerCert, issuerCertType);
+            } catch (CertPathValidatorException e) {
+                throw new CertPathValidatorException("Path validation failed for " + issuerCert.getSubjectDN() + ": " + e.getMessage(),
+                        e, certPath, i);
+            }
 
             cert = issuerCert;
             certType = issuerCertType;
-            certHolder = issuersCertHolder;
+            certHolder = issuerCertHolder;
 
         }
 
-        return new X509ProxyCertPathValidatorResult(this.identityCert, this.limited);
+        return new X509ProxyCertPathValidatorResult(this.identityCert,
+                this.limited);
 
     }
 
