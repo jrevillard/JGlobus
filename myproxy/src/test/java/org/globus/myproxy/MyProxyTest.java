@@ -23,6 +23,7 @@ import org.globus.myproxy.ChangePasswordParams;
 import org.globus.myproxy.InfoParams;
 import org.globus.myproxy.InitParams;
 import org.globus.myproxy.StoreParams;
+import org.globus.util.TestUtil;
 import org.globus.gsi.gssapi.auth.IdentityAuthorization;
 import org.globus.gsi.gssapi.GlobusGSSCredentialImpl;
 import org.globus.gsi.X509Credential;
@@ -32,12 +33,12 @@ import junit.framework.TestSuite;
 import junit.framework.Test;
 
 import org.gridforum.jgss.ExtendedGSSManager;
-
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 
-public class MyProxyTest extends TestCase { 
-
+public class MyProxyTest extends TestCase {
+	private static final String CONFIG = "org/globus/myproxy/test/test.properties";
+			    
     private static String host = "localhost";
     private static int port = 7512;
     private static final String username = "testusername";
@@ -47,13 +48,21 @@ public class MyProxyTest extends TestCase {
     private MyProxy myProxy;
     private GSSCredential cred;
 
+    private static TestUtil util;
+    
     static {
+    	try {
+    	    util = new TestUtil(CONFIG);
+    	} catch (Exception e) {
+    	    e.printStackTrace();
+    	    System.exit(-1);
+    	}
         String value;
-        value = System.getenv("MYPROXY_SERVER_PORT");
+        value = util.get("myproxy.port");
         if (value != null)
             port = Integer.parseInt(value.trim());
 
-        value = System.getenv("MYPROXY_SERVER");
+        value = util.get("myproxy.host");
         if (value != null)
             host = value;
     }
@@ -75,7 +84,7 @@ public class MyProxyTest extends TestCase {
 	GSSManager manager = ExtendedGSSManager.getInstance();
 	cred = manager.createCredential(GSSCredential.INITIATE_ONLY);
 
-	String subjectDN = System.getenv("MYPROXY_SERVER_DN");
+	String subjectDN =  util.get("myproxy.subject");
 	if (subjectDN != null) {
 	    myProxy.setAuthorization(new IdentityAuthorization(subjectDN));
 	}
