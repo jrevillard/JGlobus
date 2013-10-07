@@ -561,7 +561,9 @@ public class BouncyCastleCertProcessingFactory {
 				}
 			}
 	        
-			ContentSigner contentSigner = new JcaContentSignerBuilder("SHA1withRSA").setProvider(securityProvider).build(issuerKey);
+			String sigAlgName = issuerCert.getSigAlgName();
+			
+			ContentSigner contentSigner = new JcaContentSignerBuilder(sigAlgName).setProvider(securityProvider).build(issuerKey);
 			X509CertificateHolder x509CertificateHolder = certBuilder.build(contentSigner);
 			
 //			try {
