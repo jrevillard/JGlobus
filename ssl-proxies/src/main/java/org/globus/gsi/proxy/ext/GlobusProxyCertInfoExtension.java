@@ -20,17 +20,17 @@ import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.x509.X509Extension;
+import org.bouncycastle.asn1.x509.Extension;
 
 /**
  * Represents ProxyCertInfo X.509 extension.
  */
-public class GlobusProxyCertInfoExtension extends X509Extension {
+public class GlobusProxyCertInfoExtension extends Extension {
 	private final DERSequence bs;
 
     public GlobusProxyCertInfoExtension(ProxyCertInfo value) throws IOException {
-	    super(true, (ASN1OctetString)null); //ASN1OctetString.getInstance(value.getProxyPolicy()) 
-	    bs = (DERSequence) value.getDERObject();
+	    super(ProxyCertInfo.OLD_OID, true, (ASN1OctetString)null); //ASN1OctetString.getInstance(value.getProxyPolicy()) 
+	    bs = (DERSequence) value.toASN1Primitive();
 	}
 	
     public ASN1OctetString getExtnValue() {

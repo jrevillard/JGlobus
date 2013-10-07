@@ -148,12 +148,7 @@ public class X500NameHelper {
         if (seq == null) {
             return null;
         }
-        RDN[] rdns = new RDN[seq.size()];
-        int index = 0;
-        for (Enumeration<?> e = seq.getObjects(); e.hasMoreElements();){
-            rdns[index++] = RDN.getInstance(e.nextElement());
-        }
-        return new X500Name(GlobusStyle.INSTANCE, rdns).toString();
+        return X500Name.getInstance(GlobusStyle.INSTANCE, seq).toString();
     }
 
     /**

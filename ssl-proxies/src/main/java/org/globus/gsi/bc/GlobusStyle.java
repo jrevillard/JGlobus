@@ -275,12 +275,12 @@ public class GlobusStyle extends BCStyle {
 			Set<ASN1ObjectIdentifier> asn1ObjectIdentifiers = DefaultSymbols.keySet();
 			for (ASN1ObjectIdentifier asn1ObjectIdentifier : asn1ObjectIdentifiers) {
 				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
-						((ASN1Set) rdn1.getDERObject()).getObjectAt(0)).getType())) {
+						((ASN1Set) rdn1.toASN1Primitive()).getObjectAt(0)).getType())) {
 					// Revert
 					return true;
 				}
 				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
-						((ASN1Set) rdn2.getDERObject()).getObjectAt(0)).getType())) {
+						((ASN1Set) rdn2.toASN1Primitive()).getObjectAt(0)).getType())) {
 					// Do not revert;
 					return false;
 				}

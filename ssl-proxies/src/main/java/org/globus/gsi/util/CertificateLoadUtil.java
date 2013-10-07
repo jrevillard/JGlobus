@@ -16,16 +16,15 @@ package org.globus.gsi.util;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.security.GeneralSecurityException;
 import java.security.Key;
-import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -43,16 +42,20 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.cert.X509CRLHolder;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CRLConverter;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMReader;
-import org.bouncycastle.openssl.PasswordFinder;
-import org.bouncycastle.util.encoders.Base64;
-import org.bouncycastle.util.io.pem.PemHeader;
-import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.jce.provider.X509CertificateObject;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 import org.globus.gsi.X509Credential;
 
 /**
@@ -180,27 +183,31 @@ public final class CertificateLoadUtil {
     	if (reader == null) {
 			throw new IllegalArgumentException("The reader must not be null.");
 		}
-    	MyPEMReader pemReader = null;
+    	PEMParser pemParser = null;
     	try {
 	    	if(!reader.ready()){
 	    		//No data;
 	    		return null;
 	    	}
-			pemReader = new MyPEMReader(reader);
+	    	pemParser = new PEMParser(reader);
 			Object pemObject = null;
 			ArrayList<X509Certificate> certificates = new ArrayList<X509Certificate>(3);
-			while ((pemObject = pemReader.readObject()) != null) {
-				if(pemObject instanceof X509Certificate){
-					certificates.add((X509Certificate)pemObject);
+			while ((pemObject = pemParser.readObject()) != null) {
+				if(pemObject instanceof X509CertificateHolder){
+					try {
+						certificates.add(new JcaX509CertificateConverter().getCertificate((X509CertificateHolder)pemObject));
+					} catch (CertificateException e) {
+						throw new IOException("Certificate not well formatted");
+					}
 				}
 			}
 			if(!certificates.isEmpty()){
 				return certificates.toArray(new X509Certificate[certificates.size()]);
 			}
 		}finally{
-			if(pemReader != null){
+			if(pemParser != null){
 				try{
-					pemReader.close();
+					pemParser.close();
 				}catch (IOException e) {}
 			}
 		}
@@ -301,7 +308,11 @@ public final class CertificateLoadUtil {
 			}
 			X509Certificate[] x509Certificates = new X509Certificate[certificates.length];
 			for (int i = 0; i < x509Certificates.length; i++) {
-				x509Certificates[i] = (X509Certificate) certificates[i];
+				if (!(certificates[i] instanceof X509CertificateObject)) {
+					x509Certificates[i] = CertificateLoadUtil.loadCertificate(new ByteArrayInputStream(certificates[i].getEncoded()));
+		        }else{
+		        	x509Certificates[i] = (X509Certificate) certificates[i];
+		        }
 			}
 			return new X509Credential(privateKey, x509Certificates);
 	    } catch (UnrecoverableKeyException e){
@@ -309,6 +320,8 @@ public final class CertificateLoadUtil {
 		} catch (NoSuchAlgorithmException e){
 			throw new KeyStoreException("Key is encrypted or uses an unsupported algorithm", e);
 		} catch (CertificateException e) {
+			throw new KeyStoreException("Keystore certificate is invalid", e);
+		} catch (GeneralSecurityException e) {
 			throw new KeyStoreException("Keystore certificate is invalid", e);
 		} finally {
 			inputStream.close();
@@ -320,17 +333,17 @@ public final class CertificateLoadUtil {
      * Loads a private key from the specified file.
      *
      * @param file the private key file to load the private key from.
-     * @param passwordFinder the password finder object which allows the {@link PEMReader} to decrypt the private key. (Can be null if not needed)
+     * @param password the password needed to decrypt the private key. (Can be null if not needed)
      * @return an array of certificates loaded from the file.
      * @throws IOException              if I/O error occurs
      * @throws GeneralSecurityException if security problems occurs.
      */
-    public static PrivateKey loadPrivateKey(String file, PasswordFinder passwordFinder) throws IOException, GeneralSecurityException {
+    public static PrivateKey loadPrivateKey(String file, char[] password) throws IOException, GeneralSecurityException {
         if (file == null) {
             throw new IllegalArgumentException("Private Key file is null");
         }
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        PrivateKey privateKey = loadPrivateKey(reader, passwordFinder);
+        PrivateKey privateKey = loadPrivateKey(reader, password);
         if(privateKey == null){
         	throw new GeneralSecurityException("No private key data");
         }
@@ -341,13 +354,13 @@ public final class CertificateLoadUtil {
      * Loads a private key from the specified stream.
      *
      * @param file the private key file to load the private key from.
-     * @param passwordFinder the password finder object which allows the {@link PEMReader} to decrypt the private key. (Can be null if not needed)
+     * @param password the password needed to decrypt the private key. (Can be null if not needed)
      * @param closeStream if <code>false</code>, the stream will not be closed.
      * @return an array of certificates loaded from the file.
      * @throws IOException              if I/O error occurs
      * @throws GeneralSecurityException if security problems occurs.
      */
-    public static PrivateKey loadPrivateKey(InputStream inputStream, PasswordFinder passwordFinder, boolean closeStream) throws IOException, GeneralSecurityException {
+    public static PrivateKey loadPrivateKey(InputStream inputStream, char[] password, boolean closeStream) throws IOException, GeneralSecurityException {
         if (inputStream == null) {
             throw new IllegalArgumentException("Private Key Input Stream is null");
         }
@@ -355,7 +368,7 @@ public final class CertificateLoadUtil {
         	inputStream = new NotClosableInputStream(inputStream);
         }
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        PrivateKey privateKey = loadPrivateKey(reader, passwordFinder);
+        PrivateKey privateKey = loadPrivateKey(reader, password);
         if(privateKey == null){
         	throw new GeneralSecurityException("No private key data");
         }
@@ -373,32 +386,36 @@ public final class CertificateLoadUtil {
      *         reader or the reader is closed.
      * @throws IOException              if I/O error occurs
      */
-    public static PrivateKey loadPrivateKey(BufferedReader reader, PasswordFinder passwordFinder) throws IOException {
+    public static PrivateKey loadPrivateKey(BufferedReader reader, char[] password) throws IOException {
     	if (reader == null) {
 			throw new IllegalArgumentException("The reader must not be null.");
 		}
-    	MyPEMReader pemReader = null;
+    	PEMParser pemParser = null;
 		Object pemObject = null;
 		try {
 			if(!reader.ready()){
 	    		//No data;
 	    		return null;
 	    	}
-			pemReader = new MyPEMReader(reader, passwordFinder);
-			while ((pemObject = pemReader.readObject()) != null) {
-				if(pemObject instanceof KeyPair){
-					return ((KeyPair)pemObject).getPrivate();
-				}else if(pemObject instanceof PrivateKey){
-					return (PrivateKey)pemObject;
+			pemParser = new PEMParser(reader);
+			while ((pemObject = pemParser.readObject()) != null) {
+				JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
+				PEMKeyPair keyPair = null;
+				if (pemObject instanceof PEMEncryptedKeyPair) {
+					keyPair = ((PEMEncryptedKeyPair)pemObject).decryptKeyPair(new JcePEMDecryptorProviderBuilder().build(password));
+				}else if(pemObject instanceof PEMKeyPair){
+					keyPair = (PEMKeyPair) pemObject;
 				}
-			}
+				if(keyPair != null){
+					return converter.getKeyPair(keyPair).getPrivate();
+				}			}
 		}finally{
 			try{
 				reader.close();
 			}catch (IOException e) {}
-			if(pemReader != null){
+			if(pemParser != null){
 				try{
-					pemReader.close();
+					pemParser.close();
 				}catch (IOException e) {}
 			}
 		}
@@ -421,13 +438,13 @@ public final class CertificateLoadUtil {
     }
     
     private static X509CRL loadCrl(BufferedReader br) throws IOException, GeneralSecurityException{
-    	MyPEMReader pemReader = null;
+    	PEMParser pemReader = null;
 		Object pemObject = null;
 		try {
-			pemReader = new MyPEMReader(br);
+			pemReader = new PEMParser(br);
 			pemObject = pemReader.readObject();
-			if(pemObject instanceof X509CRL){
-				return (X509CRL)pemObject;
+			if(pemObject instanceof X509CRLHolder){
+				return (new JcaX509CRLConverter().getCRL((X509CRLHolder)pemObject));
 			}else if(pemObject instanceof CRL){
 				throw new IllegalArgumentException("The provided input stream is a CRL but for the moment only X509CRL are accepted");
 			}
@@ -479,86 +496,86 @@ public final class CertificateLoadUtil {
 		}
 	}
     
-	/**
-	 * Class copied from Bouncycastle 1.47 to replace the bugged version from Bouncycastle 1.46
-	 * TODO: Remove it once update to JGlobus 1.47 or later done.
-	 * @author Jerome Revillard
-	 *
-	 */
-	private static class MyPEMReader extends PEMReader {
-		private static final String BEGIN = "-----BEGIN ";
-		private static final String END = "-----END ";
-
-	    /**
-	     * Create a new MyPEMReader
-	     *
-	     * @param reader the Reader
-	     */
-		public MyPEMReader(Reader reader) {
-			super(reader);
-		}
-		
-		/**
-	     * Create a new MyPEMReader with a password finder
-	     *
-	     * @param reader  the Reader
-	     * @param pFinder the password finder
-	     */
-	    public MyPEMReader(
-	        Reader reader,
-	        PasswordFinder pFinder){
-	        super(reader, pFinder, "BC");
-	    }
-
-		public PemObject readPemObject() throws IOException {
-			String line = readLine();
-
-			while (line != null && !line.startsWith(BEGIN)) {
-				line = readLine();
-			}
-
-			if (line != null) {
-				line = line.substring(BEGIN.length());
-				int index = line.indexOf('-');
-				String type = line.substring(0, index);
-
-				if (index > 0) {
-					return loadObject(type);
-				}
-			}
-
-			return null;
-		}
-
-		private PemObject loadObject(String type) throws IOException {
-			String line;
-			String endMarker = END + type;
-			StringBuffer buf = new StringBuffer();
-			List<PemHeader> headers = new ArrayList<PemHeader>();
-
-			while ((line = readLine()) != null) {
-				if (line.indexOf(":") >= 0) {
-					int index = line.indexOf(':');
-					String hdr = line.substring(0, index);
-					String value = line.substring(index + 1).trim();
-
-					headers.add(new PemHeader(hdr, value));
-
-					continue;
-				}
-
-				if (line.indexOf(endMarker) != -1) {
-					break;
-				}
-
-				buf.append(line.trim());
-			}
-
-			if (line == null) {
-				throw new IOException(endMarker + " not found");
-			}
-
-			return new PemObject(type, headers, Base64.decode(buf.toString()));
-		}
-	}
+//	/**
+//	 * Class copied from Bouncycastle 1.47 to replace the bugged version from Bouncycastle 1.46
+//	 * TODO: Remove it once update to JGlobus 1.47 or later done.
+//	 * @author Jerome Revillard
+//	 *
+//	 */
+//	private static class MyPEMReader extends PEMReader {
+//		private static final String BEGIN = "-----BEGIN ";
+//		private static final String END = "-----END ";
+//
+//	    /**
+//	     * Create a new MyPEMReader
+//	     *
+//	     * @param reader the Reader
+//	     */
+//		public MyPEMReader(Reader reader) {
+//			super(reader);
+//		}
+//		
+//		/**
+//	     * Create a new MyPEMReader with a password finder
+//	     *
+//	     * @param reader  the Reader
+//	     * @param pFinder the password finder
+//	     */
+//	    public MyPEMReader(
+//	        Reader reader,
+//	        PasswordFinder pFinder){
+//	        super(reader, pFinder, "BC");
+//	    }
+//
+//		public PemObject readPemObject() throws IOException {
+//			String line = readLine();
+//
+//			while (line != null && !line.startsWith(BEGIN)) {
+//				line = readLine();
+//			}
+//
+//			if (line != null) {
+//				line = line.substring(BEGIN.length());
+//				int index = line.indexOf('-');
+//				String type = line.substring(0, index);
+//
+//				if (index > 0) {
+//					return loadObject(type);
+//				}
+//			}
+//
+//			return null;
+//		}
+//
+//		private PemObject loadObject(String type) throws IOException {
+//			String line;
+//			String endMarker = END + type;
+//			StringBuffer buf = new StringBuffer();
+//			List<PemHeader> headers = new ArrayList<PemHeader>();
+//
+//			while ((line = readLine()) != null) {
+//				if (line.indexOf(":") >= 0) {
+//					int index = line.indexOf(':');
+//					String hdr = line.substring(0, index);
+//					String value = line.substring(index + 1).trim();
+//
+//					headers.add(new PemHeader(hdr, value));
+//
+//					continue;
+//				}
+//
+//				if (line.indexOf(endMarker) != -1) {
+//					break;
+//				}
+//
+//				buf.append(line.trim());
+//			}
+//
+//			if (line == null) {
+//				throw new IOException(endMarker + " not found");
+//			}
+//
+//			return new PemObject(type, headers, Base64.decode(buf.toString()));
+//		}
+//	}
 }
