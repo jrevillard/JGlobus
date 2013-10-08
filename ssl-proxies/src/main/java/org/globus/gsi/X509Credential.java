@@ -287,7 +287,7 @@ public class X509Credential {
      * @return subject DN.
      */
     public String getSubject() {
-        return GlobusStyle.INSTANCE.toString(new X500Name(this.certChain[0].getSubjectX500Principal().getName()));
+        return GlobusStyle.INSTANCE.toString(X500Name.getInstance(this.certChain[0].getSubjectX500Principal().getEncoded()));
     }
 
     /**
@@ -296,7 +296,7 @@ public class X509Credential {
      * @return issuer DN.
      */
     public String getIssuer() {
-        return GlobusStyle.INSTANCE.toString(new X500Name(this.certChain[0].getIssuerX500Principal().getName()));
+        return GlobusStyle.INSTANCE.toString(X500Name.getInstance(this.certChain[0].getIssuerX500Principal().getEncoded()));
     }
 
     /**

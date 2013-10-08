@@ -205,7 +205,7 @@ public class GlobusStyle extends BCStyle {
 		return builder.build().getRDNs();
 	}
 	
-	public static void swap(RDN[] rdns) {
+	public static RDN[] swap(RDN[] rdns) {
 		RDN temp = null;
 		for (int start = 0, end = rdns.length - 1; start < end; start++, end--) {
 			// swap rdns
@@ -225,6 +225,7 @@ public class GlobusStyle extends BCStyle {
 						invertAttributeTypeAndValueArray(rdns[((rdns.length + 1)) / 2].getTypesAndValues()));
 			}
 		}
+		return rdns;
 	}
 
 	private static AttributeTypeAndValue[] invertAttributeTypeAndValueArray(
@@ -250,27 +251,7 @@ public class GlobusStyle extends BCStyle {
 		RDN[] rdns = name.getRDNs();
 
 		// Check if reverse or not
-		boolean revert = false;
-		if (rdns.length > 1) {
-			RDN rdn1 = rdns[0];
-			RDN rdn2 = rdns[rdns.length - 1];
-			Set<ASN1ObjectIdentifier> asn1ObjectIdentifiers = DefaultSymbols.keySet();
-			for (ASN1ObjectIdentifier asn1ObjectIdentifier : asn1ObjectIdentifiers) {
-				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
-						((ASN1Set) rdn1.getDERObject()).getObjectAt(0)).getType())) {
-					// Revert
-					revert = true;
-					break;
-				}
-				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
-						((ASN1Set) rdn2.getDERObject()).getObjectAt(0)).getType())) {
-					// Do not revert;
-					revert = false;
-					break;
-				}
-			}
-		}
-
+		boolean revert = toRevert(name);
 		if (revert) {
 			for (int i = rdns.length - 1; i >= 0; i--) {
 				appendRDNInfo(buf, rdns[i], "/");
@@ -283,6 +264,29 @@ public class GlobusStyle extends BCStyle {
 
 		return buf.toString();
 	}
+	
+	public static boolean toRevert(X500Name name){
+		RDN[] rdns = name.getRDNs();
+		// Check if reverse or not
+		if (rdns.length > 1) {
+			RDN rdn1 = rdns[0];
+			RDN rdn2 = rdns[rdns.length - 1];
+			Set<ASN1ObjectIdentifier> asn1ObjectIdentifiers = DefaultSymbols.keySet();
+			for (ASN1ObjectIdentifier asn1ObjectIdentifier : asn1ObjectIdentifiers) {
+				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
+						((ASN1Set) rdn1.getDERObject()).getObjectAt(0)).getType())) {
+					// Revert
+					return true;
+				}
+				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
+						((ASN1Set) rdn2.getDERObject()).getObjectAt(0)).getType())) {
+					// Do not revert;
+					return false;
+				}
+			}
+		}
+		return false;
+	}
 
 	protected void appendRDNInfo(StringBuffer buf, RDN rdn, String separator) {
 		buf.append(separator);
@@ -294,7 +298,7 @@ public class GlobusStyle extends BCStyle {
 				if (firstAtv) {
 					firstAtv = false;
 				} else {
-					buf.append('+');
+					buf.append('/');
 				}
 
 				IETFUtils.appendTypeAndValue(buf, atv[j], DefaultSymbols);

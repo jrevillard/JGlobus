@@ -26,6 +26,7 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
 
 /**
  * A helper class to deal with {@link X500Name X500Name} object.
@@ -42,7 +43,11 @@ public class X500NameHelper {
      * @param name existing <code>X500Name</code> 
      */
     public X500NameHelper(X500Name name) {
-        this.seq = ASN1Sequence.getInstance(name.getDERObject());
+    	RDN[] rdns = name.getRDNs();
+    	if(GlobusStyle.toRevert(name)){
+    		GlobusStyle.swap(rdns);
+    	}
+    	this.seq = new DERSequence(rdns);
     }
 
     /**
@@ -56,7 +61,7 @@ public class X500NameHelper {
         for (Enumeration<?> e = seq.getObjects(); e.hasMoreElements();){
             rdns[index++] = RDN.getInstance(e.nextElement());
         }
-        return new X500Name(GlobusStyle.INSTANCE, rdns);
+        return new X500Name(BCStyle.INSTANCE, rdns);
     }
 
     /**
@@ -67,13 +72,14 @@ public class X500NameHelper {
      *              X500Name.CN}
      * @param value the value (e.g. "proxy")
      */
-    public void add(
+    public X500NameHelper add(
             ASN1ObjectIdentifier oid,
             String value) {
         ASN1EncodableVector v = new ASN1EncodableVector();
         v.add(oid);
         v.add(new DERPrintableString(value));
         add(new DERSet(new DERSequence(v)));
+        return this;
     }
 
     /**
@@ -82,14 +88,15 @@ public class X500NameHelper {
      *
      * @param entry the name component to add.
      */
-    public void add(ASN1Set entry) {
+    public X500NameHelper add(ASN1Set entry) {
         ASN1EncodableVector v = new ASN1EncodableVector();
         int size = seq.size();
-        v.add(RDN.getInstance(entry));
         for (int i = 0; i < size; i++) {
             v.add(seq.getObjectAt(i));
         }
+        v.add(entry);
         seq = new DERSequence(v);
+        return this;
     }
 
     /**

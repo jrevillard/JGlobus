@@ -17,7 +17,6 @@ package org.globus.gsi.bc;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -27,50 +26,29 @@ import java.security.Provider;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 import java.util.TimeZone;
 
-import javax.security.auth.x500.X500Principal;
-
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.DERSet;
-import org.bouncycastle.asn1.pkcs.Attribute;
-import org.bouncycastle.asn1.pkcs.CertificationRequest;
-import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
-import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.asn1.x509.TBSCertificateStructure;
-import org.bouncycastle.asn1.x509.Time;
-import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
-import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.X509Extensions;
-import org.bouncycastle.asn1.x509.X509ExtensionsGenerator;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
-import org.bouncycastle.jce.X509Principal;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 import org.bouncycastle.operator.ContentSigner;
@@ -439,7 +417,8 @@ public class BouncyCastleCertProcessingFactory {
             throw new IllegalArgumentException(err);
         }
 
-        X500Name issuerDN = new X500Name(issuerCert.getSubjectX500Principal().getName());
+        //XXX: WARN: NEVER USE "new X500Name(issuerCert.getSubjectX500Principal().getName())" as it break certs with UTF-8 DN!
+        X500Name issuerDN = X500Name.getInstance(issuerCert.getSubjectX500Principal().getEncoded());
         X500NameHelper issuer = new X500NameHelper(issuerDN);
         X500NameHelper subject = new X500NameHelper(issuerDN);
         subject.add(BCStyle.CN, (cnValue == null) ? delegDN : cnValue);
@@ -458,15 +437,10 @@ public class BouncyCastleCertProcessingFactory {
             date.add(Calendar.SECOND, lifetime);
             notAfter = date.getTime();
         }
-        try {
-        	RDN[] rdns = issuer.getAsName().getRDNs();
-        	X500Name realIssuer = new X500Name(BCStyle.INSTANCE, rdns);
+       
+        try {        	
+        	X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(issuer.getAsName(), serialNum, notBefore, notAfter, subject.getAsName(), subjectPublicKeyInfo);
         	
-            rdns = subject.getAsName().getRDNs();
-        	X500Name realSubject = new X500Name(BCStyle.INSTANCE, rdns);
-        	
-        	MyX509v3CertificateBuilder certBuilder = new MyX509v3CertificateBuilder(realIssuer, serialNum, notBefore, notAfter, realSubject, subjectPublicKeyInfo);
-	        
 	        X509Extension x509Ext = null;        
 	        if (gt3_4) {
 	        	ASN1ObjectIdentifier extOID = null;
@@ -634,8 +608,7 @@ public class BouncyCastleCertProcessingFactory {
      *                if security error occurs.
      */
     public byte[] createCertificateRequest(X509Certificate cert, KeyPair keyPair) throws GeneralSecurityException {
-        String issuer = cert.getSubjectX500Principal().getName();
-        X500Name subjectDN = new X500Name(issuer + ",CN=proxy");
+        X500Name subjectDN = new X500NameHelper(X500Name.getInstance(cert.getSubjectX500Principal().getEncoded())).add(BCStyle.CN, "proxy").getAsName();
         String sigAlgName = cert.getSigAlgName();
         return createCertificateRequest(subjectDN, sigAlgName, keyPair);
     }
@@ -655,7 +628,7 @@ public class BouncyCastleCertProcessingFactory {
      */
     public byte[] createCertificateRequest(X500Name subjectDN, String sigAlgName, KeyPair keyPair) throws GeneralSecurityException {
 		try {
-			MyPKCS10CertificationRequestBuilder pkcs10CertificationRequestBuilder = new MyPKCS10CertificationRequestBuilder(subjectDN, new SubjectPublicKeyInfo((ASN1Sequence)ASN1Sequence.fromByteArray(keyPair.getPublic().getEncoded())));
+			PKCS10CertificationRequestBuilder pkcs10CertificationRequestBuilder = new PKCS10CertificationRequestBuilder(subjectDN, new SubjectPublicKeyInfo((ASN1Sequence)ASN1Sequence.fromByteArray(keyPair.getPublic().getEncoded())));
 			PKCS10CertificationRequestHolder certReq = pkcs10CertificationRequestBuilder.build(new JcaContentSignerBuilder(sigAlgName).setProvider("BC").build(keyPair.getPrivate()));
 			boolean rs = certReq.isSignatureValid(new JcaContentVerifierProviderBuilder().setProvider("BC").build(keyPair.getPublic()));
 			if (!rs) {
@@ -742,255 +715,4 @@ public class BouncyCastleCertProcessingFactory {
         }
         return bcCerts;
     }
-    
-    /**
-     * FIXME:
-	 * This class is a copy of {@link X509v3CertificateBuilder}. The modification is in the constructor in order to
-	 * fill the Subject and Issuer using a {@link X509Principal} instead of a {@link X500Name}. The hash produced server
-	 * side is different in both cases (i.e: MyProxy server).
-	 */
-	public class MyX509v3CertificateBuilder
-	{
-	    private V3TBSCertificateGenerator   tbsGen;
-	    private X509ExtensionsGenerator     extGenerator;
-	
-	    /**
-	     * Create a builder for a version 3 certificate.
-	     *
-	     * @param issuer the certificate issuer
-	     * @param serial the certificate serial number
-	     * @param notBefore the date before which the certificate is not valid
-	     * @param notAfter the date after which the certificate is not valid
-	     * @param subject the certificate subject
-	     * @param publicKeyInfo the info structure for the public key to be associated with this certificate.
-	     */
-	    public MyX509v3CertificateBuilder(X500Name issuer, BigInteger serial, Date notBefore, Date notAfter, X500Name subject, SubjectPublicKeyInfo publicKeyInfo)
-	    {
-	        tbsGen = new V3TBSCertificateGenerator();
-	        tbsGen.setSerialNumber(new DERInteger(serial));
-	        //---- MODIF ---			
-	        X500Principal originalIssuer = new X500Principal(issuer.toString());
-	        X509Principal x509NameIssuer = null;
-			try {
-				x509NameIssuer = new X509Principal(originalIssuer.getEncoded());
-			} catch (IOException e) {
-				throw new IllegalStateException("cannot construct certificate x509NameIssuer");
-			}
-			//---- END MODIF ---
-	        tbsGen.setIssuer(x509NameIssuer);
-	        tbsGen.setStartDate(new Time(notBefore));
-	        tbsGen.setEndDate(new Time(notAfter));
-	        //---- MODIF ---
-	        X500Principal originalSubject = new X500Principal(subject.toString());
-	        X509Principal x509NameSubject = null;
-			try {
-				x509NameSubject = new X509Principal(originalSubject.getEncoded());
-			} catch (IOException e) {
-				throw new IllegalStateException("cannot construct certificate x509NameSubject");
-			}
-			//---- END MODIF ---
-	        tbsGen.setSubject(x509NameSubject);
-	        tbsGen.setSubjectPublicKeyInfo(publicKeyInfo);
-	
-	        extGenerator = new X509ExtensionsGenerator();
-	    }
-	
-	    /**
-	     * Add a given extension field for the standard extensions tag (tag 3)
-	     *
-	     * @param oid the OID defining the extension type.
-	     * @param isCritical true if the extension is critical, false otherwise.
-	     * @param value the ASN.1 structure that forms the extension's value.
-	     * @return this builder object.
-	     */
-	    public MyX509v3CertificateBuilder addExtension(
-	        ASN1ObjectIdentifier oid,
-	        boolean isCritical,
-	        ASN1Encodable value)
-	    {
-	        extGenerator.addExtension(oid, isCritical, value);
-	
-	        return this;
-	    }
-	
-	    /**
-	     * Add a given extension field for the standard extensions tag (tag 3)
-	     * copying the extension value from another certificate.
-	     *
-	     * @param oid the OID defining the extension type.
-	     * @param isCritical true if the copied extension is to be marked as critical, false otherwise.
-	     * @param certHolder the holder for the certificate that the extension is to be copied from.
-	     * @return this builder object.
-	     */
-	    public MyX509v3CertificateBuilder copyAndAddExtension(
-	        ASN1ObjectIdentifier oid,
-	        boolean isCritical,
-	        X509CertificateHolder certHolder)
-	    {
-	        X509CertificateStructure cert = certHolder.toASN1Structure();
-	
-	        X509Extension extension = cert.getTBSCertificate().getExtensions().getExtension(oid);
-	
-	        if (extension == null)
-	        {
-	            throw new NullPointerException("extension " + oid + " not present");
-	        }
-	
-	        extGenerator.addExtension(oid, isCritical, extension.getValue().getOctets());
-	
-	        return this;
-	    }
-	
-	    /**
-	     * Generate an X.509 certificate, based on the current issuer and subject
-	     * using the passed in signer.
-	     *
-	     * @param signer the content signer to be used to generate the signature validating the certificate.
-	     * @return a holder containing the resulting signed certificate.
-	     */
-	    public X509CertificateHolder build(
-	        ContentSigner signer)
-	    {
-	        tbsGen.setSignature(signer.getAlgorithmIdentifier());
-	
-	        if (!extGenerator.isEmpty())
-	        {
-	            tbsGen.setExtensions(extGenerator.generate());
-	        }
-	        TBSCertificateStructure tbsCert = tbsGen.generateTBSCertificate();
-	        try {
-				return new X509CertificateHolder(generateStructure(tbsCert, signer.getAlgorithmIdentifier(), generateSig(signer, tbsCert)));
-			} catch (IOException e) {
-				throw new IllegalStateException("cannot produce certificate signature");
-			}
-	      
-	    }
-	    
-	    private byte[] generateSig(ContentSigner signer, ASN1Encodable tbsObj) throws IOException   {
-	            OutputStream sOut = signer.getOutputStream();
-
-	            sOut.write(tbsObj.getDEREncoded());
-
-	            sOut.close();
-
-	            return signer.getSignature();
-	        }
-
-        private X509CertificateStructure generateStructure(TBSCertificateStructure tbsCert, AlgorithmIdentifier sigAlgId, byte[] signature) {
-            ASN1EncodableVector v = new ASN1EncodableVector();
-
-            v.add(tbsCert);
-            v.add(sigAlgId);
-            v.add(new DERBitString(signature));
-
-            return X509CertificateStructure.getInstance(new DERSequence(v));
-        }
-	}
-	
-    /**
-     * FIXME:
-	 * This class is a copy of {@link PKCS10CertificationRequestBuilder}. The modification is in the constructor in order to
-	 * fill the Subject and Issuer using a {@link X509Principal} instead of a {@link X500Name}. The hash produced server
-	 * side is different in both cases (i.e: MyProxy server).
-	 */
-	public class MyPKCS10CertificationRequestBuilder
-	{
-	    private SubjectPublicKeyInfo publicKeyInfo;
-	    private X500Name subject;
-	    private List<Attribute> attributes = new ArrayList<Attribute>();
-
-	    /**
-	     * Basic constructor.
-	     *
-	     * @param subject the X.500 Name defining the certificate subject this request is for.
-	     * @param publicKeyInfo the info structure for the public key to be associated with this subject.
-	     */
-	    public MyPKCS10CertificationRequestBuilder(X500Name subject, SubjectPublicKeyInfo publicKeyInfo)
-	    {
-	        this.subject = subject;
-	        this.publicKeyInfo = publicKeyInfo;
-	    }
-
-	    /**
-	     * Add an attribute to the certification request we are building.
-	     *
-	     * @param attrType the OID giving the type of the attribute.
-	     * @param attrValue the ASN.1 structure that forms the value of the attribute.
-	     * @return this builder object.
-	     */
-	    public MyPKCS10CertificationRequestBuilder addAttribute(ASN1ObjectIdentifier attrType, ASN1Encodable attrValue)
-	    {
-	        attributes.add(new Attribute(attrType, new DERSet(attrValue)));
-
-	        return this;
-	    }
-
-	    /**
-	     * Add an attribute with multiple values to the certification request we are building.
-	     *
-	     * @param attrType the OID giving the type of the attribute.
-	     * @param attrValues an array of ASN.1 structures that form the value of the attribute.
-	     * @return this builder object.
-	     */
-	    public MyPKCS10CertificationRequestBuilder addAttribute(ASN1ObjectIdentifier attrType, ASN1Encodable[] attrValues)
-	    {
-	        attributes.add(new Attribute(attrType, new DERSet(attrValues)));
-
-	        return this;
-	    }
-
-	    /**
-	     * Generate an PKCS#10 request based on the past in signer.
-	     *
-	     * @param signer the content signer to be used to generate the signature validating the certificate.
-	     * @return a holder containing the resulting PKCS#10 certification request.
-	     */
-	    public PKCS10CertificationRequestHolder build(
-	        ContentSigner signer)
-	    {
-	        CertificationRequestInfo info;
-
-	        //---- MODIF ---
-	        X500Principal originalSubject = new X500Principal(subject.toString());
-	        X509Principal x509NameSubject = null;
-			try {
-				x509NameSubject = new X509Principal(originalSubject.getEncoded());
-			} catch (IOException e) {
-				throw new IllegalStateException("cannot construct certificate x509NameSubject");
-			}
-			//---- END MODIF ---
-	        
-	        if (attributes.isEmpty())
-	        {
-	            info = new CertificationRequestInfo(x509NameSubject, publicKeyInfo, null);
-	        }
-	        else
-	        {
-	            ASN1EncodableVector v = new ASN1EncodableVector();
-
-	            for (Iterator<Attribute> it = attributes.iterator(); it.hasNext();)
-	            {
-	                v.add(Attribute.getInstance(it.next()));
-	            }
-
-	            info = new CertificationRequestInfo(x509NameSubject, publicKeyInfo, new DERSet(v));
-	        }
-
-	        try
-	        {
-	            OutputStream sOut = signer.getOutputStream();
-
-	            sOut.write(info.getDEREncoded());
-
-	            sOut.close();
-
-	            return new PKCS10CertificationRequestHolder(new CertificationRequest(info, signer.getAlgorithmIdentifier(), new DERBitString(signer.getSignature())));
-	        }
-	        catch (IOException e)
-	        {
-	            throw new IllegalStateException("cannot produce certification request signature");
-	        }
-	    }
-	}
-
 }
