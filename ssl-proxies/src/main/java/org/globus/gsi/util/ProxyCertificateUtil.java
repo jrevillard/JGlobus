@@ -150,16 +150,20 @@ public final class ProxyCertificateUtil {
     	if(!crt.hasExtensions()){
     		return null;
     	}
-		Extension ext = crt.getExtension(ProxyCertInfo.OID);
+		Extension ext = crt.getExtension(ProxyCertInfo.RFC_OID);
 		if (ext == null) {
-			ext = crt.getExtension(ProxyCertInfo.OLD_OID);
+			ext = crt.getExtension(ProxyCertInfo.DRAFT_RFC_OID);
 		}
         return (ext != null) ? getProxyCertInfo(ext) : null;
     }
 
     public static ProxyCertInfo getProxyCertInfo(Extension ext) {
         byte[] value = ext.getExtnValue().getOctets();
-        return ProxyCertInfo.getInstance(value);
+        try {
+			return ProxyCertInfo.getInstance(value);
+		} catch (IOException e) {
+			throw new IllegalArgumentException();
+		}
     }
 
     /**

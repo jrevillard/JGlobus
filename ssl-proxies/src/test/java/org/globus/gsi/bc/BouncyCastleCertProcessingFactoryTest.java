@@ -35,8 +35,8 @@ import org.bouncycastle.asn1.x509.Extensions;
 import org.globus.gsi.GSIConstants.CertificateType;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.proxy.ext.ProxyCertInfo;
-import org.globus.gsi.proxy.ext.ProxyCertInfoExtension;
 import org.globus.gsi.proxy.ext.ProxyPolicy;
+import org.globus.gsi.proxy.ext.RFC_ProxyCertInfoExtension;
 
 public class BouncyCastleCertProcessingFactoryTest extends TestCase {
 
@@ -98,8 +98,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     list.add(ext);
     
     ProxyPolicy policy = new ProxyPolicy(policyOid, policyValue.getBytes());
-    ext = new ProxyCertInfoExtension(new ProxyCertInfo(policy));
-    list.add(ext);
+    list.add(new RFC_ProxyCertInfoExtension(new ProxyCertInfo(policy)));
     
     
     Extensions extSet = new Extensions(list.toArray(new Extension[list.size()]));
@@ -116,10 +115,10 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     X509Certificate newCert = newCred.getCertificateChain()[0];
     verifyExtension(newCert, oid, expectedValue, critical);
     
-    byte [] realValue = newCert.getExtensionValue(ProxyCertInfo.OID.getId());
+    byte [] realValue = newCert.getExtensionValue(ProxyCertInfo.RFC_OID.getId());
     assertTrue(realValue != null && realValue.length > 0);
 
-    ProxyCertInfo proxyCertInfo = ProxyCertInfo.getInstance(realValue);
+    ProxyCertInfo proxyCertInfo = ProxyCertInfo.getInstance(newCert);
     
     assertTrue(proxyCertInfo != null);
     assertTrue(proxyCertInfo.getProxyPolicy() != null);

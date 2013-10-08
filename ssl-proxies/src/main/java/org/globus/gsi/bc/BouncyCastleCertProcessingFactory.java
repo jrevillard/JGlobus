@@ -17,7 +17,6 @@ package org.globus.gsi.bc;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -34,35 +33,19 @@ import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.TimeZone;
 
-import javax.security.auth.x500.X500Principal;
-
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.DERInteger;
-import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.pkcs.CertificationRequest;
-import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.asn1.x509.Certificate;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.asn1.x509.TBSCertificate;
-import org.bouncycastle.asn1.x509.TBSCertificateStructure;
-import org.bouncycastle.asn1.x509.Time;
-import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
-import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.asn1.x509.X509Extension;
-import org.bouncycastle.asn1.x509.X509ExtensionsGenerator;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -83,10 +66,10 @@ import org.bouncycastle.pkcs.PKCSException;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.VersionUtil;
 import org.globus.gsi.X509Credential;
-import org.globus.gsi.proxy.ext.GlobusProxyCertInfoExtension;
+import org.globus.gsi.proxy.ext.DRAFT_RFC_ProxyCertInfoExtension;
 import org.globus.gsi.proxy.ext.ProxyCertInfo;
-import org.globus.gsi.proxy.ext.ProxyCertInfoExtension;
 import org.globus.gsi.proxy.ext.ProxyPolicy;
+import org.globus.gsi.proxy.ext.RFC_ProxyCertInfoExtension;
 import org.globus.gsi.util.CertificateLoadUtil;
 import org.globus.gsi.util.CertificateUtil;
 import org.globus.gsi.util.ProxyCertificateUtil;
@@ -458,20 +441,16 @@ public class BouncyCastleCertProcessingFactory {
         try {        	
         	X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(issuer.getAsName(), serialNum, notBefore, notAfter, subject.getAsName(), subjectPublicKeyInfo);
         	
-	        X509Extension x509Ext = null;        
+			Extension x509Ext = null;        
 	        if (gt3_4) {
-	        	ASN1ObjectIdentifier extOID = null;
 				if (extSet != null) {
-					x509Ext = extSet.getExtension(ProxyCertInfo.OID);
-					extOID = ProxyCertInfo.OID;
+					x509Ext = extSet.getExtension(ProxyCertInfo.RFC_OID);
 					if (x509Ext == null) {
-						x509Ext = extSet.getExtension(ProxyCertInfo.OLD_OID);
-						extOID = ProxyCertInfo.OLD_OID;
+						x509Ext = extSet.getExtension(ProxyCertInfo.DRAFT_RFC_OID);
 					}
 				}
 	
 				if (x509Ext == null) {
-					extOID = null;
 					// create ProxyCertInfo extension
 					ProxyPolicy policy = null;
 					if (ProxyCertificateUtil.isLimitedProxy(certType)) {
@@ -491,17 +470,14 @@ public class BouncyCastleCertProcessingFactory {
 					ProxyCertInfo proxyCertInfo = new ProxyCertInfo(policy);
 					if (ProxyCertificateUtil.isGsi4Proxy(certType)) {
 						// RFC compliant OID
-						x509Ext = new ProxyCertInfoExtension(proxyCertInfo);
-						extOID = ProxyCertInfo.OID;
+						x509Ext = new RFC_ProxyCertInfoExtension(proxyCertInfo);
 					} else {
 						// old OID
-						x509Ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
-						extOID = ProxyCertInfo.OLD_OID;
+						x509Ext = new DRAFT_RFC_ProxyCertInfoExtension(proxyCertInfo);
 					}
 				}
-	
-	            // add ProxyCertInfo extension to the new cert
-	        	certBuilder.addExtension(extOID, x509Ext.isCritical(), x509Ext.getParsedValue());
+				// add ProxyCertInfo extension to the new cert
+		        certBuilder.addExtension(x509Ext.getExtnId(), x509Ext.isCritical(), x509Ext.getParsedValue());
 	        }
 	        
 	        // handle KeyUsage in issuer cert
@@ -544,7 +520,7 @@ public class BouncyCastleCertProcessingFactory {
 				while (oids.hasMoreElements()) {
 					ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) oids.nextElement();
 					// skip ProxyCertInfo extension
-					if (oid.equals(ProxyCertInfo.OID) || oid.equals(ProxyCertInfo.OLD_OID)) {
+					if (oid.equals(ProxyCertInfo.RFC_OID) || oid.equals(ProxyCertInfo.DRAFT_RFC_OID)) {
 						continue;
 					}
 					x509Ext = extSet.getExtension(oid);

@@ -340,13 +340,15 @@ public final class CertificateUtil {
         X500Name x500name = crt.getSubject();
         //Needed to put the RDN array in the expected order.
         RDN[] rdns = x500name.getRDNs();
-		//GlobusStyle.swap(rdns);
+        if(GlobusStyle.toRevert(x500name)){
+        	GlobusStyle.swap(rdns);
+        }
 		AttributeTypeAndValue attributeTypeAndValue;
-		if(rdns[0].isMultiValued()){
-			AttributeTypeAndValue[] attributeTypeAndValues = rdns[0].getTypesAndValues();
-			attributeTypeAndValue = attributeTypeAndValues[attributeTypeAndValues.length -1];
+		if(rdns[rdns.length-1].isMultiValued()){
+			AttributeTypeAndValue[] attributeTypeAndValues = rdns[rdns.length-1].getTypesAndValues();
+			attributeTypeAndValue = attributeTypeAndValues[0];
 		}else{
-			attributeTypeAndValue = rdns[0].getFirst();
+			attributeTypeAndValue = rdns[rdns.length-1].getFirst();
 		}
 		if (BCStyle.CN.equals(attributeTypeAndValue.getType())) {
 			type = processCN(crt, type, attributeTypeAndValue);
@@ -365,10 +367,10 @@ public final class CertificateUtil {
 		} else if (crt.hasExtensions()) {
 			boolean gsi4 = true;
 			// GSI_4
-			Extension proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OID);
+			Extension proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.RFC_OID);
 			if (proxyCertInfosExtension == null) {
 				// GSI_3
-				proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.OLD_OID);
+				proxyCertInfosExtension = crt.getExtension(ProxyCertInfo.DRAFT_RFC_OID);
 				gsi4 = false;
 			}
 			if (proxyCertInfosExtension != null) {

@@ -15,7 +15,6 @@
 package org.globus.gsi.bc;
 
 import java.io.IOException;
-import java.util.Enumeration;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -56,12 +55,7 @@ public class X500NameHelper {
      * @return the <code>X500Name</code> object.
      */
     public X500Name getAsName() {
-        RDN[] rdns = new RDN[seq.size()];
-        int index = 0;
-        for (Enumeration<?> e = seq.getObjects(); e.hasMoreElements();){
-            rdns[index++] = RDN.getInstance(e.nextElement());
-        }
-        return new X500Name(BCStyle.INSTANCE, rdns);
+        return X500Name.getInstance(BCStyle.INSTANCE, this.seq);
     }
 
     /**
