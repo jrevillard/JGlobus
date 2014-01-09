@@ -369,10 +369,9 @@ public class TrustedCertificates implements Serializable {
 
 	private static class DefaultTrustedCertificates 
         extends TrustedCertificates {
-        
-		public synchronized void reload(String locations) {
-            super.reload(CoGProperties.getDefault().getCaCertLocations());
-        }
+		public DefaultTrustedCertificates() {
+			reload(CoGProperties.getDefault().getCaCertLocations());
+		}
     }
 
     public String toString() {
