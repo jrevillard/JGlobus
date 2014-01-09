@@ -22,7 +22,8 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509CRL;
 
-import org.springframework.core.io.Resource;
+
+import org.globus.util.GlobusResource;
 
 /**
  * Created by IntelliJ IDEA.
@@ -35,17 +36,17 @@ public class ResourceCRL extends AbstractResourceSecurityWrapper<X509CRL> {
 
     public ResourceCRL(String fileName) throws ResourceStoreException {
     	super(false);
-        init(resolver.getResource(fileName));
+    	init(globusResolver.getResource(fileName));
     }
 
-    public ResourceCRL(boolean inMemory, Resource resource) throws ResourceStoreException {
+    public ResourceCRL(boolean inMemory, GlobusResource globusResource) throws ResourceStoreException {
     	super(inMemory);
-        init(resource);
+        init(globusResource);
     }
 
     public ResourceCRL(String fileName, X509CRL crl) throws ResourceStoreException {
     	super(false);
-        init(resolver.getResource(fileName), crl);
+        init(globusResolver.getResource(fileName), crl);
     }
 
     public X509CRL getCrl() throws ResourceStoreException {
@@ -53,21 +54,20 @@ public class ResourceCRL extends AbstractResourceSecurityWrapper<X509CRL> {
     }
 
     @Override
-    protected X509CRL create(Resource resource) throws ResourceStoreException {
-    	InputStream inputStream = null;
+    protected X509CRL create(GlobusResource resource) throws ResourceStoreException {
+        InputStream is = null;
         try {
-        	inputStream = resource.getInputStream();
-            return CertificateLoadUtil.loadCrl(inputStream);
+            is = resource.getInputStream();
+            return CertificateLoadUtil.loadCrl(is);
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         } catch (GeneralSecurityException e) {
             throw new ResourceStoreException(e);
-        }finally{
-        	try {
-        		if(inputStream != null){
-        			inputStream.close();
-        		}
-			} catch (IOException e) {}
+        } finally {
+            try {
+                if (is != null) is.close();
+            } catch (IOException e) {
+            }
         }
     }
 

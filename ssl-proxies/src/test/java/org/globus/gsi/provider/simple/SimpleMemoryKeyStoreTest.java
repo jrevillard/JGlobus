@@ -7,7 +7,7 @@ import org.junit.Before;
 
 import java.util.Enumeration;
 
-import org.springframework.core.io.ClassPathResource;
+import org.globus.util.GlobusPathMatchingResourcePatternResolver;
 
 import java.security.cert.CertificateFactory;
 import org.junit.AfterClass;
@@ -29,7 +29,7 @@ public class SimpleMemoryKeyStoreTest {
         Security.addProvider(new BouncyCastleProvider());
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         cert = (X509Certificate) factory.generateCertificate(
-            new ClassPathResource("validatorTest/testca.pem").getInputStream());
+            new GlobusPathMatchingResourcePatternResolver().getResource("classpath:/validatorTest/testca.pem").getInputStream());
     }
 
     @Before
@@ -42,56 +42,56 @@ public class SimpleMemoryKeyStoreTest {
     @Test
     public void testEngineSize() throws Exception {
         assertEquals(0, store.engineSize());
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
         assertEquals(1, store.engineSize());
     }
 
     @Test
     public void testEngineAliases() throws Exception {
         assertFalse(store.engineAliases().hasMoreElements());
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
         Enumeration e = store.engineAliases();
-        assertEquals(cert.getSubjectDN().getName(), e.nextElement());
+        assertEquals(cert.getSubjectX500Principal().getName(), e.nextElement());
         assertFalse(e.hasMoreElements());
     }
 
     @Test
     public void testEngineContainsAliasString() throws Exception {
-        assertFalse(store.engineContainsAlias(cert.getSubjectDN().getName()));
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
+        assertFalse(store.engineContainsAlias(cert.getSubjectX500Principal().getName()));
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
         store.engineSetCertificateEntry("test", cert);
-        assertTrue(store.engineContainsAlias(cert.getSubjectDN().getName()));
+        assertTrue(store.engineContainsAlias(cert.getSubjectX500Principal().getName()));
         assertTrue(store.engineContainsAlias("test"));
     }
 
     @Test
     public void testEngineDeleteEntryString() throws Exception {
         assertEquals(0, store.engineSize());
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
         assertEquals(1, store.engineSize());
-        store.engineDeleteEntry(cert.getSubjectDN().getName());
+        store.engineDeleteEntry(cert.getSubjectX500Principal().getName());
         assertEquals(0, store.engineSize());
     }
 
     @Test
     public void testEngineGetCertificateString() throws Exception {
-        assertNull(store.engineGetCertificate(cert.getSubjectDN().getName()));
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
-        assertEquals(cert, store.engineGetCertificate(cert.getSubjectDN().getName()));
+        assertNull(store.engineGetCertificate(cert.getSubjectX500Principal().getName()));
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
+        assertEquals(cert, store.engineGetCertificate(cert.getSubjectX500Principal().getName()));
     }
 
     @Test
     public void testEngineIsCertificateEntryString() throws Exception {
-        assertFalse(store.engineIsCertificateEntry(cert.getSubjectDN().getName()));
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
-        assertTrue(store.engineIsCertificateEntry(cert.getSubjectDN().getName()));
+        assertFalse(store.engineIsCertificateEntry(cert.getSubjectX500Principal().getName()));
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
+        assertTrue(store.engineIsCertificateEntry(cert.getSubjectX500Principal().getName()));
     }
 
     @Test
     public void testEngineIsKeyEntryString() throws Exception {
-        assertFalse(null, store.engineIsCertificateEntry(cert.getSubjectDN().getName()));
-        store.engineSetCertificateEntry(cert.getSubjectDN().getName(), cert);
-        assertFalse(store.engineIsKeyEntry(cert.getSubjectDN().getName()));
+        assertFalse(null, store.engineIsCertificateEntry(cert.getSubjectX500Principal().getName()));
+        store.engineSetCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
+        assertFalse(store.engineIsKeyEntry(cert.getSubjectX500Principal().getName()));
     }
 
     @Test(expected = UnsupportedOperationException.class)

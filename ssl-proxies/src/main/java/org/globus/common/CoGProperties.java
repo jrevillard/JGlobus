@@ -1,33 +1,18 @@
-/*
- * Copyright 1999-2010 University of Chicago
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS,WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
 package org.globus.common;
 
-import java.util.Properties;
-import java.util.Enumeration;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileInputStream;
 import java.io.OutputStream;
-import java.io.FileOutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
-import org.globus.util.ConfigUtil;
+import java.util.Enumeration;
+import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.globus.util.ConfigUtil;
 
 /** Responsible for managing the properties file 
  * "~/.globus/cog.properties", which holds information about various properties
@@ -43,12 +28,14 @@ import org.apache.commons.logging.LogFactory;
  * </UL>
  */
 public class CoGProperties extends Properties {
+	
+	private static final long serialVersionUID = -6124204536737322883L;
 
-    private static Log logger =
-        LogFactory.getLog(CoGProperties.class.getName());
+	private static Log logger =
+			LogFactory.getLog(CoGProperties.class.getName());
     
     private static final String DEFAULT_RANDOM_PROVIDER =
-	"cryptix.jce.provider.CryptixRandom";
+	"org.bouncycastle.jce.provider.BouncyCastleProvider";
     
     private static final String DEFAULT_RANDOM_ALGORITHM = 
 	"DevRandom";
@@ -65,7 +52,13 @@ public class CoGProperties extends Properties {
     public static final String MDSHOST = "localhost";
     public static final String MDSPORT = "2135";
     public static final String BASEDN  = "Mds-Vo-name=local, o=Grid";
-    
+
+    final static String SOCKET_TIMEOUT = "org.globus.socket.timeout";
+    private static final String REVERSE_DNS_CACHETYPE = "org.globus.gsi.gssapi.cache.type";
+    private static final String REVERSE_DNS_CACHE_LIFETIME = "org.globus.gsi.gssapi.cache.lifetime";
+    final static public String NO_CACHE = "NoCache";
+    final static public String THREADED_CACHE = "ThreadedCache";
+
     /** the configuration file properties are read from -- 
      * located in ~/.globus" */
     public static final String CONFIG_FILE = "cog.properties";
@@ -157,7 +150,7 @@ public class CoGProperties extends Properties {
     public static void fixSpace(Properties p) {
 	// this will get rid off the trailing spaces
 	String key, value;
-	Enumeration e = p.keys();
+	Enumeration<?> e = p.keys();
 	while(e.hasMoreElements()) {
 	    key   = e.nextElement().toString();
 	    value = p.getProperty(key);
@@ -486,9 +479,10 @@ public class CoGProperties extends Properties {
 
     /**
      * Returns the delegation key cache lifetime for all delegations from this
-     * JVM. If this property is not set or set to zero or less, no caching is done. The
-     * value is the number of milliseconds the key/pair is cached.
-     * @return
+     * JVM. If this property is not set or set to zero or less, no caching is
+     * done.
+     *
+     * @return the number of milliseconds the key/pair is cached
      */
     public int getDelegationKeyCacheLifetime() {
 
@@ -517,10 +511,12 @@ public class CoGProperties extends Properties {
 
 
     /**
-     * Returns the CRL cache lifetime. If this property is not set or
+     * Returns the CRL cache lifetime. If this property is
      * set to zero or less, no caching is done. The value is the
      * number of milliseconds the CRLs are cached without checking for
      * modifications on disk.
+     *
+     * Defaults to 60s.
      *
      * @throws NumberFormatException if the cache lifetime property
      *         could not be parsed
@@ -529,7 +525,7 @@ public class CoGProperties extends Properties {
     public long getCRLCacheLifetime()
         throws NumberFormatException {
 
-        long value = 0;
+        long value = 60*1000;
 
         String property = getProperty(CRL_CACHE_LIFETIME);
         if (property != null && property.length() > 0) {
@@ -551,6 +547,54 @@ public class CoGProperties extends Properties {
         return value;
     }
 
+    /**
+     * Returns the reverse DNS cache time.
+     *
+     * Defaults to 1h.
+     *
+     * @throws NumberFormatException if the cache lifetime property
+     *         could not be parsed
+     * @return the reverse DNS cache lifetime in milliseconds
+     */
+    public long getReveseDNSCacheLifetime()
+            throws NumberFormatException {
+
+        long value = 60*60*1000;
+
+        String property = getProperty(REVERSE_DNS_CACHE_LIFETIME);
+        if (property != null && property.length() > 0) {
+            long parsedValue = Long.parseLong(property);
+            if (parsedValue > 0) {
+                value = parsedValue;
+            }
+        }
+
+        // System property takes precedence
+        property = System.getProperty(REVERSE_DNS_CACHE_LIFETIME);
+        if (property != null && property.length() > 0) {
+            long parsedValue = Long.parseLong(property);
+            if (parsedValue > 0) {
+                value = parsedValue;
+            }
+        }
+
+        return value;
+    }
+
+    /**
+     * Returns the reverse DNS cache type.
+     * Defaults to a threaded chache.
+     *
+     * @return the type of cache for reverse DNS requests
+     */
+    public String getReverseDNSCacheType() {
+        String value = System.getProperty(REVERSE_DNS_CACHETYPE);
+        if (value != null) {
+            return value;
+        }
+        return getProperty(REVERSE_DNS_CACHETYPE, THREADED_CACHE);
+    }
+
     public String getSecureRandomProvider() {
 	String value = System.getProperty("org.globus.random.provider");
 	if (value != null) {
@@ -570,19 +614,14 @@ public class CoGProperties extends Properties {
     }
 
     /**
-     * Returns the timeout (in seconds) for creating a new socket connection
-     * to a MyProxy host.  The socket timeout property can be set either as
-     * the Java system property "MYPROXY_SOCKET_TIMEOUT" (i.e. via the '-D'
-     * command line option or environment variable) or via the
-     * "sockettimeout" property in the cog.properties file.  If no such
-     * property is found, the default timeout of 10 seconds is returned.
+     * Returns the timeout (in milliseconds) for sockets operations. The default
+     * timeout of 30 seconds (30,000 ms) is returned.
      *
-     * @return The timeout for creating a socket connectino to a MyProxy
-     *         host. Defaults to 10 seconds.
+     * @return The timeout for sockets operations. Defaults to 30 seconds.
      */
     public int getSocketTimeout() {
         int timeoutInt = -1;  // -1 indicates it hasn't been set yet
-        String timeoutStr = System.getProperty("MYPROXY_SOCKET_TIMEOUT");
+        String timeoutStr = System.getProperty(SOCKET_TIMEOUT);
         if (timeoutStr != null && timeoutStr.length() > 0) {
             int parsedTimeoutInt = Integer.parseInt(timeoutStr);
             if (parsedTimeoutInt >= 0) {
@@ -590,7 +629,7 @@ public class CoGProperties extends Properties {
             }
         }
         if (timeoutInt == -1) { // Didn't find a system property
-            timeoutStr = getProperty("sockettimeout");
+            timeoutStr = getProperty(SOCKET_TIMEOUT);
             if (timeoutStr != null && timeoutStr.length() > 0) {
                 int parsedTimeoutInt = Integer.parseInt(timeoutStr);
                 if (parsedTimeoutInt >= 0) {
@@ -599,13 +638,13 @@ public class CoGProperties extends Properties {
             }
         }
         if (timeoutInt == -1) { // Didn't find any property at all
-            timeoutInt = 10;
+            timeoutInt = 120 * 1000;
         }
         return timeoutInt;
     }
 
     public void setSocketTimeout(int socketTimeout) {
-        put("sockettimeout", String.valueOf(socketTimeout));
+        put(SOCKET_TIMEOUT, String.valueOf(socketTimeout));
     }
 
 

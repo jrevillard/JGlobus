@@ -18,7 +18,8 @@ import java.io.Serializable;
 
 public class PasswordCredential implements Serializable {
 
-    private char[] password;
+	private static final long serialVersionUID = 1L;
+	private char[] password;
     
     public PasswordCredential(String password) {
 	this.password = password.toCharArray();

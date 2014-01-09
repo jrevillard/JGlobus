@@ -14,30 +14,29 @@
  */
 package org.globus.gsi.gridmap;
 
-import java.util.Map;
-import java.util.Vector;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.StringTokenizer;
-import java.io.IOException;
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.Serializable;
-
-import org.globus.util.I18n;
-
-import org.globus.util.QuotedStringTokenizer;
-import org.globus.util.ConfigUtil;
+import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.globus.util.ConfigUtil;
+import org.globus.util.I18n;
+import org.globus.util.QuotedStringTokenizer;
 
 public class GridMap implements Serializable {
+	private static final long serialVersionUID = 1L;
 
-    private static I18n i18n =
+	private static I18n i18n =
         I18n.getI18n("org.globus.gsi.gridmap.errors",
                      GridMap.class.getClassLoader());
 

@@ -14,18 +14,17 @@
  */
 package org.globus.gsi.proxy.ext;
 
-import org.globus.gsi.util.CertificateUtil;
-
-import org.bouncycastle.asn1.DERObjectIdentifier;
-
 import java.io.IOException;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DEREncodable;
-import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
+import org.globus.gsi.util.CertificateUtil;
 
 /**
  * Represents ProxyCertInfo extension. <BR>
@@ -37,12 +36,10 @@ import org.bouncycastle.asn1.DERSequence;
 public class ProxyCertInfo implements DEREncodable {
 
     /** ProxyCertInfo extension OID */
-    public static final DERObjectIdentifier OID 
-    = new DERObjectIdentifier("1.3.6.1.5.5.7.1.14");
-    public static final DERObjectIdentifier OLD_OID 
-        = new DERObjectIdentifier("1.3.6.1.4.1.3536.1.222");
+    public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.14");
+    public static final ASN1ObjectIdentifier OLD_OID = new ASN1ObjectIdentifier("1.3.6.1.4.1.3536.1.222");
 
-    private DERInteger pathLenConstraint;
+    private ASN1Integer pathLenConstraint;
     private ProxyPolicy proxyPolicy;
 
     /**
@@ -57,8 +54,8 @@ public class ProxyCertInfo implements DEREncodable {
 
         int seqPos = 0;
 
-        if (seq.getObjectAt(seqPos) instanceof DERInteger) {
-            this.pathLenConstraint = (DERInteger) seq.getObjectAt(seqPos);
+        if (seq.getObjectAt(seqPos) instanceof ASN1Integer) {
+            this.pathLenConstraint = (ASN1Integer) seq.getObjectAt(seqPos);
             seqPos++;
         }
 
@@ -78,7 +75,7 @@ public class ProxyCertInfo implements DEREncodable {
         if (policy == null) {
             throw new IllegalArgumentException();
         }
-        this.pathLenConstraint = new DERInteger(pathLenConstraint);
+        this.pathLenConstraint = new ASN1Integer(pathLenConstraint);
         this.proxyPolicy = policy;
     }
 
@@ -96,7 +93,7 @@ public class ProxyCertInfo implements DEREncodable {
     }
 
     /**
-     * Returns an inÂstance of <code>ProxyCertInfo</code> from given object.
+     * Returns an instance of <code>ProxyCertInfo</code> from given object.
      *
      * @param obj the object to create the instance from.
      * @return <code>ProxyCertInfo</code> instance.
@@ -113,12 +110,15 @@ public class ProxyCertInfo implements DEREncodable {
         } else if (obj instanceof byte[]) {
             DERObject derObj;
             try {
-                derObj = CertificateUtil.toDERObject((byte[]) obj);
+                derObj = CertificateUtil.toASN1Primitive((byte[]) obj);
             } catch (IOException e) {
                 throw new IllegalArgumentException(e.getMessage(), e);
             }
             if (derObj instanceof ASN1Sequence) {
                 return new ProxyCertInfo((ASN1Sequence) derObj);
+            }else if(derObj instanceof DEROctetString) {
+            	ASN1Sequence asn1Sequence = ASN1Sequence.getInstance(((DEROctetString)derObj).getOctets());
+            	return new ProxyCertInfo(asn1Sequence);
             }
         }
         throw new IllegalArgumentException();
@@ -127,7 +127,7 @@ public class ProxyCertInfo implements DEREncodable {
     /**
      * Returns the DER-encoded ASN.1 representation of the extension.
      *
-     * @return <code>DERObject</code> the encoded representation of the extension.
+     * @return <code>ASN1Primitive</code> the encoded representation of the extension.
      */
     public DERObject getDERObject() {
         ASN1EncodableVector vec = new ASN1EncodableVector();

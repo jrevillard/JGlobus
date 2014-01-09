@@ -14,6 +14,8 @@
  */
 package org.globus.net;
 
+import org.globus.common.CoGProperties;
+
 import java.net.Socket;
 import java.net.InetAddress;
 import java.net.BindException;
@@ -70,7 +72,9 @@ public class SocketFactory {
         if (this.portRange.isEnabled() && localPort == 0) {
             return new PrSocket(createSocket(address, port, localAddr));
         } else {
-            return new Socket(address, port, localAddr, localPort);
+            Socket s =  new Socket(address, port, localAddr, localPort);
+            s.setSoTimeout(CoGProperties.getDefault().getSocketTimeout());
+            return s;
         }
     }
 
@@ -85,6 +89,7 @@ public class SocketFactory {
 
             try {
                 socket = new Socket(address, port, localAddr, localPort);
+                socket.setSoTimeout(CoGProperties.getDefault().getSocketTimeout());
                 this.portRange.setUsed(localPort);
                 return socket;
             } catch(BindException e) {

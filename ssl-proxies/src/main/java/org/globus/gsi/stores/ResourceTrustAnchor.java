@@ -23,11 +23,11 @@ import org.globus.gsi.util.CertificateLoadUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 
-import org.springframework.core.io.Resource;
+import org.globus.util.GlobusResource;
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -41,22 +41,22 @@ public class ResourceTrustAnchor extends AbstractResourceSecurityWrapper<TrustAn
 
     public ResourceTrustAnchor(String fileName) throws ResourceStoreException {
     	super(false);
-        init(resolver.getResource(fileName));
+        init(globusResolver.getResource(fileName));
     }
 
-    public ResourceTrustAnchor(boolean inMemory, Resource resource) throws ResourceStoreException {
+    public ResourceTrustAnchor(boolean inMemory, GlobusResource globusResource) throws ResourceStoreException {
     	super(inMemory);
-        init(resource);
+        init(globusResource);
     }
 
     public ResourceTrustAnchor(String fileName, TrustAnchor cachedAnchor) throws ResourceStoreException {
     	super(false);
-        init(resolver.getResource(fileName), cachedAnchor);
+        init(globusResolver.getResource(fileName), cachedAnchor);
     }
 
-    public ResourceTrustAnchor(boolean inMemory, Resource resource, TrustAnchor cachedAnchor) throws ResourceStoreException {
+    public ResourceTrustAnchor(boolean inMemory, GlobusResource globusResource, TrustAnchor cachedAnchor) throws ResourceStoreException {
     	super(inMemory);
-        init(resource, cachedAnchor);
+        init(globusResource, cachedAnchor);
     }
 
     public TrustAnchor getTrustAnchor() throws ResourceStoreException {
@@ -64,11 +64,11 @@ public class ResourceTrustAnchor extends AbstractResourceSecurityWrapper<TrustAn
     }
 
     @Override
-    protected TrustAnchor create(Resource resource) throws ResourceStoreException {
+    protected TrustAnchor create(GlobusResource resource) throws ResourceStoreException {
         X509Certificate certificate;
         InputStream inputStream = null;
         try {
-        	inputStream = resource.getInputStream();
+        	inputStream = globusResource.getInputStream();
             certificate = CertificateLoadUtil.loadCertificate(inputStream);
         } catch (IOException e) {
             throw new ResourceStoreException(e);
@@ -89,9 +89,7 @@ public class ResourceTrustAnchor extends AbstractResourceSecurityWrapper<TrustAn
 
     public void store() throws ResourceStoreException {
         try {
-            CertificateIOUtil.writeCertificate(this.getTrustAnchor().getTrustedCert(), resource.getFile());
-        } catch (CertificateEncodingException e) {
-            throw new ResourceStoreException(e);
+            CertificateIOUtil.writeCertificate(this.getTrustAnchor().getTrustedCert(), globusResource.getFile());
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         }

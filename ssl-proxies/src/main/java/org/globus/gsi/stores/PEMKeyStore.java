@@ -38,7 +38,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
@@ -48,11 +47,14 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Properties;
 
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.globus.util.GlobusResource;
+import org.globus.util.GlobusPathMatchingResourcePatternResolver;
+
+import org.globus.gsi.util.CertificateIOUtil;
 
 /**
  * This class provides a KeyStore implementation that supports trusted
@@ -379,7 +381,7 @@ public class PEMKeyStore extends KeyStoreSpi {
 			CertificateException {
 		
 		if (defaultDirectoryString != null) {
-			defaultDirectory = new PathMatchingResourcePatternResolver().getResource(defaultDirectoryString).getFile();
+			defaultDirectory = new GlobusPathMatchingResourcePatternResolver().getResource(defaultDirectoryString).getFile();
 			if (!defaultDirectory.exists()) {
 				boolean directoryMade = defaultDirectory.mkdirs();
 				if (!directoryMade) {
@@ -423,24 +425,24 @@ public class PEMKeyStore extends KeyStoreSpi {
 		}
 	}
 
-	private void loadCertificateKey(String userCertFilename,
-			String userKeyFilename) throws CredentialException,
-			ResourceStoreException {
-		PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    private void loadCertificateKey(String userCertFilename,
+                                    String userKeyFilename) throws CredentialException,
+            ResourceStoreException {
+        GlobusPathMatchingResourcePatternResolver resolver = new GlobusPathMatchingResourcePatternResolver();
 
-		if ((userCertFilename == null) || (userKeyFilename == null)) {
-			return;
-		}
-		// File certFile = new File(userCertFilename);
-		// File keyFile = new File(userKeyFilename);
-		Resource certResource = resolver.getResource(userCertFilename);
-		Resource keyResource = resolver.getResource(userKeyFilename);
-		CertKeyCredential credential = new CertKeyCredential(certResource,
-				keyResource);
-		// What do we name this alias?
-		String alias = userCertFilename + ":" + userKeyFilename;
-		this.aliasObjectMap.put(alias, credential);
-	}
+        if ((userCertFilename == null) || (userKeyFilename == null)) {
+            return;
+        }
+        // File certFile = new File(userCertFilename);
+        // File keyFile = new File(userKeyFilename);
+        GlobusResource certResource = resolver.getResource(userCertFilename);
+        GlobusResource keyResource = resolver.getResource(userKeyFilename);
+        CertKeyCredential credential = new CertKeyCredential(certResource,
+                keyResource);
+        // What do we name this alias?
+        String alias = userCertFilename + ":" + userKeyFilename;
+        this.aliasObjectMap.put(alias, credential);
+    }
 
 	private void loadDirectories(String directoryList)
 			throws CertificateException {
@@ -449,15 +451,44 @@ public class PEMKeyStore extends KeyStoreSpi {
 			caDelegate.loadWrappers(directoryList);
 			Map<String, ResourceTrustAnchor> wrapperMap = caDelegate
 					.getWrapperMap();
+            Set<String> knownCerts = new HashSet<String>();
+			// The alias hashing merits explanation.  Loading all the files in a directory triggers a
+			// deadlock bug for old jglobus clients if the directory contains repeated CAs (like the
+			// modern IGTF bundle does).  So, we ignore the cert if the alias is incorrect or already seen.
+			// However, we track all the certs we ignore and load any that were completely ignored due to
+			// aliases.  So, non-hashed directories will still work.
+			Map<String, String> ignoredAlias = new HashMap<String, String>();
+			Map<String, ResourceTrustAnchor> ignoredAnchor = new HashMap<String, ResourceTrustAnchor>();
+			Map<String, X509Certificate> ignoredCert = new HashMap<String, X509Certificate>();
 			for (ResourceTrustAnchor trustAnchor : wrapperMap.values()) {
 				String alias = trustAnchor.getResourceURL().toExternalForm();
 				TrustAnchor tmpTrustAnchor = trustAnchor.getTrustAnchor();
 				X509Certificate trustCert = tmpTrustAnchor.getTrustedCert();
-				certFilenameMap.put(trustCert, alias);
-				if (this.aliasObjectMap == null) {
-					System.out.println("Alias Map Null");
+                String hash = CertificateIOUtil.nameHash(trustCert.getSubjectX500Principal());
+                if (this.aliasObjectMap == null) {
+                    System.out.println("Alias Map Null");
+                }
+				boolean hash_in_alias = !alias.contains(hash);
+				if (knownCerts.contains(hash) || !hash_in_alias) {
+					if (!hash_in_alias) {
+						ignoredAlias.put(hash, alias);
+						ignoredAnchor.put(hash, trustAnchor);
+						ignoredCert.put(hash, trustCert);
+					}
+                    continue;
+                }
+                knownCerts.add(hash);
+                this.aliasObjectMap.put(alias, trustAnchor);
+                certFilenameMap.put(trustCert, alias);
+			}
+			// Add any CA we skipped above.
+			for (String hash : ignoredAlias.keySet()) {
+				if (knownCerts.contains(hash)) {
+					continue;
 				}
-				this.aliasObjectMap.put(alias, trustAnchor);
+				String alias = ignoredAlias.get(hash);
+				this.aliasObjectMap.put(alias, ignoredAnchor.get(hash));
+				certFilenameMap.put(ignoredCert.get(hash), alias);
 			}
 		} catch (ResourceStoreException e) {
 			throw new CertificateException("",e);
@@ -571,7 +602,7 @@ public class PEMKeyStore extends KeyStoreSpi {
 			file = new File(defaultDirectory, s + "-key.pem");
 		}
 		try {
-			wrapper = new ResourceProxyCredential(inMemoryOnly, new FileSystemResource(file),
+			wrapper = new ResourceProxyCredential(inMemoryOnly, new GlobusResource(file.getAbsolutePath()),
 					credential);
 		} catch (ResourceStoreException e) {
 			throw new KeyStoreException(e);
@@ -579,31 +610,31 @@ public class PEMKeyStore extends KeyStoreSpi {
 		return wrapper;
 	}
 
-	private CredentialWrapper createCertKeyCredential(String s,
-			X509Credential credential) throws KeyStoreException {
-		Resource certResource;
-		Resource keyResource;
-		CredentialWrapper wrapper;
-		CredentialWrapper credentialWrapper = getKeyEntry(s);
-		if (credentialWrapper != null
-				&& credentialWrapper instanceof CertKeyCredential) {
-			CertKeyCredential certKeyCred = (CertKeyCredential) credentialWrapper;
-			certResource = certKeyCred.getCertificateFile();
-			keyResource = certKeyCred.getKeyFile();
-		} else {
-			certResource = new FileSystemResource(new File(defaultDirectory, s
-					+ ".0"));
-			keyResource = new FileSystemResource(new File(defaultDirectory, s
-					+ "-key.pem"));
-		}
-		try {
-			wrapper = new CertKeyCredential(certResource, keyResource,
-					credential);
-		} catch (ResourceStoreException e) {
-			throw new KeyStoreException(e);
-		}
-		return wrapper;
-	}
+    private CredentialWrapper createCertKeyCredential(String s,
+                                                      X509Credential credential) throws KeyStoreException {
+        GlobusResource certResource;
+        GlobusResource keyResource;
+        CredentialWrapper wrapper;
+        CredentialWrapper credentialWrapper = getKeyEntry(s);
+        if (credentialWrapper != null
+                && credentialWrapper instanceof CertKeyCredential) {
+            CertKeyCredential certKeyCred = (CertKeyCredential) credentialWrapper;
+            certResource = certKeyCred.getCertificateFile();
+            keyResource = certKeyCred.getKeyFile();
+        } else {
+            certResource = new GlobusResource(new File(defaultDirectory, s
+                    + ".0").getAbsolutePath());
+            keyResource = new GlobusResource(new File(defaultDirectory, s
+                    + "-key.pem").getAbsolutePath());
+        }
+        try {
+            wrapper = new CertKeyCredential(certResource, keyResource,
+                    credential);
+        } catch (ResourceStoreException e) {
+            throw new KeyStoreException(e);
+        }
+        return wrapper;
+    }
 
 	private void storeWrapper(CredentialWrapper wrapper)
 			throws KeyStoreException {
@@ -699,15 +730,13 @@ public class PEMKeyStore extends KeyStoreSpi {
 				writeCertificate(x509Cert, file);
 			}
 			ResourceTrustAnchor anchor = new ResourceTrustAnchor(inMemoryOnly,
-					new FileSystemResource(file), new TrustAnchor(x509Cert,
+					new GlobusResource(file.getAbsolutePath()), new TrustAnchor(x509Cert,
 							null));
 			this.aliasObjectMap.put(alias, anchor);
 			this.certFilenameMap.put(x509Cert, alias);
 		} catch (ResourceStoreException e) {
 			throw new KeyStoreException(e);
 		} catch (IOException e) {
-			throw new KeyStoreException(e);
-		} catch (CertificateEncodingException e) {
 			throw new KeyStoreException(e);
 		}
 	}

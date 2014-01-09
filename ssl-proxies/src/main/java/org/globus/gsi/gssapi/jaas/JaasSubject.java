@@ -14,12 +14,13 @@
  */
 package org.globus.gsi.gssapi.jaas;
 
-import org.globus.util.I18n;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import javax.security.auth.Subject;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
-import java.security.PrivilegedActionException;
+
+import org.globus.util.I18n;
 
 /**
  * Generic JAAS Subject helper API that provides abstraction layer on top of 
@@ -51,7 +52,7 @@ public abstract class JaasSubject {
 		className = "org.globus.gsi.gssapi.jaas.GlobusSubject";
 	    }
 	    try {
-		Class clazz = Class.forName(className);
+		Class<?> clazz = Class.forName(className);
 		if (!JaasSubject.class.isAssignableFrom(clazz)) {
 		    throw new RuntimeException(i18n.getMessage("invalidJaasSubject",
                                                        className));
@@ -79,12 +80,12 @@ public abstract class JaasSubject {
     /**
      * SPI method. 
      */
-    public abstract Object runAs(Subject subject, PrivilegedAction action);
+    public abstract Object runAs(Subject subject, PrivilegedAction<?> action);
 
     /**
      * SPI method. 
      */
-    public abstract Object runAs(Subject subject, PrivilegedExceptionAction action)
+    public abstract Object runAs(Subject subject, PrivilegedExceptionAction<?> action)
 	throws PrivilegedActionException;
     
     // API
@@ -93,7 +94,7 @@ public abstract class JaasSubject {
      * A convenience method, calls 
      * <code>JaasSubject.getJaasSubject().runAs()<code/>.
      */
-    public static Object doAs(Subject subject, PrivilegedExceptionAction action) 
+    public static Object doAs(Subject subject, PrivilegedExceptionAction<?> action) 
 	throws PrivilegedActionException {
 	return JaasSubject.getJaasSubject().runAs(subject, action);
     }
@@ -102,7 +103,7 @@ public abstract class JaasSubject {
      * A convenience method, calls 
      * <code>JaasSubject.getJaasSubject().runAs()<code/>.
      */
-    public static Object doAs(Subject subject, PrivilegedAction action) {
+    public static Object doAs(Subject subject, PrivilegedAction<?> action) {
 	return JaasSubject.getJaasSubject().runAs(subject, action);
     }
     

@@ -15,45 +15,31 @@
 
 package org.globus.gsi.util;
 
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
-import java.io.FileOutputStream;
-
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.Principal;
-import java.security.cert.CertificateEncodingException;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-
-
 
 import javax.security.auth.x500.X500Principal;
 
-import org.bouncycastle.util.encoders.Base64;
-import org.bouncycastle.asn1.DEROutputStream;
-import org.bouncycastle.asn1.x509.X509Name;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.openssl.PEMWriter;
 
 /**
  * Fill Me
  */
 public final class CertificateIOUtil {
-
-    // for PEM strings
-    public static final int LINE_LENGTH = 64;
-    public static final String LINE_SEP = "\n";
-    public static final String CERT_HEADER = "-----BEGIN CERTIFICATE-----";
-    public static final String CERT_FOOTER = "-----END CERTIFICATE-----";
-    public static final String KEY_HEADER = "-----BEGIN RSA PRIVATE KEY-----";
-    public static final String KEY_FOOTER = "-----END RSA PRIVATE KEY-----";
-
-    private static Log logger = LogFactory.getLog(CertificateIOUtil.class.getCanonicalName());
-    private static MessageDigest md5;
+	private static Log logger = LogFactory.getLog(CertificateIOUtil.class.getCanonicalName());
+	
+	private static MessageDigest md5;
 
     private CertificateIOUtil() {
         //This should not be instantiated
@@ -69,7 +55,6 @@ public final class CertificateIOUtil {
         }
     }
 
-
     /**
      * Returns equivalent of:
      * openssl x509 -in "cert-file" -hash -noout
@@ -77,7 +62,7 @@ public final class CertificateIOUtil {
      * @param subjectDN
      * @return hash for certificate names
      */
-    public static String nameHash(Principal subjectDN) {
+    public static String nameHash(X500Principal subjectDN) {
         try {
             return hash(encodePrincipal(subjectDN));
         } catch (Exception e) {
@@ -86,24 +71,30 @@ public final class CertificateIOUtil {
         }
     }
 
-    public static byte[] encodePrincipal(Principal subject) throws IOException {
-        if (subject instanceof X500Principal) {
-            return ((X500Principal) subject).getEncoded();
-            //} else if (subject instanceof X500Name) {
-            //    return ((X500Name)subject).getEncoded();
-        } else if (subject instanceof X509Name) {
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            DEROutputStream der = new DEROutputStream(bout);
-            X509Name nm = (X509Name) subject;
-            der.writeObject(nm.getDERObject());
-            return bout.toByteArray();
-        } else {
-            throw new ClassCastException("unsupported input class: "
-                    + subject.getClass().toString());
+    /**
+     * Returns equivalent of: openssl x509 -in "cert-file" -hash -noout
+     *
+     * @param subjectDN
+     * @return hash for certificate names
+     */
+    public static String nameHash(X500Name subjectDN) {
+        try {
+            return hash(encodePrincipal(subjectDN));
+        } catch (Exception e) {
+            logger.error("", e);
+            return null;
         }
     }
 
-    private static String hash(byte[] data) {
+    public static byte[] encodePrincipal(X500Principal subject) throws IOException {
+        return subject.getEncoded();
+    }
+
+    public static byte[] encodePrincipal(X500Name subject) throws IOException {
+        return subject.getDEREncoded();
+    }
+
+    private synchronized static String hash(byte[] data) {
         init();
         if (md5 == null) {
             return null;
@@ -126,69 +117,165 @@ public final class CertificateIOUtil {
         return (b < 0) ? (long) (b + 256) : (long) b;
     }
 
-    public static void writeCertificate(X509Certificate cert, File path)
-            throws CertificateEncodingException, IOException {
-        FileOutputStream fos = new FileOutputStream(path);
-        writeCertificate(fos, cert);
-        fos.close();
-    }
+	/**
+	 * Writes certificate to the specified file in PEM format.
+	 * 
+	 */
+	public static void writeCertificate(X509Certificate cert, File path) throws IOException {
+		writeCertificate(cert, new FileOutputStream(path));
+	}
 
-    /**
-     * Creates PEM encoded cert string with line length, header and footer.
-     *
-     * @param base64Data already encoded into string
-     * @return string
-     */
-    public static String certToPEMString(String base64Data) {
-        return toStringImpl(base64Data, false);
-    }
+	/**
+	 * Writes certificate to the specified output stream in PEM format (closes the Stream).
+	 * 
+	 */
+	public static void writeCertificate(X509Certificate cert, OutputStream out) throws IOException {
+		writeCertificate(cert, out, true);
+	}
+	
+	/**
+	 * Writes certificate to the specified output stream in PEM format.
+	 * 
+	 */
+	public static void writeCertificate(X509Certificate cert, OutputStream out, boolean closeTheStream) throws IOException {
+		if (!closeTheStream) {
+			write(new NotClosableOutputStream(out), cert);
+		} else {
+			write(out, cert);
+		}
+	}
+	
+	/**
+	 * Writes certificate chain to the specified file in PEM format.
+	 * 
+	 */
+	public static void writeCertificateChain(X509Certificate[] certChain, File path) throws IOException {
+		writeCertificateChain(certChain, new FileOutputStream(path));
+	}
 
-    /**
-     * Writes certificate to the specified output stream in PEM format.
-     */
-    public static void writeCertificate(
-            OutputStream out,
-            X509Certificate cert)
-            throws IOException, CertificateEncodingException {
-        PEMUtil.writeBase64(out,
-                "-----BEGIN CERTIFICATE-----",
-                Base64.encode(cert.getEncoded()),
-                "-----END CERTIFICATE-----");
-    }
+	/**
+	 * Writes certificate chain to the specified output stream in PEM format (closes the Stream).
+	 * 
+	 */
+	public static void writeCertificateChain(X509Certificate[] certChain, OutputStream out) throws IOException {
+		writeCertificateChain(certChain, out, true);
+	}
+	
+	/**
+	 * Writes certificate chain to the specified output stream in PEM format.
+	 * 
+	 */
+	public static void writeCertificateChain(X509Certificate[] certChain, OutputStream out, boolean closeTheStream) throws IOException {
+		if (!closeTheStream) {
+			write(new NotClosableOutputStream(out), null, certChain, true);
+		} else {
+			write(out, null, certChain, true);
+		}
+	}
 
+	/**
+	 * Writes private key to the specified file in PEM format.
+	 * 
+	 */
+	public static void writePrivateKey(PrivateKey privateKey, File path) throws IOException {
+		writePrivateKey(privateKey, new FileOutputStream(path));
+	}
 
-    private static String toStringImpl(String base64Data, boolean isKey) {
+	/**
+	 * Writes private key to the specified output stream in PEM format (closes the Stream).
+	 * 
+	 */
+	public static void writePrivateKey(PrivateKey privateKey, OutputStream out) throws IOException {
+		writePrivateKey(privateKey, out, true);
+	}
+	
+	/**
+	 * Writes private key to the specified output stream in PEM format.
+	 * 
+	 */
+	public static void writePrivateKey(PrivateKey privateKey, OutputStream out, boolean closeTheStream) throws IOException {
+		if (!closeTheStream) {
+			write(new NotClosableOutputStream(out), privateKey, null, true);
+		} else {
+			write(out, privateKey, null, true);
+		}
+	}
 
-        int length = LINE_LENGTH;
-        int offset = 0;
+	/**
+	 * Writes certificate chain and private key to the specified output stream in PEM format. (Close the stream)
+	 * 
+	 */
+	public static void writeCertificateChainAndPrivateKey(PrivateKey privateKey, X509Certificate[] certChain,
+			OutputStream out) throws IOException {
+		writeCertificateChainAndPrivateKey(privateKey, certChain, out, true);
+	}
 
-        final StringBuffer buf = new StringBuffer(2048);
+	/**
+	 * Writes certificate chain and private key to the specified output stream in PEM format.
+	 * 
+	 */
+	public static void writeCertificateChainAndPrivateKey(PrivateKey privateKey, X509Certificate[] certChain,
+			OutputStream out, boolean closeTheStream) throws IOException {
+		if (!closeTheStream) {
+			write(new NotClosableOutputStream(out), privateKey, certChain, true);
+		} else {
+			write(out, privateKey, certChain, true);
+		}
+	}
+	
+	private static void write(OutputStream out, X509Certificate cert) throws IOException {
+		PEMWriter pemWriter = null;
+		try {
+			pemWriter = new PEMWriter(new OutputStreamWriter(out));
+			pemWriter.writeObject(cert);
+			pemWriter.flush();
+		} finally {
+			if (pemWriter != null) {
+				pemWriter.close();
+			}
+		}	
+	}
 
-        if (isKey) {
-            buf.append(KEY_HEADER);
-        } else {
-            buf.append(CERT_HEADER);
-        }
-        buf.append(LINE_SEP);
+	private static void write(OutputStream out, PrivateKey privateKey, X509Certificate[] certChain,
+			boolean skipSelfSigned) throws IOException {
+		PEMWriter pemWriter = null;
+		try {
+			pemWriter = new PEMWriter(new OutputStreamWriter(out));
+			if (certChain != null) {
+				pemWriter.writeObject(certChain[0]);
+			}
+			if (privateKey != null) {
+				pemWriter.writeObject(privateKey);
+			}
+			if (certChain != null) {
+				for (int i = 1; i < certChain.length; i++) {
+					// This will skip the self-signed certificates?
+					if (!skipSelfSigned) {
+						if (certChain[i].getSubjectX500Principal().equals(certChain[i].getIssuerX500Principal())) {
+							continue;
+						}
+					}
+					pemWriter.writeObject(certChain[i]);
+				}
+			}
+			pemWriter.flush();
+		} finally {
+			if (pemWriter != null) {
+				pemWriter.close();
+			}
+		}
+	}
 
-        final int size = base64Data.length();
-        while (offset < size) {
-            if (LINE_LENGTH > (size - offset)) {
-                length = size - offset;
-            }
-            buf.append(base64Data.substring(offset, offset + length));
-            buf.append(LINE_SEP);
-            offset = offset + LINE_LENGTH;
-        }
+	private static class NotClosableOutputStream extends FilterOutputStream {
 
-        if (isKey) {
-            buf.append(KEY_FOOTER);
-        } else {
-            buf.append(CERT_FOOTER);
-        }
-        buf.append(LINE_SEP);
+		public NotClosableOutputStream(OutputStream out) {
+			super(out);
+		}
 
-        return buf.toString();
-    }
+		@Override
+		public void close() throws IOException {
+			// Do not close nor flush
+		}
+	}
 }
 

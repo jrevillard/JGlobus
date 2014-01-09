@@ -88,7 +88,6 @@ public class CertInfo {
 	int options         = 0;
 	boolean error       = false;
 	boolean globusStyle = false;
-	boolean debug       = false;
 	
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equalsIgnoreCase("-file")) {
@@ -131,7 +130,7 @@ public class CertInfo {
 	X509Certificate cert = null;
 
 	try {
-	    cert = CertificateLoadUtil.loadCertificate(file);
+	    cert = CertificateLoadUtil.loadCertificates(file)[0];
 	} catch(Exception e) {
 	    System.err.println("Unable to load the certificate : " + e.getMessage());
 	    System.exit(1);

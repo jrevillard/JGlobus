@@ -27,8 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.CertificateEncodingException;
 
-
-import org.springframework.core.io.Resource;
+import org.globus.util.GlobusResource;
 
 /**
  * JGLOBUS-87 : document me
@@ -45,9 +44,9 @@ public class ResourceProxyCredential extends AbstractResourceSecurityWrapper<X50
         init(locationPattern);
     }
 
-    public ResourceProxyCredential(Resource resource) throws ResourceStoreException {
+    public ResourceProxyCredential(GlobusResource globusResource) throws ResourceStoreException {
     	super(false);
-        init(resource);
+        init(globusResource);
     }
 
     public ResourceProxyCredential(String filename, X509Credential object) throws ResourceStoreException {
@@ -55,53 +54,32 @@ public class ResourceProxyCredential extends AbstractResourceSecurityWrapper<X50
         init(filename, object);
     }
 
-    public ResourceProxyCredential(boolean inMemory, Resource resource, X509Credential object) throws ResourceStoreException {
+    public ResourceProxyCredential(boolean inMemory, GlobusResource globusResource, X509Credential object) throws ResourceStoreException {
     	super(inMemory);
-        init(resource, object);
+        init(globusResource, object);
     }
 
     public X509Credential getCredential() throws ResourceStoreException {
         return getSecurityObject();
     }
 
-    protected X509Credential create(Resource resource) throws ResourceStoreException {
-
-        InputStream keyInputStream = null;
-        InputStream certInputStream = null;
+    protected X509Credential create(GlobusResource globusResource) throws ResourceStoreException {
         try {
-            keyInputStream = new BufferedInputStream(resource.getInputStream());
-            certInputStream = new BufferedInputStream(resource.getInputStream());
-            return new X509Credential(keyInputStream, certInputStream);
+            return new X509Credential(globusResource.getFile().getAbsolutePath());
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         } catch (CredentialException e) {
             throw new ResourceStoreException(e);
-        } finally {
-
-            if (keyInputStream != null) {
-                try {
-                    keyInputStream.close();
-                } catch (Exception e) {
-                    logger.warn("Unable to close stream.");
-                }
-            }
-            if (certInputStream != null) {
-                try {
-                    certInputStream.close();
-                } catch (Exception e) {
-                    logger.warn("Unable to close stream.");
-                }
-            }
         }
     }
 
     public void store() throws ResourceStoreException {
         try {
             X509Credential credential = getCredential();
-            credential.writeToFile(resource.getFile());
+            credential.writeToFile(globusResource.getFile());
         } catch (IOException ioe) {
             throw new ResourceStoreException(ioe);
-        } catch (CertificateEncodingException e) {
+        } catch (CredentialException e) {
             throw new ResourceStoreException(e);
         }
     }

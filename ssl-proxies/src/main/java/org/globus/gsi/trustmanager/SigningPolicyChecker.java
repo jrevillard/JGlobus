@@ -58,13 +58,13 @@ public class SigningPolicyChecker implements CertificateChecker {
         }
 
         if (policy == null) {
-            throw new CertPathValidatorException("No signing policy for " + cert.getIssuerDN());
+            throw new CertPathValidatorException("No signing policy for " + cert.getIssuerX500Principal());
         }
 
         boolean valid = policy.isValidSubject(cert.getSubjectX500Principal());
 
         if (!valid) {
-            throw new CertPathValidatorException("Certificate " + cert.getSubjectDN()
+            throw new CertPathValidatorException("Certificate " + cert.getSubjectX500Principal()
                     + " violates signing policy for CA " + caPrincipal.getName());
         }
     }

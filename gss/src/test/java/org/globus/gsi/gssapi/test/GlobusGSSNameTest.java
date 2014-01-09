@@ -32,13 +32,13 @@ public class GlobusGSSNameTest extends TestCase {
 
 	name = new GlobusGSSName("/C=US/O=Globus/O=ANL/OU=MCS/CN=gawor/CN=proxy");
 
-	name = new GlobusGSSName("/C=US/O=Globus/O=ANL/OU=MCS/CN=gawor/CN=host/wiggum.mcs.anl.gov");
+	name = new GlobusGSSName("/C=US/O=Globus/O=ANL/OU=MCS/CN=gawor/CN=host/tlager-mbp.mcs.anl.gov");
 
-	name = new GlobusGSSName("/C=US/O=Globus/O=ANL/OU=MCS/CN=host/wiggum.mcs.anl.gov/CN=gawor");
+	name = new GlobusGSSName("/C=US/O=Globus/O=ANL/OU=MCS/CN=host/tlager-mbp.mcs.anl.gov/CN=gawor");
 
 	name = new GlobusGSSName("/C=US/CN=host/pitcairn.mcs.anl.gov/CN=gawor+OU=ANL");
 
-	name = new GlobusGSSName("/C=US/CN=gawor+OU=ANL/CN=host/wiggum.mcs.anl.gov");
+	name = new GlobusGSSName("/C=US/CN=gawor+OU=ANL/CN=host/tlager-mbp.mcs.anl.gov");
     }
 
     public void testAnonymous() throws Exception {
@@ -96,7 +96,7 @@ public class GlobusGSSNameTest extends TestCase {
 	} catch (GSSException e) {
 	}
 
-	GSSName n3 = new GlobusGSSName("host@tlagER-mbp.mcs.anl.gov", GSSName.NT_HOSTBASED_SERVICE);
+	GSSName n3 = new GlobusGSSName("host@tlager-mbp.mcs.anl.gov", GSSName.NT_HOSTBASED_SERVICE);
 
 	GSSName n4 = new GlobusGSSName("/C=US/O=Globus/CN=tlager-mbp.mcs-7.anl.gov", null);
 	GSSName n5 = new GlobusGSSName("/C=US/O=Globus/CN=tlager-mbp-8", null);
@@ -147,7 +147,7 @@ public class GlobusGSSNameTest extends TestCase {
 
     public void testEquals2() throws Exception {
 	
-	GSSName n1 = new GlobusGSSName("host@tlAGer-mbp.mcs.anl.gov", GSSName.NT_HOSTBASED_SERVICE);
+	GSSName n1 = new GlobusGSSName("host@tlager-mbp.mcs.anl.gov", GSSName.NT_HOSTBASED_SERVICE);
 	GSSName n2 = new GlobusGSSName("/C=US/O=Globus/CN=tlager-mbp.mcs.anl.gov", null);
 	GSSName n3 = new GlobusGSSName("/C=US/O=Globus/CN=host/tlager-mbp.MCS.anl.gov", null);
 	GSSName n4 = new GlobusGSSName("/C=US/O=Globus/CN=ftp/tlager-mbp.mcs.anl.gOv", null);

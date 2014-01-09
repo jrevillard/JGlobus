@@ -15,11 +15,13 @@
 package org.globus.gsi.util;
 
 import java.io.IOException;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 
-import org.bouncycastle.asn1.x509.TBSCertificateStructure;
 import org.bouncycastle.asn1.x509.X509Extension;
-import org.bouncycastle.asn1.x509.X509Extensions;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.globus.gsi.GSIConstants;
+import org.globus.gsi.GSIConstants.CertificateType;
 import org.globus.gsi.proxy.ext.ProxyCertInfo;
 
 /**
@@ -130,31 +132,32 @@ public final class ProxyCertificateUtil {
                 || certType == GSIConstants.CertificateType.GSI_2_PROXY;
 
     }
+    
+    public static int getProxyPathConstraint(X509Certificate crt) throws IOException, CertificateEncodingException {
+        ProxyCertInfo proxyCertExt = getProxyCertInfo(new X509CertificateHolder(crt.getEncoded()));
+        return (proxyCertExt != null) ? proxyCertExt.getPathLenConstraint() : -1;
+    }
 
-    public static int getProxyPathConstraint(TBSCertificateStructure crt)
+    public static int getProxyPathConstraint(X509CertificateHolder crt)
             throws IOException {
 
         ProxyCertInfo proxyCertExt = getProxyCertInfo(crt);
         return (proxyCertExt != null) ? proxyCertExt.getPathLenConstraint() : -1;
     }
 
-    public static ProxyCertInfo getProxyCertInfo(TBSCertificateStructure crt)
+    public static ProxyCertInfo getProxyCertInfo(X509CertificateHolder crt)
             throws IOException {
-
-        X509Extensions extensions = crt.getExtensions();
-        if (extensions == null) {
-            return null;
-        }
-        X509Extension ext =
-                extensions.getExtension(ProxyCertInfo.OID);
-        if (ext == null) {
-            ext = extensions.getExtension(ProxyCertInfo.OLD_OID);
-        }
+    	if(!crt.hasExtensions()){
+    		return null;
+    	}
+		X509Extension ext = crt.getExtension(ProxyCertInfo.OID);
+		if (ext == null) {
+			ext = crt.getExtension(ProxyCertInfo.OLD_OID);
+		}
         return (ext != null) ? getProxyCertInfo(ext) : null;
     }
 
     public static ProxyCertInfo getProxyCertInfo(X509Extension ext) {
-
         byte[] value = ext.getValue().getOctets();
         return ProxyCertInfo.getInstance(value);
     }
@@ -167,7 +170,7 @@ public final class ProxyCertificateUtil {
      *        description of.
      * @return the string description of the proxy type.
      */
-    public static String getProxyTypeAsString(GSIConstants.CertificateType proxyType) {
+    public static String getProxyTypeAsString(CertificateType proxyType) {
         switch(proxyType) {
         case GSI_4_IMPERSONATION_PROXY:
             return "RFC 3820 compliant impersonation proxy";

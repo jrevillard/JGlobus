@@ -19,19 +19,24 @@ import org.globus.gsi.util.KeyStoreUtil;
 
 import org.globus.gsi.stores.ResourceSigningPolicyStore;
 import org.globus.gsi.stores.ResourceSigningPolicyStoreParameters;
+import org.globus.gsi.stores.Stores;
 
 import org.globus.gsi.provider.GlobusProvider;
 import org.globus.gsi.provider.KeyStoreParametersFactory;
 
 import javax.security.auth.x500.X500Principal;
+
+import java.security.cert.CertStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509CertSelector;
 import java.security.KeyStore;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.StringTokenizer;
 import java.util.Collection;
 import java.util.Iterator;
@@ -41,6 +46,7 @@ import org.globus.common.CoGProperties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import java.io.Serializable;
+import java.io.IOException;
 
 // COMMENT: What is the replacement for this?
 // COMMENT: We lost the refresh functionality: Currently an entirely new store is loaded upon load()
@@ -70,6 +76,8 @@ public class TrustedCertificates implements Serializable {
     // Vector of X.509 Certificate objects
     private Vector certList;
 
+    private final Set<X500Principal> invalidPolicies = new HashSet<X500Principal>();
+
     private boolean changed;
 
     /**
@@ -77,7 +85,11 @@ public class TrustedCertificates implements Serializable {
      * <caHash>.signing_policy in the same directory as the trusted 
      * certificates.
      */
-    public static String SIGNING_POLICY_FILE_SUFFIX = ".signing_policy";
+    public final static String SIGNING_POLICY_FILE_SUFFIX = ".signing_policy";
+    
+    private static KeyStore ms_trustStore = null;
+    private static CertStore ms_crlStore = null;
+    private static ResourceSigningPolicyStore ms_sigPolStore = null;
     
     protected TrustedCertificates() {}
     
@@ -201,10 +213,6 @@ public class TrustedCertificates implements Serializable {
         }
     }
 
-    public void refresh() {
-        reload(null);
-    }
-
     public synchronized void reload(String locations) {
         if (locations == null) {
             return;
@@ -227,37 +235,60 @@ public class TrustedCertificates implements Serializable {
             }
 
             String caCertLocation = "file:" + caDir.getAbsolutePath();
-            String sigPolPattern = caCertLocation + "/*.signing_policy";
-            if (!caDir.isDirectory()) {
-                sigPolPattern = getPolicyFileName(caCertLocation);
-            }
+//            String sigPolPattern = caCertLocation + "/*.signing_policy";
+//            if (!caDir.isDirectory()) {
+//                sigPolPattern = getPolicyFileName(caCertLocation);
+//            }
 
-            KeyStore keyStore = null;
             try {
-                keyStore = KeyStore.getInstance(GlobusProvider.KEYSTORE_TYPE, GlobusProvider.PROVIDER_NAME);
-                keyStore.load(KeyStoreParametersFactory.createTrustStoreParameters(caCertLocation));
-                Collection<? extends Certificate> caCerts = KeyStoreUtil.getTrustedCertificates(keyStore, new X509CertSelector());
+                ms_trustStore = Stores.getTrustStore(caCertLocation + "/" + Stores.getDefaultCAFilesPattern());
+                
+                Collection<? extends Certificate> caCerts = KeyStoreUtil.getTrustedCertificates(ms_trustStore, new X509CertSelector());
                 Iterator iter = caCerts.iterator();
                 while (iter.hasNext()) {
                     X509Certificate cert = (X509Certificate) iter.next();
-                    newCertSubjectDNMap.put(cert.getSubjectDN().toString(), cert);
+                    if (!newCertSubjectDNMap.containsKey(cert.getSubjectX500Principal().toString())){
+                        newCertSubjectDNMap.put(cert.getSubjectX500Principal().toString(), cert);
+					}
                 }
             } catch (Exception e) {
                 logger.warn("Failed to create trust store",e);
             }
+            
+            try {
+				ms_sigPolStore = Stores.getSigningPolicyStore(caCertLocation + "/" + Stores.getDefaultSigningPolicyFilesPattern());
+			} catch (GeneralSecurityException e) {
+				logger.warn("Failed to create signing_policy store",e);
+			}
                 
             try {
-                ResourceSigningPolicyStore sigPolStore = new ResourceSigningPolicyStore(new ResourceSigningPolicyStoreParameters(sigPolPattern));
-                Collection<? extends Certificate> caCerts = KeyStoreUtil.getTrustedCertificates(keyStore, new X509CertSelector());
+            	ms_sigPolStore = Stores.getSigningPolicyStore(caCertLocation+ "/" + Stores.getDefaultSigningPolicyFilesPattern());
+                Collection<? extends Certificate> caCerts = KeyStoreUtil.getTrustedCertificates(ms_trustStore, new X509CertSelector());
                 Iterator iter = caCerts.iterator();
                 while (iter.hasNext()) {
                     X509Certificate cert = (X509Certificate) iter.next();
                     X500Principal principal = cert.getSubjectX500Principal();
-                    SigningPolicy policy = sigPolStore.getSigningPolicy(principal);
+                    if (!newCertSubjectDNMap.containsKey(principal.toString())) {
+                        continue;
+                    }
+                    SigningPolicy policy;
+                    try {
+                        policy = ms_sigPolStore.getSigningPolicy(principal);
+                    } catch (Exception e) {
+                        if (!invalidPolicies.contains(principal)) {
+                            logger.warn("Invalid signing policy for CA certificate; skipping");
+                            logger.debug("Invalid signing policy for CA certificate; skipping",e);
+                            invalidPolicies.add(principal);
+                        }
+                        continue;
+                    }
                     if (policy != null) {
                         newSigningDNMap.put(CertificateUtil.toGlobusID(policy.getCASubjectDN()), policy);
                     } else {
-                        logger.warn("no signing policy for ca cert " + cert.getSubjectDN());
+                        if (!invalidPolicies.contains(principal)) {
+                            logger.warn("no signing policy for ca cert " + cert.getSubjectX500Principal());
+                            invalidPolicies.add(principal);
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -320,11 +351,23 @@ public class TrustedCertificates implements Serializable {
         if (trustedCertificates == null) {
             trustedCertificates = new DefaultTrustedCertificates();
         }
-        trustedCertificates.refresh();
+
         return trustedCertificates;
     }
     
-    private static class DefaultTrustedCertificates 
+    public static KeyStore getTrustStore() {
+		return ms_trustStore;
+	}
+
+	public static CertStore getcrlStore() {
+		return ms_crlStore;
+	}
+
+	public static ResourceSigningPolicyStore getsigPolStore() {
+		return ms_sigPolStore;
+	}
+
+	private static class DefaultTrustedCertificates 
         extends TrustedCertificates {
         
         public void refresh() {

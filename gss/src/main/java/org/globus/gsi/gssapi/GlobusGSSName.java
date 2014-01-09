@@ -17,6 +17,7 @@ package org.globus.gsi.gssapi;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.globus.common.CoGProperties;
 import org.globus.gsi.util.CertificateUtil;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.GSSException;
@@ -28,12 +29,98 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.*;
+import java.util.regex.Pattern;
 
 /**
  * An implementation of <code>GSSName</code>.
  */
 public class GlobusGSSName implements GSSName, Serializable {
 
+	private static final long serialVersionUID = 1L;
+
+    static class ReverseDNSCache {
+        static class MapEntry {
+            final Future<String> hostName;
+            Long inserted;
+
+            public MapEntry(Future<String> hostName, Long inserted) {
+                this.hostName = hostName;
+                this.inserted = inserted;
+            }    
+        }
+        
+        // Use TreeMap to avoid clustering in any case
+        final protected Map<String, MapEntry> cache = new TreeMap<String, MapEntry>();        
+        final long duration;
+        final ExecutorService threads = Executors.newCachedThreadPool(new ThreadFactory() {
+            public Thread newThread(Runnable runnable) {
+                Thread t = new Thread(runnable);
+                t.setName("Reverse DNS request");
+                t.setDaemon(true);
+                return t;
+            }
+        });
+        long oldest = System.currentTimeMillis();
+
+        public ReverseDNSCache(long duration) {
+            this.duration = duration;
+        }
+        
+        protected void enforceConstraints() {
+            if(oldest + duration < System.currentTimeMillis()) {
+                long newOldest = System.currentTimeMillis();
+                List<String> toClear = new LinkedList<String>();
+                for(Map.Entry<String, MapEntry> e: cache.entrySet()) {
+                    if(e.getValue().inserted + duration < System.currentTimeMillis()) toClear.add(e.getKey());
+                    else if(e.getValue().inserted < newOldest) newOldest = e.getValue().inserted;
+                }
+                for(String k: toClear) cache.remove(k);
+                oldest = newOldest;
+            }
+        }
+
+        protected synchronized Future<String> getCached(final String ip) {
+            MapEntry inCache = cache.get(ip);
+            if(inCache == null) {
+                Future<String> name = threads.submit(new Callable<String>() {
+                    public String call() throws Exception {
+                        return queryHost(ip);
+                    }
+                });
+                inCache = new MapEntry(name, System.currentTimeMillis());
+                cache.put(ip, inCache);
+            } else {
+                inCache.inserted = System.currentTimeMillis();
+            }
+            enforceConstraints();
+            return inCache.hostName;
+        }
+
+        public String resolve(String ip) throws UnknownHostException {
+            try {
+               return getCached(ip).get();
+            } catch(InterruptedException e) {
+               throw new UnknownHostException(e.getMessage());
+            } catch(ExecutionException e) {
+               throw new UnknownHostException(e.getMessage());
+            }
+
+        }
+        
+    }
+
+    static String queryHost(String name) throws UnknownHostException {
+        InetAddress i = InetAddress.getByName(name);
+        return InetAddress.getByName(i.getHostAddress()).getHostName();
+    }
+    
+    final static ReverseDNSCache reverseDNSCache = new ReverseDNSCache(CoGProperties.getDefault().getReveseDNSCacheLifetime());
+    
     protected Oid nameType;
     protected X500Principal name;
 
@@ -115,10 +202,13 @@ public class GlobusGSSName implements GSSName, Serializable {
 		    // performs reverse DNS lookup
 		    String host = name.substring(atPos+1);
 		    try {
-			InetAddress i = InetAddress.getByName(host);
-			host = InetAddress.getByName(i.getHostAddress()).getHostName();
-		    } catch (UnknownHostException e) {
-			throw new GlobusGSSException(GSSException.FAILURE, e);
+                if (CoGProperties.getDefault().getReverseDNSCacheType().equals(CoGProperties.THREADED_CACHE)) {
+                    host = reverseDNSCache.resolve(host);
+                } else {
+                    host = queryHost(host);
+                }
+            } catch (UnknownHostException e) {
+			    throw new GlobusGSSException(GSSException.FAILURE, e);
 		    }
 
             hostBasedServiceCN = name.substring(0, atPos) + "/" + host;

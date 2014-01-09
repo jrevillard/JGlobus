@@ -45,31 +45,23 @@ import java.util.Map;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.KeyPair;
-import java.security.PrivateKey;
 import java.security.GeneralSecurityException;
 import java.security.interfaces.RSAPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 
 import org.globus.gsi.ProviderLoader;
-import org.globus.gsi.provider.GlobusProvider;
-import org.globus.gsi.provider.KeyStoreParametersFactory;
-
-import org.globus.gsi.stores.ResourceCertStoreParameters;
 import org.globus.gsi.stores.ResourceSigningPolicyStore;
-import org.globus.gsi.stores.ResourceSigningPolicyStoreParameters;
 
 import java.security.cert.CertStore;
 import java.security.cert.CertificateFactory;
 import java.security.KeyStore;
 
 import org.globus.gsi.GSIConstants;
+import org.globus.gsi.TrustedCertificates;
 import org.globus.gsi.X509Credential;
 import org.globus.gsi.util.CertificateLoadUtil;
-import org.globus.gsi.bc.BouncyCastleUtil;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
-import org.globus.gsi.proxy.ProxyPolicyHandler;
 import org.globus.util.I18n;
-import org.globus.common.CoGProperties;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -95,6 +87,8 @@ import COM.claymoresystems.util.Util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.globus.gsi.stores.Stores;
 
 /**
  * Implementation of SSL/GSI mechanism for Java GSS-API. The implementation
@@ -195,7 +189,7 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
     // gss context state variables
     protected boolean credentialDelegation = false;
     protected boolean anonymity = false;
-    protected boolean encryption = false;
+    protected boolean encryption = true;
     protected boolean established = false;
 
     /** The name of the context initiator */
@@ -257,15 +251,14 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
     /** Used during delegation */
     protected KeyPair keyPair;
 
-    /* Needed to verifing certs */
-/*DEL
     protected TrustedCertificates tc;
-*/
     
     protected Map proxyPolicyHandlers;
 
     /** Limited peer credentials */
     protected Boolean peerLimited = null;
+
+    private String[] bannedCiphers = new String[0];
 
     /**
      * @param target expected target name. Can be null.
@@ -289,27 +282,28 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 
             this.sslConfigurator = new SSLConfigurator();
 
-	    // set trust parameters in SSLConfigurator
-
-	    String caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
-            String crlPattern = caCertsLocation + "/*.r*";
-            String sigPolPattern = caCertsLocation + "/*.signing_policy";
-            KeyStore trustStore = KeyStore.getInstance(GlobusProvider.KEYSTORE_TYPE, GlobusProvider.PROVIDER_NAME);
-            trustStore.load(KeyStoreParametersFactory.createTrustStoreParameters(caCertsLocation + "/*.0"));
-	    sslConfigurator.setTrustAnchorStore(trustStore);
-
-            CertStore crlStore = CertStore.getInstance(GlobusProvider.CERTSTORE_TYPE, new ResourceCertStoreParameters(null,crlPattern));
-	    sslConfigurator.setCrlStore(crlStore);
-
-            ResourceSigningPolicyStore sigPolStore = new ResourceSigningPolicyStore(new ResourceSigningPolicyStoreParameters(sigPolPattern));
-	    sslConfigurator.setPolicyStore(sigPolStore);
-
             // Need to set this so we are able to communicate properly with
             // GT4.0.8 servers that use only SSLv3 (no TLSv1). Thanks to
             // Jon Siwek for pointing this and the following link out:
             // http://java.sun.com/j2se/1.4.2/relnotes.html#security
             if (System.getProperty("com.sun.net.ssl.rsaPreMasterSecretFix") == null)
                System.setProperty("com.sun.net.ssl.rsaPreMasterSecretFix", "true");
+
+            // WARNING WARNING:
+            // The new jglobus2-based srm-client is not compatible with old bestman2
+            // servers UNLESS we change this setting.
+            //
+            // The protection we are turning off helps against the BEAST attack.
+            // When enabled, it will insert empty TLS application records into the
+            // stream.  However, the old server will deadlock on the extra records.
+            //
+            // To our knowledge, the BEAST attack is not applicable to this client as
+            // we don't have any concurrent insecure connections.  Regardless, we ought
+            // to remove this as soon as we can drop support for the old servers.
+            //
+            // -BB.  Sept 24, 2012.
+            //
+            System.setProperty("jsse.enableCBCProtection", "false");
 
 	} catch  (Exception e) {
                 throw new GlobusGSSException(GSSException.FAILURE, e);
@@ -526,9 +520,9 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
                             setGoodUntil(cert.getNotAfter());
                         }
 
-                        String identity = BouncyCastleUtil.getIdentity(bcConvert(BouncyCastleUtil.getIdentityCertificate((X509Certificate [])chain)));
-                        this.sourceName = new GlobusGSSName(CertificateUtil.toGlobusID(identity, false));
-			this.peerLimited = Boolean.valueOf(ProxyCertificateUtil.isLimitedProxy(BouncyCastleUtil.getCertificateType((X509Certificate)chain[0])));
+                        String identity = CertificateUtil.getIdentity((X509Certificate [])chain);
+                        this.sourceName = new GlobusGSSName(identity);
+			this.peerLimited = Boolean.valueOf(ProxyCertificateUtil.isLimitedProxy(CertificateUtil.getCertificateType((X509Certificate)chain[0])));
 
 			logger.debug("Peer Identity is: " + identity
 				 + " Target name is: " + this.targetName +
@@ -736,12 +730,12 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 		 		new Exception("Unexpected BUFFER_UNDERFLOW;" +
                         " Handshaking status: " + sslEngine.getHandshakeStatus()));
                 }
-		if (result.getStatus() !=
-			SSLEngineResult.Status.OK) {
-               	throw new GlobusGSSException(GSSException.FAILURE,
-                                         GlobusGSSException.TOKEN_FAIL,
-                                         result.getStatus().toString());
-		}
+//		if (result.getStatus() !=
+//			SSLEngineResult.Status.OK) {
+//               	throw new GlobusGSSException(GSSException.FAILURE,
+//                                         GlobusGSSException.TOKEN_FAIL,
+//                                         result.getStatus().toString());
+//		}
               } while (inBBuff.hasRemaining());
 
 		return outBBuff;
@@ -786,12 +780,12 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
 			// More data needed from peer
 			break;
 		}
-		if (result.getStatus() !=
-			SSLEngineResult.Status.OK) {
-                	throw new GlobusGSSException(GSSException.FAILURE,
-                                             GlobusGSSException.TOKEN_FAIL,
-                                         result.getStatus().toString());
-		}
+//		if (result.getStatus() !=
+//			SSLEngineResult.Status.OK) {
+//                	throw new GlobusGSSException(GSSException.FAILURE,
+//                                             GlobusGSSException.TOKEN_FAIL,
+//                                         result.getStatus().toString());
+//		}
               } while (inBBuff.hasRemaining());
 		return outBBuff;
 	} catch (IllegalArgumentException e) {
@@ -799,6 +793,8 @@ public class GlobusGSSContextImpl implements ExtendedGSSContext {
         } catch (SSLException e) {
             if (e.toString().endsWith("bad record MAC"))
                 throw new GlobusGSSException(GSSException.BAD_MIC, e);
+            else if (e.toString().endsWith("ciphertext sanity check failed"))
+                throw new GlobusGSSException(GSSException.DEFECTIVE_TOKEN, e);
             else
                 throw new GlobusGSSException(GSSException.FAILURE, e);
 	} catch (Exception e) {
@@ -1050,10 +1046,10 @@ done:      do {
 			// chain verification would have already been done by
 			// JSSE
 
-                    String identity = BouncyCastleUtil.getIdentity(bcConvert(BouncyCastleUtil.getIdentityCertificate((X509Certificate [])chain)));
-                    this.targetName = new GlobusGSSName(CertificateUtil.toGlobusID(identity, false));
+                    String identity = CertificateUtil.getIdentity((X509Certificate [])chain);
+                    this.targetName = new GlobusGSSName(identity);
 
-                    this.peerLimited = Boolean.valueOf(ProxyCertificateUtil.isLimitedProxy(BouncyCastleUtil.getCertificateType((X509Certificate)chain[0])));
+                    this.peerLimited = Boolean.valueOf(ProxyCertificateUtil.isLimitedProxy(CertificateUtil.getCertificateType((X509Certificate)chain[0])));
 
 		    logger.debug("Peer Identity is: " + identity +
 			 " Target name is: " + this.targetName +
@@ -1085,7 +1081,7 @@ done:      do {
                         // break. otherwise we fall through!!!
                         if (this.outByteBuff.remaining() > 0) {
                             break;
-                        } 
+                        }
                     } else {
                         setDone();
                         break;
@@ -1102,6 +1098,7 @@ done:      do {
 
         case CLIENT_START_DEL:
             
+            logger.debug("CLIENT_START_DEL");
             // sanity check - might be invalid state
             if (this.state != CLIENT_START_DEL || this.outByteBuff.remaining() > 0) {
                 throw new GSSException(GSSException.FAILURE);
@@ -1138,6 +1135,7 @@ done:      do {
 
         case CLIENT_END_DEL:
 
+            logger.debug("CLIENT_END_DEL");
 	    if (!inByteBuff.hasRemaining()) {
                 throw new GSSException(GSSException.DEFECTIVE_TOKEN);
 	    }
@@ -1278,6 +1276,18 @@ done:      do {
         this.conn.init();
 */
 	try {
+	    // set trust parameters in SSLConfigurator
+		if(this.tc == null){
+	        KeyStore trustStore = Stores.getDefaultTrustStore();
+	        sslConfigurator.setTrustAnchorStore(trustStore);
+	
+	        CertStore crlStore = Stores.getDefaultCRLStore(); 
+	        sslConfigurator.setCrlStore(crlStore);
+	
+	        ResourceSigningPolicyStore sigPolStore = Stores.getDefaultSigningPolicyStore();
+	        sslConfigurator.setPolicyStore(sigPolStore);
+		}
+        
 		this.sslConfigurator.setRejectLimitProxy(rejectLimitedProxy);
                 if (proxyPolicyHandlers != null)
                     sslConfigurator.setHandlers(proxyPolicyHandlers);
@@ -1314,6 +1324,7 @@ done:      do {
                cs.addAll(Arrays.asList(this.sslEngine.getEnabledCipherSuites()));
             }
         }
+        cs.removeAll(Arrays.asList(bannedCiphers));
         String[] testSuite = new String[0];
         this.sslEngine.setEnabledCipherSuites(cs.toArray(testSuite));
         logger.debug("CIPHER SUITE IS: " + Arrays.toString(
@@ -2254,7 +2265,6 @@ done:      do {
         this.proxyPolicyHandlers = (Map)value;
     }
 
-/*DEL
     protected void setTrustedCertificates(Object value) 
         throws GSSException {
         if (!(value instanceof TrustedCertificates)) {
@@ -2264,10 +2274,13 @@ done:      do {
                                          new Object[] {"Trusted certificates", 
                                                        TrustedCertificates.class});
         }
-	//TODO: set this in SSLConfigurator before creating SSLContext and engine?
-        this.tc = (TrustedCertificates)value;
+        this.tc = (TrustedCertificates) value;
+        //TODO: set this in SSLConfigurator before creating SSLContext and engine?
+        sslConfigurator.setTrustAnchorStore(((TrustedCertificates)value).getTrustStore());
+        sslConfigurator.setCrlStore(((TrustedCertificates)value).getcrlStore());
+        sslConfigurator.setPolicyStore(((TrustedCertificates)value).getsigPolStore());
     }
-*/
+
     
     public void setOption(Oid option, Object value)
         throws GSSException {
@@ -2297,8 +2310,7 @@ done:      do {
             setGrimPolicyHandler(value);
 */
         } else if (option.equals(GSSConstants.TRUSTED_CERTIFICATES)) {
-            // setTrustedCertificates(value);
-            throw new GSSException(GSSException.UNAVAILABLE);
+            setTrustedCertificates(value);
         } else if (option.equals(GSSConstants.PROXY_POLICY_HANDLERS)) {
             setProxyPolicyHandlers(value);
         } else if (option.equals(GSSConstants.ACCEPT_NO_CLIENT_CERTS)) {
@@ -2336,8 +2348,7 @@ done:      do {
         } else if (option.equals(GSSConstants.REQUIRE_CLIENT_AUTH)) {
             return this.requireClientAuth;
         } else if (option.equals(GSSConstants.TRUSTED_CERTIFICATES)) {
-            // return this.tc;
-            throw new GSSException(GSSException.UNAVAILABLE);
+            return this.tc;
         } else if (option.equals(GSSConstants.PROXY_POLICY_HANDLERS)) {
             // return this.proxyPolicyHandlers;
             throw new GSSException(GSSException.UNAVAILABLE);
@@ -2692,6 +2703,12 @@ done:      do {
         
         return null;
     }
+
+    public void setBannedCiphers(String[] ciphers) {
+        bannedCiphers = new String[ciphers.length];
+        System.arraycopy(ciphers, 0, bannedCiphers, 0, ciphers.length);
+    }
+
 
 
     // ==================================================================

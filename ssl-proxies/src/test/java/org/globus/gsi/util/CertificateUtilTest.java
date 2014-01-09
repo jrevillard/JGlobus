@@ -14,6 +14,8 @@
  */
 package org.globus.gsi.util;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import org.globus.gsi.testutils.FileSetupUtil;
@@ -21,14 +23,16 @@ import org.globus.gsi.util.CertificateLoadUtil;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
-import java.security.GeneralSecurityException;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.security.auth.x500.X500Principal;
 
 /**
  * FILL ME
@@ -113,19 +117,20 @@ public class CertificateUtilTest {
 
         BufferedReader reader =
                 new BufferedReader(new StringReader(this.validCert1));
-        X509Certificate cert =
-                CertificateLoadUtil.readCertificate(reader);
+        X509Certificate[] cert =
+                CertificateLoadUtil.loadCertificates(reader);
         assert (cert != null);
+        assert (cert.length == 1);
 
         reader = new BufferedReader(new StringReader(this.invalidCert1));
 
         boolean expected = false;
         try {
-            cert = CertificateLoadUtil.readCertificate(reader);
-        } catch (GeneralSecurityException e) {
+            cert = CertificateLoadUtil.loadCertificates(reader);
+        } catch (IOException e) {
 
             if ((e.getMessage().indexOf(
-                    "Certificate needs to start with  BEGIN CERTIFICATE")) != -1) {
+                    "Certificate not well formatted")) != -1) {
                 expected = true;
             }
         }
@@ -135,11 +140,11 @@ public class CertificateUtilTest {
 
         expected = false;
         try {
-            cert = CertificateLoadUtil.readCertificate(reader);
-        } catch (GeneralSecurityException e) {
+            cert = CertificateLoadUtil.loadCertificates(reader);
+        } catch (IOException e) {
 
             if ((e.getMessage().indexOf(
-                    "Certificate needs to start with  BEGIN CERTIFICATE")) != -1) {
+                    "Certificate not well formatted")) != -1) {
                 expected = true;
             }
         }
@@ -154,7 +159,7 @@ public class CertificateUtilTest {
 
             X509Certificate cert =
                     CertificateLoadUtil
-                            .loadCertificate(testCert1.getAbsoluteFilename());
+                            .loadCertificates(testCert1.getAbsoluteFilename())[0];
 
             assert (cert != null);
 
@@ -163,11 +168,11 @@ public class CertificateUtilTest {
             boolean worked = false;
             try {
                 cert = CertificateLoadUtil
-                        .loadCertificate(testCert2.getAbsoluteFilename());
-            } catch (GeneralSecurityException e) {
+                        .loadCertificates(testCert2.getAbsoluteFilename())[0];
+            } catch (IOException e) {
                 String err = e.getMessage();
                 if (err != null &&
-                        err.indexOf("BEGIN CERTIFICATE") != -1) {
+                        err.indexOf("Certificate not well formatted") != -1) {
                     worked = true;
                 }
             }
@@ -192,11 +197,98 @@ public class CertificateUtilTest {
         boolean worked = false;
         try {
             crl = CertificateLoadUtil.loadCrl(in);
-        } catch (GeneralSecurityException e) {
+        } catch (IOException e) {
             worked = true;
         }
 
         assertTrue(worked);
+    }
+
+    @Test
+    public void testToGlobusIdForString()
+    {
+        String dn =
+            CertificateUtil.toGlobusID("DC=org, DC=DOEGrids, OU=Certificate Authorities, CN=DOEGrids CA 1");
+        assertThat(dn, is("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1"));
+    }
+
+    @Test
+    public void testToGlobusIdForReverseString()
+    {
+        String dn =
+            CertificateUtil.toGlobusID("CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org");
+        assertThat(dn, is("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1"));
+    }
+
+    @Test
+    public void testToGlobusIdForX500Principal()
+    {
+        String dn = CertificateUtil.toGlobusID(
+            new X500Principal("CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org"));
+        assertThat(dn, is("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1"));
+    }
+
+    @Test
+    public void testToPrincipal()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("/DC=org/DC=DOEGrids/OU=Certificate Authorities/CN=DOEGrids CA 1");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
+    }
+
+    @Test
+    public void testToPrincipalWithSlashInAttribute()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("/DC=org/DC=DOEGrids/OU=Certificate / Authorities/CN=DOEGrids CA 1");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, OU=Certificate / Authorities, DC=DOEGrids, DC=org")));
+    }
+
+    @Test
+    public void testToPrincipalWithEmptyAttribute()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("/DC=org/DC=DOEGrids//CN=DOEGrids CA 1");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, DC=DOEGrids, DC=org")));
+    }
+
+    @Test
+    public void testToPrincipalWithEmptyString()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal("");
+        assertThat(principal, is(new X500Principal("")));
+    }
+
+//    @Test
+//    public void testToPrincipalWithWhiteSpace()
+//    {
+//        X500Principal principal =
+//            CertificateUtil.toPrincipal(" /DC=org/ DC=DOEGrids/OU=Certificate Authorities / CN=DOEGrids CA 1   ");
+//        assertThat(principal, is(new X500Principal(
+//            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
+//    }
+
+    @Test
+    public void testToPrincipalWithRdnUnknownToJre()
+    {
+        String dn = "/DC=org/DC=terena/DC=tcs/C=FI/PostalCode=02101/ST=Uusimaa/L=Espoo/STREET=P.O. Box " +
+            "405/O=CSC/OU=satellite.csc.fi/CN=liuske.csc.fi";
+        X500Principal principal = CertificateUtil.toPrincipal(dn);
+        String newDn = CertificateUtil.toGlobusID(principal);
+        assertThat(newDn, is(dn));
+    }
+
+    @Test
+    public void testToPrincipalWithUrl() {
+        String dn = "/C=US/ST=UT/L=Salt Lake City/O=The USERTRUST Network"
+                + "/OU=http://www.usertrust.com/CN=UTN-USERFirst-Client Authentication and Email";
+        X500Principal principal = CertificateUtil.toPrincipal(dn);
+        String newDn = CertificateUtil.toGlobusID(principal);
+        assertThat(newDn, is(dn));
     }
 
     @After

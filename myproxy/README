@@ -1,0 +1,43 @@
+1. To build using Maven run:
+
+mvn -DskipTests=true package
+
+2. To build and test using Maven run:
+
+mvn package
+
+3. To test using Maven after building, run:
+
+mvn test
+
+TESTING:
+
+The following environment variables can be used to specify the MyProxy
+server and port to be used by the test suite.
+
+       MYPROXY_SERVER
+              Specifies the hostname where the  myproxy-server(8)  is  run-
+              ning. Multiple hostnames can be specified in a comma separated
+              list with each hostname optionally followed by a  ':'  and  port
+              number. If multiple hostnames are specified, the client will
+              serially try one after the other in the order specified, stopping
+              with the one with which it could establish a successful network
+              connection.
+              The default host is "localhost" and the default port is 7512.
+
+       MYPROXY_SERVER_PORT
+              Specifies the port where the myproxy-server(8) is running.  This
+              is overridden by any port number specified in the value for the
+              environment variable MYPROXY_SERVER.
+
+       MYPROXY_SERVER_DN
+              Specifies  the distinguished name (DN) of the myproxy-server(8).
+              All MyProxy client programs authenticate the server's  identity.
+              By  default,  MyProxy  servers run with host credentials, so the
+              MyProxy client programs expect the  server  to  have  a  distin-
+              guished  name  with "/CN=host/<fqhn>" or "/CN=myproxy/<fqhn>" or
+              "/CN=<fqhn>" (where <fqhn> is the  fully-qualified  hostname  of
+              the  server).   If the server is running with some other DN, you
+              can set this environment variable to tell the MyProxy clients to
+              accept the alternative DN.
+

@@ -14,31 +14,35 @@
  */
 package org.globus.gsi.proxy.ext;
 
-import org.globus.gsi.bc.BouncyCastleX509Extension;
-import org.globus.util.I18n;
+import java.io.IOException;
+
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.x509.X509Extension;
 
 /**
  * Represents ProxyCertInfo X.509 extension.
  */
-public class GlobusProxyCertInfoExtension extends BouncyCastleX509Extension {
+public class GlobusProxyCertInfoExtension extends X509Extension {
+	private final DERSequence bs;
 
-    private static I18n i18n =
-            I18n.getI18n("org.globus.gsi.errors",
-                         GlobusProxyCertInfoExtension.class.getClassLoader());
-
-    public GlobusProxyCertInfoExtension(ProxyCertInfo value) {
-    super(ProxyCertInfo.OLD_OID.getId(), true, null);
-    if (value == null) {
-        throw new IllegalArgumentException(i18n.getMessage("proxyErr22"));
+    public GlobusProxyCertInfoExtension(ProxyCertInfo value) throws IOException {
+	    super(true, (ASN1OctetString)null); //ASN1OctetString.getInstance(value.getProxyPolicy()) 
+	    bs = (DERSequence) value.getDERObject();
+	}
+	
+    public ASN1OctetString getExtnValue() {
+        try {
+			return DEROctetString.getInstance(bs.getEncoded());
+		} catch (IOException e) {
+			return null;
+		}
     }
-    setValue(value);
-    }
-
-    public void setOid(String oid) {
-    throw new RuntimeException(i18n.getMessage("proxyErr23"));
-    }
-
-    public void setCritical(boolean critical) {
-    throw new RuntimeException(i18n.getMessage("proxyErr24"));
+    
+    public ASN1Encodable getParsedValue()
+    {
+        return bs;
     }
 }

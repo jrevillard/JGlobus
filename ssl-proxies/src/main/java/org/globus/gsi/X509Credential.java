@@ -14,55 +14,37 @@
  */
 package org.globus.gsi;
 
-import org.globus.gsi.util.CertificateIOUtil;
-import org.globus.gsi.util.CertificateLoadUtil;
-import org.globus.gsi.util.CertificateUtil;
-import org.globus.gsi.util.ProxyCertificateUtil;
-
-import org.globus.gsi.trustmanager.X509ProxyCertPathValidator;
-
-import org.globus.gsi.stores.ResourceCertStoreParameters;
-import org.globus.gsi.stores.ResourceSigningPolicyStore;
-import org.globus.gsi.stores.ResourceSigningPolicyStoreParameters;
-
-import org.globus.gsi.provider.GlobusProvider;
-import org.globus.gsi.provider.KeyStoreParametersFactory;
-
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
-
-import java.security.cert.CertStore;
-import java.security.KeyStore;
-import org.globus.common.CoGProperties;
-import java.io.FileNotFoundException;
-import java.io.FileInputStream;
-import java.security.cert.CertificateException;
-import org.globus.gsi.bc.BouncyCastleUtil;
-import java.security.interfaces.RSAPrivateKey;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.EOFException;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
-import java.security.Key;
+import java.security.KeyStore;
 import java.security.PrivateKey;
-import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertStore;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
 import java.util.Date;
-import java.util.Vector;
 
-
-
-import org.bouncycastle.util.encoders.Base64;
-
-import org.globus.gsi.bc.BouncyCastleOpenSSLKey;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.openssl.PEMException;
+import org.bouncycastle.openssl.PasswordException;
+import org.bouncycastle.openssl.PasswordFinder;
+import org.globus.common.CoGProperties;
+import org.globus.gsi.GSIConstants.CertificateType;
+import org.globus.gsi.bc.GlobusStyle;
+import org.globus.gsi.stores.ResourceSigningPolicyStore;
+import org.globus.gsi.stores.Stores;
+import org.globus.gsi.trustmanager.X509ProxyCertPathValidator;
+import org.globus.gsi.util.CertificateIOUtil;
+import org.globus.gsi.util.CertificateLoadUtil;
+import org.globus.gsi.util.CertificateUtil;
+import org.globus.gsi.util.ProxyCertificateUtil;
 
 /**
  * FILL ME
@@ -75,9 +57,9 @@ import org.globus.gsi.bc.BouncyCastleOpenSSLKey;
 // COMMENT: Do we need the getDefaultCred functionality?
 public class X509Credential {
 
-    public static final int BUFFER_SIZE = Integer.MAX_VALUE;
-    private static Log logger = LogFactory.getLog(X509Credential.class.getCanonicalName());
-    private OpenSSLKey opensslKey;
+	private static Log logger = LogFactory.getLog(X509Credential.class.getCanonicalName());
+    private PrivateKey privateKey;
+    private final String privateKeyFile;
     private X509Certificate[] certChain;
 
     
@@ -105,61 +87,90 @@ public class X509Credential {
 
         this.certChain = new X509Certificate[initCertChain.length];
         System.arraycopy(initCertChain, 0, this.certChain, 0, initCertChain.length);
-        this.opensslKey = new BouncyCastleOpenSSLKey(initKey);
+        this.privateKey = initKey;
+        this.privateKeyFile = null;
     }
-
+    
+    /**
+     * Creates a {@link X509Credential} using the input streams. The private key must NOT be encrypted
+     * @param in
+     * @throws CredentialException
+     */
     public X509Credential(InputStream certInputStream, InputStream keyInputStream) throws CredentialException {
-        if (certInputStream.markSupported()) {
-            certInputStream.mark(BUFFER_SIZE);
-        }
-        loadKey(keyInputStream);
-        loadCertificate(certInputStream);
-        validateCredential();
-    }
-
-    public X509Credential(String certFile, String keyFile) throws CredentialException, IOException {
-    	FileInputStream keyFileInputStream = null;
-    	FileInputStream certFileInputStream = null;
     	try{
-    		keyFileInputStream = new FileInputStream(new File(keyFile));
-	        loadKey(keyFileInputStream);
-	        certFileInputStream = new FileInputStream(new File(certFile));
-	        loadCertificate(certFileInputStream);
-	        validateCredential();
-    	}finally{
-    		if (keyFileInputStream != null) {
-                try {
-                	keyFileInputStream.close();
-                } catch (Exception e) {
-                    logger.warn("Unable to close stream.");
-                }
-            }
-    		if (certFileInputStream != null) {
-                try {
-                	certFileInputStream.close();
-                } catch (Exception e) {
-                    logger.warn("Unable to close stream.");
-                }
-            }
-    	}
+    		this.privateKey = CertificateLoadUtil.loadPrivateKey(keyInputStream, null, true);
+    	} catch (IOException e) {
+			throw new CredentialException("No Private Key found or Encrypted one",e);
+		} catch (GeneralSecurityException e) {
+			throw new CredentialException("No Private Key found", e);
+		}
+    	try {
+			this.certChain = CertificateLoadUtil.loadCertificates(certInputStream, true);
+		} catch (IOException e) {
+			throw new CredentialException("No Certificate found", e);
+		} catch (GeneralSecurityException e) {
+			throw new CredentialException("No Certificate found", e);
+		}
+    	this.privateKeyFile = null;
+    }
+    
+    public X509Credential(String certFile, String keyFile) throws CredentialException {
+    	try {
+			this.certChain = CertificateLoadUtil.loadCertificates(certFile);
+		} catch (IOException e) {
+			throw new CredentialException("No Certificate found", e);
+		} catch (GeneralSecurityException e) {
+			throw new CredentialException("No Certificate found", e);
+		}
+    	try{
+    		this.privateKey = CertificateLoadUtil.loadPrivateKey(keyFile, null);
+    	}catch (PasswordException e) {
+			// Ok, the keystore needs a password, we will decrypt it later.
+    	}catch (PEMException e) {
+    		if("no PasswordFinder specified".equals(e.getMessage())){
+    			// Ok, the keystore needs a password, we will decrypt it later.
+    		}else{
+    			throw new CredentialException("Cannot understand the private key format.", e);
+    		}
+		} catch (IOException e) {
+			throw new CredentialException("No Private Key found", e);
+		} catch (GeneralSecurityException e) {
+			throw new CredentialException("No Private Key found", e);
+		}
+    	this.privateKeyFile = keyFile;
+    }
+    
+    /**
+     * Creates a {@link X509Credential} using an input stream. The private key must NOT be encrypted
+     * @param in
+     * @throws CredentialException
+     */
+    public X509Credential(InputStream in) throws CredentialException {
+    	try{
+    		if(!in.markSupported()){
+    			in =  new BufferedInputStream(in);
+        	}
+    		in.mark(in.available());
+    		this.privateKey = CertificateLoadUtil.loadPrivateKey(in, null, false);
+    	} catch (IOException e) {
+			throw new CredentialException("No Private Key found or Encrypted one",e);
+		} catch (GeneralSecurityException e) {
+			throw new CredentialException("No Private Key found", e);
+		}
+    	
+    	try {
+    		in.reset();
+			this.certChain = CertificateLoadUtil.loadCertificates(in, true);
+		} catch (IOException e) {
+			throw new CredentialException("No Certificate found",e);
+		} catch (GeneralSecurityException e) {
+			throw new CredentialException("No Certificate found",e);
+		}
+    	this.privateKeyFile = null;
     }
 
     public X509Credential(String proxyFile) throws CredentialException {
-        if (proxyFile == null) {
-            throw new IllegalArgumentException("proxy file is null");
-        }
-        logger.debug("Loading proxy file: " + proxyFile);
-
-        try {
-            InputStream in = new FileInputStream(proxyFile);
-            load(in);
-        } catch (FileNotFoundException f) {
-            throw new CredentialException("proxy not found");
-        }
-    }
-
-    public X509Credential(InputStream input) throws CredentialException {
-        load(input);
+    	this(proxyFile,proxyFile);
     }
 
     public X509Certificate[] getCertificateChain() {
@@ -173,106 +184,51 @@ public class X509Credential {
         return getPrivateKey(null);
     }
 
-    public PrivateKey getPrivateKey(String password) throws CredentialException {
-
-        if (this.opensslKey.isEncrypted()) {
-            if (password == null) {
-                throw new CredentialException("Key encrypted, password required");
-            } else {
-                try {
-                    this.opensslKey.decrypt(password);
-                } catch (GeneralSecurityException exp) {
-                    throw new CredentialException(exp.getMessage(), exp);
-                }
-            }
-        }
-        return this.opensslKey.getPrivateKey();
-
+    public PrivateKey getPrivateKey(final String password) throws CredentialException {
+    	if(this.privateKey == null){
+    		try {
+				this.privateKey = CertificateLoadUtil.loadPrivateKey(privateKeyFile, new PasswordFinder() {
+					
+					public char[] getPassword() {
+						if(password == null){
+							return null;
+						}
+						return password.toCharArray();
+					}
+				});
+			} catch (PasswordException e) {
+				throw new CredentialException("Key encrypted, password required");
+			} catch (IOException e) {
+				throw new CredentialException(e.getMessage(), e);
+			} catch (GeneralSecurityException e) {
+				throw new CredentialException(e.getMessage(), e);
+			}
+    	}
+        return this.privateKey;
     }
 
     public boolean isEncryptedKey() {
-        return this.opensslKey.isEncrypted();
+        return (this.privateKey == null);
     }
 
     /**
-     * Reads Base64 encoded data from the stream and returns its decoded value. The reading continues until
-     * the "END" string is found in the data. Otherwise, returns null.
+     * Save the certificate and the private key to provided output stream (Do NOT close the stream)
      */
-    private static byte[] getDecodedPEMObject(BufferedReader reader) throws IOException {
-        String line;
-        StringBuffer buf = new StringBuffer();
-        while ((line = reader.readLine()) != null) {
-            if (line.indexOf("--END") != -1) { // found end
-                return Base64.decode(buf.toString().getBytes());
-            } else {
-                buf.append(line);
-            }
-        }
-        throw new EOFException("Missing PEM end footer");
+    public void save(OutputStream out) throws IOException, CredentialException {
+    	CertificateIOUtil.writeCertificateChainAndPrivateKey(getPrivateKey(), this.certChain, out, false);
     }
 
-    public void saveKey(OutputStream out) throws IOException {
-
-        this.opensslKey.writeTo(out);
-        out.flush();
-    }
-
-    // COMMENT Used to be "key cert cert cert ...", which is wrong afaik. must be "cert key cert cert ..."
-    public void saveCertificateChain(OutputStream out) throws IOException, CertificateEncodingException {
-
-        CertificateIOUtil.writeCertificate(out, this.certChain[0]);
-
-        for (int i = 1; i < this.certChain.length; i++) {
-            // skip the self-signed certificates
-            if (this.certChain[i].getSubjectDN().equals(certChain[i].getIssuerDN())) {
-                continue;
-            }
-            CertificateIOUtil.writeCertificate(out, this.certChain[i]);
-        }
-        out.flush();
-    }
-
-    public void save(OutputStream out) throws IOException, CertificateEncodingException {
-        CertificateIOUtil.writeCertificate(out, this.certChain[0]);
-        saveKey(out);
-        for (int i = 1; i < this.certChain.length; i++) {
-            // This will skip the self-signed certificates?
-            if (this.certChain[i].getSubjectDN().equals(certChain[i].getIssuerDN())) {
-                continue;
-            }
-            CertificateIOUtil.writeCertificate(out, this.certChain[i]);
-        }
-        out.flush();
-    }
-
-    public void writeToFile(File file) throws IOException, CertificateEncodingException {
+    public void writeToFile(File file) throws IOException, CredentialException {
         writeToFile(file, file);
     }
 
-    public void writeToFile(File certFile, File keyFile) throws IOException, CertificateEncodingException {
-        FileOutputStream keyOutputStream = null;
-        FileOutputStream certOutputStream = null;
-        try {
-            keyOutputStream = new FileOutputStream(keyFile);
-            certOutputStream = new FileOutputStream(certFile);
-            saveKey(keyOutputStream);
-            saveCertificateChain(certOutputStream);
-        } finally {
-            try {
-                if (keyOutputStream != null) {
-                    keyOutputStream.close();
-                }
-            } catch (IOException e) {
-                logger.warn("Could not close stream on save of key to file. " + keyFile.getPath());
-            }
-            try {
-                if (certOutputStream != null) {
-                    certOutputStream.close();
-                }
-            } catch (IOException e) {
-                logger.warn("Could not close stream on save certificate chain to file. " + certFile.getPath());
-            }
-        }
+    public void writeToFile(File certFile, File keyFile) throws IOException, CredentialException {
+    	if(certFile.equals(keyFile)){
+    		save(new FileOutputStream(certFile));
+    	}else{
+    		CertificateIOUtil.writePrivateKey(getPrivateKey(), keyFile);
+    		CertificateIOUtil.writeCertificateChain(certChain, certFile);
+    	}
     }
 
     public Date getNotBefore() {
@@ -293,7 +249,7 @@ public class X509Credential {
      */
     public int getCertNum() {
         for (int i = this.certChain.length - 1; i >= 0; i--) {
-            if (!this.certChain[i].getSubjectDN().equals(this.certChain[i].getIssuerDN())) {
+            if (!this.certChain[i].getSubjectX500Principal().equals(this.certChain[i].getIssuerX500Principal())) {
                 return i + 1;
             }
         }
@@ -315,21 +271,14 @@ public class X509Credential {
      * @return strength of the key in bits. Returns -1 if unable to determine it.
      */
     public int getStrength(String password) throws CredentialException {
-        if (opensslKey == null) {
-            return -1;
+        getPrivateKey(password);
+        if("RSA".equals(privateKey.getAlgorithm())){
+        	return ((RSAPrivateKey)privateKey).getModulus().bitLength();      	
+        }else if("DSA".equals(privateKey.getAlgorithm())){
+        	return -1;
+        }else{
+        	return -2;
         }
-        if (this.opensslKey.isEncrypted()) {
-            if (password == null) {
-                throw new CredentialException("Key encrypted, password required");
-            } else {
-                try {
-                    this.opensslKey.decrypt(password);
-                } catch (GeneralSecurityException exp) {
-                    throw new CredentialException(exp.getMessage(), exp);
-                }
-            }
-        }
-        return ((RSAPrivateKey)opensslKey.getPrivateKey()).getModulus().bitLength();
     }
 
     /**
@@ -338,7 +287,7 @@ public class X509Credential {
      * @return subject DN.
      */
     public String getSubject() {
-        return this.certChain[0].getSubjectDN().getName();
+        return GlobusStyle.INSTANCE.toString(X500Name.getInstance(this.certChain[0].getSubjectX500Principal().getEncoded()));
     }
 
     /**
@@ -347,7 +296,7 @@ public class X509Credential {
      * @return issuer DN.
      */
     public String getIssuer() {
-        return this.certChain[0].getIssuerDN().getName();
+        return GlobusStyle.INSTANCE.toString(X500Name.getInstance(this.certChain[0].getIssuerX500Principal().getEncoded()));
     }
 
     /**
@@ -358,13 +307,13 @@ public class X509Credential {
      * 
      * @return the type of first certificate in the chain. -1 if unable to determine the certificate type.
      */
-    public GSIConstants.CertificateType getProxyType() {
+    public CertificateType getProxyType() {
         try {
-            return BouncyCastleUtil.getCertificateType(this.certChain[0]);
+            return CertificateUtil.getCertificateType(this.certChain[0]);
         } catch (CertificateException e) {
             logger.error("Error getting certificate type.", e);
-            return GSIConstants.CertificateType.UNDEFINED;
-        }
+            return CertificateType.UNDEFINED;
+		}
     }
 
     /**
@@ -394,7 +343,7 @@ public class X509Credential {
      */
     public String getIdentity() {
     try {
-        return BouncyCastleUtil.getIdentity(this.certChain);
+        return CertificateUtil.getIdentity(this.certChain);
     } catch (CertificateException e) {
             logger.debug("Error getting certificate identity.", e);
         return null;
@@ -410,7 +359,7 @@ public class X509Credential {
      */
     public X509Certificate getIdentityCertificate() {
         try {
-            return BouncyCastleUtil.getIdentityCertificate(this.certChain);
+            return CertificateUtil.getIdentityCertificate(this.certChain);
         } catch (CertificateException e) {
             logger.debug("Error getting certificate identity.", e);
             return null;
@@ -429,7 +378,7 @@ public class X509Credential {
         int pathLength = Integer.MAX_VALUE;
         try {
             for (int i=0; i<this.certChain.length; i++) {
-                int length = BouncyCastleUtil.getProxyPathConstraint(this.certChain[i]);
+                int length = ProxyCertificateUtil.getProxyPathConstraint(this.certChain[i]);
                 // if length is one, then no proxy cert extension exists, so
                 // path length is -1
                 if (length == -1) {
@@ -451,17 +400,34 @@ public class X509Credential {
      * certificates in default locations.
      * 
      * @exception CredentialException
-     *                if one of the certificates in the chain expired or if path validiation fails.
+     *                if one of the certificates in the chain expired or if path validation fails.
      */
     public void verify() throws CredentialException {
+    	verify(null);    	
+    }
+    	
+    	
+    /**
+     * Verifies the validity of the credentials. 
+     * 
+     * @param caCertsLocation
+     * 				The directory where to find the CA certificates. If <code>null</code>, path validation is performed using trusted
+     * 				certificates in default locations.
+     * @throws CredentialException
+     * 				if one of the certificates in the chain expired or if path validation fails.
+     */
+    public void verify(String caCertsLocation) throws CredentialException {
         try {
-            String caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
-            String crlPattern = caCertsLocation + "/*.r*";
-            String sigPolPattern = caCertsLocation + "/*.signing_policy";
-            KeyStore keyStore = KeyStore.getInstance(GlobusProvider.KEYSTORE_TYPE, GlobusProvider.PROVIDER_NAME);
-            CertStore crlStore = CertStore.getInstance(GlobusProvider.CERTSTORE_TYPE, new ResourceCertStoreParameters(null,crlPattern));
-            ResourceSigningPolicyStore sigPolStore = new ResourceSigningPolicyStore(new ResourceSigningPolicyStoreParameters(sigPolPattern));
-            keyStore.load(KeyStoreParametersFactory.createTrustStoreParameters(caCertsLocation +"/*.0"));
+        	if(caCertsLocation == null){
+            	caCertsLocation = "file:" + CoGProperties.getDefault().getCaCertLocations();
+        	}else{
+        		caCertsLocation = "file:" + caCertsLocation;
+        	}
+
+            KeyStore keyStore = Stores.getTrustStore(caCertsLocation + "/" + Stores.getDefaultCAFilesPattern());
+            CertStore crlStore = Stores.getCRLStore(caCertsLocation + "/" + Stores.getDefaultCRLFilesPattern()); 
+            ResourceSigningPolicyStore sigPolStore = Stores.getSigningPolicyStore(caCertsLocation + "/" + Stores.getDefaultSigningPolicyFilesPattern());
+            
             X509ProxyCertPathParameters parameters = new X509ProxyCertPathParameters(keyStore, crlStore, sigPolStore, false);
             X509ProxyCertPathValidator validator = new X509ProxyCertPathValidator();
             validator.engineValidate(CertificateUtil.getCertPath(certChain), parameters);
@@ -532,150 +498,4 @@ public class X509Credential {
         buf.append("proxy type : ").append(ProxyCertificateUtil.getProxyTypeAsString(getProxyType()));
         return buf.toString();
     }
-
-    protected void load(InputStream input) throws CredentialException {
-
-        if (input == null) {
-            throw new IllegalArgumentException("input stream cannot be null");
-        }
-
-        X509Certificate cert = null;
-        Vector chain = new Vector(3);
-        String line;
-        BufferedReader reader = null;
-        ByteArrayInputStream byteArrayInputStream = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(input));
-            while ((line = reader.readLine()) != null) {
-
-                if (line.indexOf("BEGIN CERTIFICATE") != -1) {
-                    byte[] data = getDecodedPEMObject(reader);
-                    byteArrayInputStream = new ByteArrayInputStream(data);
-                    cert = CertificateLoadUtil.loadCertificate(byteArrayInputStream);
-                    chain.addElement(cert);
-                } else if (line.indexOf("BEGIN RSA PRIVATE KEY") != -1) {
-                    byte[] data = getDecodedPEMObject(reader);
-                    this.opensslKey = new BouncyCastleOpenSSLKey("RSA", data);
-                }
-            }
-        } catch (Exception e) {
-            throw new CredentialException(e);
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                }
-            }
-            if (byteArrayInputStream != null) {
-                try {
-                	byteArrayInputStream.close();
-                } catch (IOException e) {
-                }
-            }
-        }
-
-        int size = chain.size();
-
-        if (size == 0) {
-            throw new CredentialException("no certs");
-        }
-
-        if (opensslKey == null) {
-            throw new CredentialException("no key");
-        }
-
-        // set chain
-        this.certChain = new X509Certificate[size];
-        chain.copyInto(certChain);
-    }
-
-    protected void loadCertificate(InputStream input) throws CredentialException {
-
-        if (input == null) {
-            throw new IllegalArgumentException("Input stream to load X509Credential is null");
-        }
-
-        X509Certificate cert;
-        Vector<X509Certificate> chain = new Vector<X509Certificate>();
-
-        String line;
-        BufferedReader reader = null;
-        ByteArrayInputStream byteArrayInputStream = null;
-        try {
-            if (input.markSupported()) {
-                input.reset();
-            }
-            reader = new BufferedReader(new InputStreamReader(input));
-
-            while ((line = reader.readLine()) != null) {
-
-                if (line.indexOf("BEGIN CERTIFICATE") != -1) {
-                    byte[] data = getDecodedPEMObject(reader);
-                    byteArrayInputStream = new ByteArrayInputStream(data);
-                    cert = CertificateLoadUtil.loadCertificate(byteArrayInputStream);
-                    chain.addElement(cert);
-                }
-            }
-
-        } catch (IOException e) {
-            throw new CredentialException(e);
-        } catch (GeneralSecurityException e) {
-            throw new CredentialException(e);
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                    logger.debug("error closing reader");
-                }
-            }
-            if (byteArrayInputStream != null) {
-                try {
-                	byteArrayInputStream.close();
-                } catch (IOException e) {
-                    logger.debug("error closing stream");
-                }
-            }
-        }
-
-        int size = chain.size();
-        if (size > 0) {
-            this.certChain = new X509Certificate[size];
-            chain.copyInto(this.certChain);
-        }
-
-    }
-
-    protected void loadKey(InputStream input) throws CredentialException {
-
-        // JGLOBUS-95: BC seems to have some PEM utility but the actual
-        // load is in private methods and cannot be leveraged.
-        // Investigate availability of standard libraries for these
-        // low level reads. FOr now, copying from CoG
-        try {
-            this.opensslKey = new BouncyCastleOpenSSLKey(input);
-        } catch (IOException e) {
-            throw new CredentialException(e.getMessage(), e);
-        } catch (GeneralSecurityException e) {
-            throw new CredentialException(e.getMessage(), e);
-        }
-    }
-
-    private void validateCredential() throws CredentialException {
-
-        if (this.certChain == null) {
-            throw new CredentialException("No certificates found");
-        }
-        int size = this.certChain.length;
-
-        if (size < 0) {
-            throw new CredentialException("No certificates found.");
-        }
-
-        if (this.opensslKey == null) {
-            throw new CredentialException("NO private key found");
-        }
-    }
-
 }

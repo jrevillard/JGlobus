@@ -18,44 +18,38 @@ package org.globus.gsi.stores;
 import org.globus.gsi.CredentialException;
 import org.globus.gsi.X509Credential;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.cert.CertificateEncodingException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.core.io.Resource;
+import org.globus.util.GlobusResource;
 
 /**
  * Fill Me
  */
 
 public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>, Storable, CredentialWrapper {
-	private Log logger = LogFactory.getLog(getClass().getCanonicalName());
-	
-    protected Resource certFile;
-    protected Resource keyFile;
+
+    protected GlobusResource globusCertFile;
+    protected GlobusResource globusKeyFile;
 
     private long certLastModified = -1;
     private long keyLastModified = -1;
     private X509Credential credential;
     private boolean changed;
 
-    public CertKeyCredential(Resource certResource, Resource keyResource) throws ResourceStoreException {
+    public CertKeyCredential(GlobusResource certResource, GlobusResource keyResource) throws ResourceStoreException {
         init(certResource, keyResource);
     }
 
-    public CertKeyCredential(Resource certResource, Resource keyResource, X509Credential credential)
+    public CertKeyCredential(GlobusResource certResource, GlobusResource keyResource, X509Credential credential)
             throws ResourceStoreException {
-        this.certFile = certResource;
+        this.globusCertFile = certResource;
         try {
             if (!certResource.exists()) {
                 FileUtils.touch(certResource.getFile());
                 this.certLastModified = certResource.lastModified();
             }
-            this.keyFile = keyResource;
+            this.globusKeyFile = keyResource;
             if (!keyResource.exists()) {
                 FileUtils.touch(keyResource.getFile());
                 this.keyLastModified = keyResource.lastModified();
@@ -66,24 +60,24 @@ public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>,
         this.credential = credential;
     }
 
-    protected void init(Resource initCertResource, Resource initKeyResource) throws ResourceStoreException {
+    protected void init(GlobusResource initCertResource, GlobusResource initKeyResource) throws ResourceStoreException {
 
         if ((initCertResource == null) || (initKeyResource == null)) {
             throw new IllegalArgumentException();
         }
 
-        this.certFile = initCertResource;
-        this.keyFile = initKeyResource;
-        this.credential = createObject(this.certFile, this.keyFile);
+        this.globusCertFile = initCertResource;
+        this.globusKeyFile = initKeyResource;
+        this.credential = createObject(this.globusCertFile, this.globusKeyFile);
         try {
-            this.certLastModified = this.certFile.lastModified();
-            this.keyLastModified = this.keyFile.lastModified();
+            this.certLastModified = this.globusCertFile.lastModified();
+            this.keyLastModified = this.globusKeyFile.lastModified();
         } catch (IOException ioe) {
             throw new ResourceStoreException(ioe);
         }
     }
 
-    protected void init(Resource initCertFile, Resource keyResource, X509Credential initCredential)
+    protected void init(GlobusResource initCertFile, GlobusResource keyResource, X509Credential initCredential)
             throws ResourceStoreException {
 
         if (initCredential == null) {
@@ -91,69 +85,46 @@ public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>,
             throw new IllegalArgumentException("Object cannot be null");
         }
         this.credential = initCredential;
-        this.certFile = initCertFile;
-        this.keyFile = keyResource;
+        this.globusCertFile = initCertFile;
+        this.globusKeyFile = keyResource;
     }
-
 
     public void refresh() throws ResourceStoreException {
         long cLatestLastModified;
         long kLatestLastModified;
         this.changed = false;
         try {
-            cLatestLastModified = this.certFile.lastModified();
-            kLatestLastModified = this.keyFile.lastModified();
+            cLatestLastModified = this.globusCertFile.lastModified();
+            kLatestLastModified = this.globusKeyFile.lastModified();
         } catch (IOException ioe) {
             throw new ResourceStoreException(ioe);
         }
         if ((this.certLastModified < cLatestLastModified) || (this.keyLastModified < kLatestLastModified)) {
-            this.credential = createObject(this.certFile, this.keyFile);
+            this.credential = createObject(this.globusCertFile, this.globusKeyFile);
             this.certLastModified = cLatestLastModified;
             this.keyLastModified = kLatestLastModified;
             this.changed = true;
         }
     }
 
-    public Resource getCertificateFile() {
-        return this.certFile;
+    public GlobusResource getCertificateFile() {
+        return this.globusCertFile;
     }
 
-    public Resource getKeyFile() {
-        return this.keyFile;
+    public GlobusResource getKeyFile() {
+        return this.globusKeyFile;
     }
 
     // for creation of credential from a file
-
-    protected X509Credential createObject(Resource certSource, Resource keySource)
+    protected X509Credential createObject(GlobusResource certSource, GlobusResource keySource)
             throws ResourceStoreException {
-        InputStream certIns = null;
-        InputStream keyIns = null;
         try {
-            certIns = certSource.getInputStream();
-            keyIns = keySource.getInputStream();
-            return new X509Credential(certIns, keyIns);
-        } catch (FileNotFoundException e) {
-            throw new ResourceStoreException(e);
+            return new X509Credential(certSource.getFile().getAbsolutePath(), keySource.getFile().getAbsolutePath());
         } catch (CredentialException e) {
             throw new ResourceStoreException(e);
-        } catch (IOException ioe) {
-            throw new ResourceStoreException(ioe);
-        }finally{
-        	if(certIns != null){
-        		try {
-					certIns.close();
-				} catch (IOException e) {
-					logger.warn("Unable to close stream.");
-				}
-        	}
-        	if(keyIns != null){
-        		try {
-        			keyIns.close();
-				} catch (IOException e) {
-					logger.warn("Unable to close stream.");
-				}
-        	}
-        }
+        } catch (IOException e) {
+        	throw new ResourceStoreException(e);
+		}
     }
 
     public X509Credential getSecurityObject() throws ResourceStoreException {
@@ -171,12 +142,12 @@ public class CertKeyCredential implements SecurityObjectWrapper<X509Credential>,
 
     public void store() throws ResourceStoreException {
         try {
-            this.credential.writeToFile(this.certFile.getFile(), this.keyFile.getFile());
+            this.credential.writeToFile(this.globusCertFile.getFile(), this.globusKeyFile.getFile());
         } catch (IOException e) {
             throw new ResourceStoreException(e);
-        } catch (CertificateEncodingException e) {
-            throw new ResourceStoreException(e);
-        }
+        } catch (CredentialException e) {
+        	throw new ResourceStoreException(e);
+		}
     }
 
     public String getAlias() {

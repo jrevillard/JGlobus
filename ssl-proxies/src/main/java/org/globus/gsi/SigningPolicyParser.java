@@ -117,7 +117,7 @@ public class SigningPolicyParser {
     public Map<X500Principal, SigningPolicy> parse(String fileName)
             throws FileNotFoundException, SigningPolicyException {
 
-        if ((fileName == null) || (fileName.trim().equals(""))) {
+        if ((fileName == null) || (fileName.trim().isEmpty())) {
             throw new IllegalArgumentException();
         }
 
@@ -243,9 +243,35 @@ public class SigningPolicyParser {
             int startIndex = CONDITION_SUBJECT.length();
             int endIndex = line.length();
             Vector<Pattern> allowedDNs = getAllowedDNs(line.substring(startIndex, endIndex));
-            X500Principal caPrincipal = CertificateUtil.toPrincipal(caDN);
-            SigningPolicy policy = new SigningPolicy(caPrincipal, allowedDNs);
-            policies.put(caPrincipal, policy);
+            // Some IGTF CA signing policies include all the various versions of having the emailAddress
+            // in the DN.  The "E=" variant causes an exception to be thrown in modern JVMs.
+            // Hence, we ignore invalid DNs.  Luckily, the signing policies contain all variants so
+            // it is safe to ignore.
+            try {
+                X500Principal caPrincipal = CertificateUtil.toPrincipal(caDN);
+                SigningPolicy policy = new SigningPolicy(caPrincipal, allowedDNs);
+                policies.put(caPrincipal, policy);
+            } catch (java.lang.IllegalArgumentException e) {
+                if (caDN == null) {
+                    throw e;
+                }
+                String [] components = caDN.split("/");
+                boolean hasE = false;
+                for (int i=0; i<components.length; i++) {
+                    String attribute = components[i].split("=")[0];
+                    if (attribute.equals("E")) {
+                        hasE = true;
+                        break;
+                    }
+                }
+                if (hasE) {
+                    logger.warn("Invalid DN (" + caDN + ") in the CA policy");
+                    logger.debug("Invalid DN in the CA policy", e);
+                    return true;
+                } else {
+                    throw e;
+                }
+            }
             return true;
         }
         return false;
@@ -256,7 +282,7 @@ public class SigningPolicyParser {
         if (line.startsWith(ACCESS_ID_CA)) {
             outCaDN = getCA(line.substring(ACCESS_ID_CA.length(),
                     line.length()));
-            logger.debug("CA DN is " + caDN);
+            logger.debug("CA DN is " + outCaDN);
         }
         return outCaDN;
     }
@@ -316,7 +342,7 @@ public class SigningPolicyParser {
         String trimmedLine = line.trim();
 
         // if line is empty or comment character, skip it.
-        if (trimmedLine.equals("") || trimmedLine.startsWith("#")) {
+        if (trimmedLine.isEmpty() || trimmedLine.startsWith("#")) {
             return false;
         }
 
@@ -363,7 +389,7 @@ public class SigningPolicyParser {
                 startIndex++;
                 int endOfDNIndex = value.indexOf('\'', startIndex);
                 if (endOfDNIndex == -1) {
-                    String err = "invlaid subjects";
+                    String err = "invalid subjects";
                     //i18n.getMessage("invalidSubjects",
                     //                       lineForErr);
                     throw new SigningPolicyException(err);
@@ -374,7 +400,7 @@ public class SigningPolicyParser {
             value = value.substring(startIndex, endIndex);
             value = value.trim();
 
-            if (value.equals("")) {
+            if (value.isEmpty()) {
                 String err = "empty subjects";
                 //i18n.getMessage("emptySubjects", lineForErr);
                 throw new SigningPolicyException(err);

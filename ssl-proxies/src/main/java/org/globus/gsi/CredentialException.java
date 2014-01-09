@@ -24,7 +24,9 @@ import java.security.GeneralSecurityException;
  */
 public class CredentialException extends GeneralSecurityException {
 
-    public CredentialException(String msg) {
+	private static final long serialVersionUID = 1L;
+
+	public CredentialException(String msg) {
         super(msg);
     }
 

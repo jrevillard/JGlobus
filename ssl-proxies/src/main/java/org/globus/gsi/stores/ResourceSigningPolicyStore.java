@@ -33,8 +33,10 @@ import java.util.Map;
 import javax.security.auth.x500.X500Principal;
 
 import org.globus.gsi.SigningPolicy;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.globus.gsi.util.CertificateIOUtil;
+
+import org.globus.util.GlobusResource;
+import org.globus.util.GlobusPathMatchingResourcePatternResolver;
 
 /**
  * FILL ME
@@ -42,13 +44,19 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  * @author ranantha@mcs.anl.gov
  */
 public class ResourceSigningPolicyStore implements SigningPolicyStore {
-    
-    private PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+    private GlobusPathMatchingResourcePatternResolver globusResolver = new GlobusPathMatchingResourcePatternResolver();
     private Map<URI, ResourceSigningPolicy> signingPolicyFileMap = new HashMap<URI, ResourceSigningPolicy>();
     private Map<String, SigningPolicy> policyMap = new HashMap<String, SigningPolicy>();
     private ResourceSigningPolicyStoreParameters parameters;
     private Log logger = LogFactory.getLog(ResourceSigningPolicyStore.class.getCanonicalName());
+    private final Map<String, Long> invalidPoliciesCache = new HashMap<String, Long>();
+    private final Map<String, Long> validPoliciesCache = new HashMap<String, Long>();
+    private final static long CACHE_TIME_MILLIS = 3600*1000;
 
+    /**
+     * Please use the {@link Stores} class to generate Key/Cert stores
+     */
     public ResourceSigningPolicyStore(SigningPolicyStoreParameters param) throws InvalidAlgorithmParameterException {
         if (param == null) {
             throw new IllegalArgumentException();
@@ -62,31 +70,51 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
         this.parameters = (ResourceSigningPolicyStoreParameters) param;
     }
 
-    public SigningPolicy getSigningPolicy(X500Principal caPrincipal) throws SigningPolicyStoreException {
+    public synchronized SigningPolicy getSigningPolicy(X500Principal caPrincipal) throws SigningPolicyStoreException {
 
         if (caPrincipal == null) {
             return null;
         }
-        loadPolicies();
-        return this.policyMap.get(caPrincipal.getName());
+        String caPrincipalName = caPrincipal.getName();
+        long now = System.currentTimeMillis();
+        String hash = CertificateIOUtil.nameHash(caPrincipal);
+
+        Long validCacheTime = validPoliciesCache.get(caPrincipalName);
+        Long invalidCacheTime = invalidPoliciesCache.get(caPrincipalName);
+
+        if ((invalidCacheTime != null) && (now - invalidCacheTime < 10*CACHE_TIME_MILLIS)) {
+            return null;
+        }
+        if ((validCacheTime == null) || (now - validCacheTime >= CACHE_TIME_MILLIS) || !this.policyMap.containsKey(caPrincipalName)) {
+            loadPolicy(hash, caPrincipalName);
+        }
+        return this.policyMap.get(caPrincipalName);
     }
 
-    private void loadPolicies() throws SigningPolicyStoreException {
+    private synchronized void loadPolicy(String hash, String caPrincipalName) throws SigningPolicyStoreException {
 
         String locations = this.parameters.getTrustRootLocations();
-        Resource[] resources;
+        GlobusResource[] resources;
+        resources = globusResolver.getResources(locations);
 
-        try {
-            resources = resolver.getResources(locations);
-        } catch (IOException e) {
-            throw new SigningPolicyStoreException(e);
-        }
-        Map<String, SigningPolicy> newPolicyMap =
-                new HashMap<String, SigningPolicy>();
-        Map<URI, ResourceSigningPolicy> newPolicyFileMap =
-                new HashMap<URI, ResourceSigningPolicy>();
+        long now = System.currentTimeMillis();
+        boolean found_policy = false;
 
-        for (Resource resource : resources) {
+        // Optimization: If we find a hash for this CA, only process that.
+        // Otherwise, we will process all policies.
+        for (GlobusResource resource : resources) {
+
+            String filename = resource.getFilename();
+
+            // Note invalidPoliciesCache contains both filenames and hashes!
+            Long invalidCacheTime = invalidPoliciesCache.get(filename);
+            if ((invalidCacheTime != null) && (now - invalidCacheTime < 10*CACHE_TIME_MILLIS)) {
+                continue;
+            }
+
+            if (!filename.startsWith(hash)) {
+                continue;
+            }
 
             if (!resource.isReadable()) {
                 logger.debug("Cannot read: " + resource.getFilename());
@@ -94,22 +122,53 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
             }
 
             try {
-                loadSigningPolicy(resource, newPolicyMap, newPolicyFileMap);
+                loadSigningPolicy(resource, policyMap, signingPolicyFileMap);
             } catch (Exception e) {
-            	if(logger.isDebugEnabled()){
-            		logger.warn("Failed to load signing policy: " + resource.getFilename(), e);
-            	}else{
-            		logger.warn("Failed to load signing policy: " + resource.getFilename() +": " + e.getMessage());
-            	}
+                invalidCacheTime = invalidPoliciesCache.get(filename);
+                if ((invalidCacheTime == null) || (now - invalidCacheTime >= 10*CACHE_TIME_MILLIS)) {
+                    logger.warn("Failed to load signing policy: " + filename);
+                    logger.debug("Failed to load signing policy: " + filename, e);
+                    invalidPoliciesCache.put(filename, now);
+                    invalidPoliciesCache.put(caPrincipalName, now);
+                }
+                continue;
+            }
+            found_policy = true;
+        }
+        if (found_policy) {
+            if (!validPoliciesCache.containsKey(caPrincipalName)) {
+                invalidPoliciesCache.put(caPrincipalName, now);
+            }
+            return;
+        }
+        // Poor-man's implementation.  Note it is much more expensive than a hashed directory
+        for (GlobusResource resource : resources) {
+            String filename = resource.getFilename();
+            Long invalidCacheTime = invalidPoliciesCache.get(filename);
+            if ((invalidCacheTime != null) && (now - invalidCacheTime < 10*CACHE_TIME_MILLIS)) {
+                continue;
+            }
+            try {
+                loadSigningPolicy(resource, policyMap, signingPolicyFileMap);
+            } catch (Exception e) {
+                invalidCacheTime = invalidPoliciesCache.get(filename);
+                if ((invalidCacheTime == null) || (now - invalidCacheTime >= 10*CACHE_TIME_MILLIS)) {
+                    logger.warn("Failed to load signing policy: " + filename);
+                    logger.debug("Failed to load signing policy: " + filename, e);
+                    invalidPoliciesCache.put(filename, now);
+                    invalidPoliciesCache.put(caPrincipalName, now);
+                }
+                continue;
             }
         }
+        if (!validPoliciesCache.containsKey(caPrincipalName)) {
+            invalidPoliciesCache.put(caPrincipalName, now);
+        }
 
-        this.policyMap = newPolicyMap;
-        this.signingPolicyFileMap = newPolicyFileMap;
     }
 
     private void loadSigningPolicy(
-            Resource policyResource, Map<String, SigningPolicy> policyMapToLoad,
+            GlobusResource policyResource, Map<String, SigningPolicy> policyMapToLoad,
             Map<URI, ResourceSigningPolicy> currentPolicyFileMap) throws SigningPolicyStoreException {
 
         URI uri;
@@ -134,8 +193,11 @@ public class ResourceSigningPolicyStore implements SigningPolicyStore {
 
         currentPolicyFileMap.put(uri, filePolicy);
         if (policies != null) {
+            long now = System.currentTimeMillis();
             for (SigningPolicy policy : policies) {
-                policyMapToLoad.put(policy.getCASubjectDN().getName(), policy);
+                X500Principal caPrincipal = policy.getCASubjectDN();
+                policyMapToLoad.put(caPrincipal.getName(), policy);
+                validPoliciesCache.put(caPrincipal.getName(), now);
             }
         }
     }

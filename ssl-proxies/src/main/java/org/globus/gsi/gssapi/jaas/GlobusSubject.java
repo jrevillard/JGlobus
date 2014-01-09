@@ -14,11 +14,12 @@
  */
 package org.globus.gsi.gssapi.jaas;
 
-import javax.security.auth.Subject;
 import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
 import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
+
+import javax.security.auth.Subject;
 
 /**
  * An implementation of the <code>JaasSubject</code> API to circumvent
@@ -43,7 +44,7 @@ public class GlobusSubject extends JaasSubject {
 	return (Subject)subjects.peek();
     }
     
-    public Object runAs(Subject subject, PrivilegedAction action) {
+    public Object runAs(Subject subject, PrivilegedAction<?> action) {
 	subjects.push(subject);
 	try {
 	    return Subject.doAs(subject, action);
@@ -52,7 +53,7 @@ public class GlobusSubject extends JaasSubject {
 	}
     }
 
-    public Object runAs(Subject subject, PrivilegedExceptionAction action)
+    public Object runAs(Subject subject, PrivilegedExceptionAction<?> action)
 	throws PrivilegedActionException {
 	subjects.push(subject);
 	try {
@@ -80,7 +81,7 @@ class StackableInheritableThreadLocal extends InheritableThreadLocal {
     }
 
     public void push(Object object) {
-	LinkedList list = (LinkedList)get();
+	LinkedList<Object> list = (LinkedList<Object>)get();
 	list.add(object);
     }
     

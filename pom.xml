@@ -1,21 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.jglobus</groupId>
-	<artifactId>jglobus-all</artifactId>
-	<version>2.0-Beta5</version>
+	<artifactId>parent</artifactId>
+	<version>2.0-Beta6-SNAPSHOT</version>
 	<modules>
-		<module>gss</module>
-		<module>jsse</module>
-		<module>ssl-proxies</module>
 		<module>test-utils</module>
+		<module>ssl-proxies</module>
 		<module>container-test-utils</module>
+		<module>jsse</module>
+		<module>gss</module>
+		<!--module>gram</module-->
+		<!--module>gridftp</module-->
 		<module>ssl-proxies-tomcat</module>
+		<!--module>io</module-->
+		<module>axis</module>
+		<module>myproxy</module>
 	</modules>
-	<name>JGlobus 2.0</name>
+	<name>JGlobus</name>
 	<packaging>pom</packaging>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 
 	<issueManagement>
 		<system>JIRA</system>
@@ -23,15 +31,18 @@
 	</issueManagement>
 
 	<scm>
+		<connection>scm:git:git@github.com:jglobus/JGlobus.git</connection>
+		<developerConnection>scm:git:git@github.com:jglobus/JGlobus.git</developerConnection>
 		<url>scm:git:git@github.com:jglobus/JGlobus.git</url>
-		<tag>dev</tag>
 	</scm>
-	<pluginRepositories>
-		<pluginRepository>
-			<id>onejar-maven-plugin.googlecode.com</id>
-			<url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo</url>
-		</pluginRepository>
-	</pluginRepositories>
+
+	<!-- Sonatype repo integration -->
+	<!--parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent-->
+
 	<distributionManagement>
 		<repository>
 			<id>maatg-fr-releases</id>
@@ -44,9 +55,16 @@
 			<url>http://nexus.maatg.fr/content/repositories/maatg-fr-snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
-
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.5</source>
+					<target>1.5</target>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
@@ -59,6 +77,86 @@
 					</execution>
 				</executions>
 			</plugin>
+			<!-- See: http://jira.codehaus.org/browse/MRELEASE-579
+			     We need at least this version of the release plugin in order
+			     to have functioning git integration with branches
+			     -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.2</version>
+			</plugin>
 		</plugins>
 	</build>
+	<dependencyManagement>
+		<dependencies>	
+			<dependency>
+				<groupId>axis</groupId>
+				<artifactId>axis</artifactId>
+				<version>1.4</version>
+			</dependency>
+			<dependency>
+				<groupId>axis</groupId>
+				<artifactId>axis-jaxrpc</artifactId>
+				<version>1.4</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>gss</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-httpclient</groupId>
+				<artifactId>commons-httpclient</artifactId>
+				<version>3.1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents</groupId>
+				<artifactId>httpclient</artifactId>
+				<version>4.0.1</version>
+			</dependency>
+			<dependency>
+				<groupId>javax.servlet</groupId>
+				<artifactId>servlet-api</artifactId>
+				<version>2.5</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-logging</groupId>
+				<artifactId>commons-logging</artifactId>
+				<version>1.1.1</version>
+				<scope>compile</scope>
+			</dependency>
+			<dependency>
+				<groupId>log4j</groupId>
+				<artifactId>log4j</artifactId>
+				<version>1.2.14</version>
+				<scope>compile</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcprov-jdk16</artifactId>
+				<version>1.46</version>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcmail-jdk16</artifactId>
+				<version>1.46</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>1.4</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-codec</groupId>
+				<artifactId>commons-codec</artifactId>
+				<version>1.4</version>
+			</dependency>
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>4.8.1</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 </project>

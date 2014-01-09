@@ -41,10 +41,10 @@ public class DateValidityChecker implements CertificateChecker {
             cert.checkValidity();
         } catch (CertificateExpiredException e) {
             throw new CertPathValidatorException(
-                    "Certificate " + cert.getSubjectDN() + " expired", e);
+                    "Certificate " + cert.getSubjectX500Principal() + " expired", e);
         } catch (CertificateNotYetValidException e) {
             throw new CertPathValidatorException(
-                    "Certificate " + cert.getSubjectDN() + " not yet valid.", e);
+                    "Certificate " + cert.getSubjectX500Principal() + " not yet valid.", e);
         }
     }
 }
