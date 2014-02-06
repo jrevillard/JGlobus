@@ -83,6 +83,7 @@ public class GlobusStyle extends BCStyle {
 		DefaultLookUp.put("emailaddress", E);
 		DefaultLookUp.put("dc", DC);
 		DefaultLookUp.put("e", E);
+		DefaultLookUp.put("email", E);
 		DefaultLookUp.put("uid", UID);
 		DefaultLookUp.put("surname", SURNAME);
 		DefaultLookUp.put("givenname", GIVENNAME);
