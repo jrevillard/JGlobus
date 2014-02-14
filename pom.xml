@@ -23,6 +23,9 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<bcprov.version>1.49</bcprov.version>
+		<commons-io.version>1.4</commons-io.version>
+		<commons-codec.version>1.4</commons-codec.version>
 	</properties>
 
 	<issueManagement>
@@ -135,22 +138,22 @@
 			<dependency>
 				<groupId>org.bouncycastle</groupId>
 				<artifactId>bcprov-jdk15on</artifactId>
-				<version>1.49</version>
+				<version>${bcprov.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bouncycastle</groupId>
 				<artifactId>bcpkix-jdk15on</artifactId>
-				<version>1.49</version>
+				<version>${bcprov.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>commons-io</groupId>
 				<artifactId>commons-io</artifactId>
-				<version>1.4</version>
+				<version>${commons-io.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>commons-codec</groupId>
 				<artifactId>commons-codec</artifactId>
-				<version>1.4</version>
+				<version>${commons-codec.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>junit</groupId>
