@@ -38,7 +38,6 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
 								<Export-Package>org.globus.*,org.gridforum.*</Export-Package>
 								<!-- BC bundle does not provide version... Import-Package>org.bouncycastle.*;version="${bcprov.version}",*</Import-Package-->
 							</instructions>

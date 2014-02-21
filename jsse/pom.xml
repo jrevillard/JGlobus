@@ -7,7 +7,7 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>jsse</artifactId>
-  <name>SSL support</name>
+  <name>JGlobus :: JSSE support</name>
 
   <dependencies>
     <dependency>
@@ -21,4 +21,32 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
+  
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>2.3.7</version>
+				<extensions>true</extensions>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>bundle</goal>
+						</goals>
+						<configuration>
+							<instructions>
+								<Export-Package>org.globus.gsi.jsse.*</Export-Package>
+								<Import-Package>
+									org.globus.*;version="${project.version}",
+									*
+								</Import-Package>
+							</instructions>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 </project>

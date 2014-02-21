@@ -9,6 +9,35 @@
   <artifactId>gss</artifactId>
   <name>GSS-API implementation for SSL with proxies</name>
 
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>2.3.7</version>
+				<extensions>true</extensions>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>bundle</goal>
+						</goals>
+						<configuration>
+							<instructions>
+								<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+								<Export-Package>org.globus.gsi.gssapi.*,org.globus.net</Export-Package>
+								<Import-Package>
+									org.globus.*;version="${project.version}",
+									*
+								</Import-Package>
+							</instructions>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
