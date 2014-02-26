@@ -25,7 +25,7 @@
 						<configuration>
 							<instructions>
 								<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-								<Export-Package>org.globus.gsi.gssapi.*,org.globus.net</Export-Package>
+								<Export-Package>org.globus.gsi.gssapi.*,org.globus.net.*</Export-Package>
 								<Import-Package>
 									org.globus.*;version="${project.version}",
 									*
