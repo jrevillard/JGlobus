@@ -38,7 +38,13 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Export-Package>org.globus.*,org.gridforum.*</Export-Package>
+								<DynamicImport-Package>
+									org.globus.gsi.gssapi
+								</DynamicImport-Package>
+								<Export-Package>
+									org.globus.*;version="${project.version}",
+									org.gridforum.*
+								</Export-Package>
 								<!-- BC bundle does not provide version... Import-Package>org.bouncycastle.*;version="${bcprov.version}",*</Import-Package-->
 							</instructions>
 						</configuration>
