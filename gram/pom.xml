@@ -23,7 +23,10 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Export-Package>org.globus.gram.*,org.globus.rsl.*</Export-Package>
+								<Export-Package>
+									org.globus.gram.*;version="${project.version}";-noimport:=true,
+									org.globus.rsl.*;version="${project.version}";-noimport:=true
+								</Export-Package>
 								<Import-Package>
 									org.globus.*;version="${project.version}",
 									*

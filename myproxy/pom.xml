@@ -26,7 +26,7 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Export-Package>org.globus.myproxy.*</Export-Package>
+								<Export-Package>org.globus.myproxy.*;version="${project.version}";-noimport:=true</Export-Package>
 								<Import-Package>
 									org.globus.*;version="${project.version}",
 									*

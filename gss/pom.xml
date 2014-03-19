@@ -24,11 +24,12 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
 								<Export-Package>
 									!org.globus.gsi.gssapi.jaas.*,
 									org.globus.gsi.gssapi.*;version=${project.version};-noimport:=true,
-									org.globus.net.*;version=${project.version};-noimport:=true</Export-Package>
+									org.globus.net.*;version=${project.version};-noimport:=true,
+									org.gridforum.*;version=${project.version};-noimport:=true,
+								</Export-Package>
 								<Import-Package>
 									org.globus.gsi.gssapi.jaas.*;version="${project.version}",
 									org.globus.*;version="${project.version}",

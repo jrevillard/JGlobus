@@ -72,10 +72,10 @@ public abstract class ExtendedGSSManager extends GSSManager {
 	    }
 	    try {
 		Class clazz = Class.forName(className);
-		if (!ExtendedGSSManager.class.isAssignableFrom(clazz)) {
-		    throw new RuntimeException("Invalid ExtendedGSSManager provider class: '" + 
-					       className + "'");
-		}
+//		if (!ExtendedGSSManager.class.isAssignableFrom(clazz)) {
+//		    throw new RuntimeException("Invalid ExtendedGSSManager provider class: '" + 
+//					       className + "'");
+//		}
 		gssManager = (ExtendedGSSManager)clazz.newInstance();
 	    } catch (ClassNotFoundException e) {
 		throw new RuntimeException("Unable to load '" + className + "' class: " +

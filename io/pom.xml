@@ -24,7 +24,7 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Export-Package>org.globus.io.*</Export-Package>
+								<Export-Package>org.globus.io.*;version="${project.version}";-noimport:=true</Export-Package>
 								<Import-Package>
 									org.globus.*;version="${project.version}",
 									*

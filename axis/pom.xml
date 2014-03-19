@@ -23,7 +23,7 @@
 						</goals>
 						<configuration>
 							<instructions>
-								<Export-Package>org.globus.axis.*</Export-Package>
+								<Export-Package>org.globus.axis.*;version="${project.version}";-noimport:=true</Export-Package>
 								<Import-Package>
 									org.globus.*;version="${project.version}",
 									*
