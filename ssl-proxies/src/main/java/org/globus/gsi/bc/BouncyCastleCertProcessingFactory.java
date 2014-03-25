@@ -47,20 +47,15 @@ import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
-import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 import org.bouncycastle.operator.ContentSigner;
-import org.bouncycastle.operator.ContentVerifierProvider;
-import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.bc.BcRSAContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestHolder;
-import org.bouncycastle.pkcs.PKCSException;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.VersionUtil;
 import org.globus.gsi.X509Credential;
@@ -165,26 +160,16 @@ public class BouncyCastleCertProcessingFactory {
 		ASN1InputStream derin = new ASN1InputStream(certRequestInputStream);
         DERObject reqInfo = derin.readObject();
 
-        PKCS10CertificationRequestHolder certReq = new PKCS10CertificationRequestHolder(reqInfo.getEncoded());
+        PKCS10CertificationRequest certReq = new PKCS10CertificationRequest(reqInfo.getEncoded());
 
-        boolean rs;
-		try {
-			AsymmetricKeyParameter asymmetricKeyParameter =  PublicKeyFactory.createKey(certReq.getSubjectPublicKeyInfo());
-			BcRSAContentVerifierProviderBuilder bcRSAContentVerifierProviderBuilder = new BcRSAContentVerifierProviderBuilder(new DefaultDigestAlgorithmIdentifierFinder());
-			ContentVerifierProvider  contentVerifierProvider = bcRSAContentVerifierProviderBuilder.build(asymmetricKeyParameter);
-			rs = certReq.isSignatureValid(contentVerifierProvider);
-		} catch (OperatorCreationException e) {
-			throw new GeneralSecurityException(e);
-		} catch (PKCSException e) {
-			throw new GeneralSecurityException(e);
-		}
+        boolean rs = certReq.verify();
 
         if (!rs) {
             String err = i18n.getMessage("certReqVerification");
             throw new GeneralSecurityException(err);
         }
 
-        return createProxyCertificate(cert, privateKey, certReq.getSubjectPublicKeyInfo(), lifetime, certType, extSet, cnValue);
+        return createProxyCertificate(cert, privateKey, certReq.getPublicKey(), lifetime, certType, extSet, cnValue);
     }
 
     /**
