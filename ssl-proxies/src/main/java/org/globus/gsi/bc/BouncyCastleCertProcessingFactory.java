@@ -63,6 +63,7 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.PKCSException;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.globus.gsi.GSIConstants;
 import org.globus.gsi.VersionUtil;
 import org.globus.gsi.X509Credential;
@@ -166,7 +167,7 @@ public class BouncyCastleCertProcessingFactory {
         @SuppressWarnings("resource")
 		ASN1InputStream derin = new ASN1InputStream(certRequestInputStream);
         ASN1Primitive reqInfo = derin.readObject();
-        PKCS10CertificationRequest certReq = new PKCS10CertificationRequest(CertificationRequest.getInstance(reqInfo));
+        JcaPKCS10CertificationRequest certReq = new JcaPKCS10CertificationRequest(CertificationRequest.getInstance(reqInfo));
         boolean rs;
 		try {
 			AsymmetricKeyParameter asymmetricKeyParameter =  PublicKeyFactory.createKey(certReq.getSubjectPublicKeyInfo());
