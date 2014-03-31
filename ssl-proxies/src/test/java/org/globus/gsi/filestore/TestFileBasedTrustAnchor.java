@@ -16,12 +16,15 @@ package org.globus.gsi.filestore;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import org.globus.common.CoGProperties;
 import org.globus.gsi.stores.ResourceTrustAnchor;
 import org.globus.gsi.testutils.FileSetupUtil;
 
 import java.io.File;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +42,7 @@ public class TestFileBasedTrustAnchor {
     public void setUp() throws Exception {
 
         this.testCert1 = new FileSetupUtil("certificateUtilTest/1c3f2ca8.0");
+        CoGProperties.getDefault().setProperty(CoGProperties.CERT_CACHE_LIFETIME, "1");
     }
 
 

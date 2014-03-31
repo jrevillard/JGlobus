@@ -292,7 +292,7 @@ public class TestProxyPathValidator {
     @Before
     public void setup() throws Exception {
 
-        CoGProperties.getDefault().setProperty(CoGProperties.getDefault().CRL_CACHE_LIFETIME, "1");
+        CoGProperties.getDefault().setProperty(CoGProperties.CERT_CACHE_LIFETIME, "1");
 
         Security.addProvider(new MockGlobusProvider());
 
