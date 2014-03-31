@@ -162,7 +162,7 @@ public class CertificateRevocationLists {
          private long lastRefresh;
 
          public DefaultCertificateRevocationLists() {
-             lifetime = CoGProperties.getDefault().getCRLCacheLifetime();
+             lifetime = CoGProperties.getDefault().getCertCacheLifetime();
          }
 
         public void refresh() {

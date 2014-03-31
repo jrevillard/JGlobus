@@ -15,18 +15,16 @@
 
 package org.globus.gsi.stores;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.globus.gsi.util.CertificateIOUtil;
 import org.globus.gsi.util.CertificateLoadUtil;
+import org.globus.util.GlobusResource;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
-
-import org.globus.util.GlobusResource;
 
 
 /**
@@ -37,7 +35,7 @@ import org.globus.util.GlobusResource;
  * To change this template use File | Settings | File Templates.
  */
 public class ResourceTrustAnchor extends AbstractResourceSecurityWrapper<TrustAnchor> {
-	private Log logger = LogFactory.getLog(getClass().getCanonicalName());
+
 
     public ResourceTrustAnchor(String fileName) throws ResourceStoreException {
     	super(false);
@@ -64,24 +62,22 @@ public class ResourceTrustAnchor extends AbstractResourceSecurityWrapper<TrustAn
     }
 
     @Override
-    protected TrustAnchor create(GlobusResource resource) throws ResourceStoreException {
+    protected TrustAnchor create(GlobusResource globusResource) throws ResourceStoreException {
         X509Certificate certificate;
-        InputStream inputStream = null;
         try {
-        	inputStream = globusResource.getInputStream();
-            certificate = CertificateLoadUtil.loadCertificate(inputStream);
+            InputStream inputStream = globusResource.getInputStream();
+            try {
+                certificate = CertificateLoadUtil.loadCertificate(new BufferedInputStream(inputStream));
+            } finally {
+                try {
+                    inputStream.close();
+                } catch (IOException ignored) {
+                }
+            }
         } catch (IOException e) {
             throw new ResourceStoreException(e);
         } catch (GeneralSecurityException e) {
             throw new ResourceStoreException(e);
-        }finally{
-        	try {
-        		if(inputStream != null){
-        			inputStream.close();
-        		}
-			} catch (IOException e) {
-				logger.warn("Unable to close stream.");
-			}
         }
 
         return new TrustAnchor(certificate, null);
