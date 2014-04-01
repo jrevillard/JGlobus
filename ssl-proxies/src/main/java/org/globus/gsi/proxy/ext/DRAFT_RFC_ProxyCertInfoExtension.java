@@ -25,6 +25,6 @@ import org.bouncycastle.asn1.x509.Extension;
 public class DRAFT_RFC_ProxyCertInfoExtension extends Extension {
 
     public DRAFT_RFC_ProxyCertInfoExtension(ProxyCertInfo value) throws IOException {
-	    super(ProxyCertInfo.DRAFT_RFC_OID, false, value.toASN1Primitive().getEncoded(ASN1Encoding.DER));
+	    super(ProxyCertInfo.DRAFT_RFC_OID, true, value.toASN1Primitive().getEncoded(ASN1Encoding.DER));
 	}
 }
