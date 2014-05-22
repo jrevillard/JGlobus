@@ -10,24 +10,6 @@
 	<profiles>
 		<profile>
 			<id>tomcat7</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<dependencies>
-				<dependency>
-					<groupId>org.apache.tomcat</groupId>
-					<artifactId>tomcat-catalina</artifactId>
-					<version>7.0.32</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.tomcat</groupId>
-					<artifactId>tomcat-coyote</artifactId>
-					<version>7.0.32</version>
-				</dependency>
-			</dependencies>
-		</profile>
-		<profile>
-			<id>tomcat6</id>
 			<build>
 				<plugins>
 					<plugin>
@@ -36,7 +18,7 @@
 						<version>1.1.1</version>
 						<configuration>
 							<patches>
-								<patch>jglobus-tomcat6.patch</patch>
+								<patch>jglobus-tomcat7.patch</patch>
 							</patches>
 							<strip>5</strip>
 						</configuration>
@@ -52,6 +34,24 @@
 					</plugin>
 				</plugins>
 			</build>
+			<dependencies>
+				<dependency>
+					<groupId>org.apache.tomcat</groupId>
+					<artifactId>tomcat-catalina</artifactId>
+					<version>7.0.32</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.tomcat</groupId>
+					<artifactId>tomcat-coyote</artifactId>
+					<version>7.0.32</version>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>tomcat6</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 			<dependencies>
 				<dependency>
 					<groupId>org.apache.tomcat</groupId>
