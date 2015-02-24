@@ -263,14 +263,14 @@ public class CertificateUtilTest {
         assertThat(principal, is(new X500Principal("")));
     }
 
-//    @Test
-//    public void testToPrincipalWithWhiteSpace()
-//    {
-//        X500Principal principal =
-//            CertificateUtil.toPrincipal(" /DC=org/ DC=DOEGrids/OU=Certificate Authorities / CN=DOEGrids CA 1   ");
-//        assertThat(principal, is(new X500Principal(
-//            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
-//    }
+    @Test
+    public void testToPrincipalWithWhiteSpace()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal(" /DC=org/ DC=DOEGrids/OU=Certificate Authorities / CN=DOEGrids CA 1   ");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
+    }
 
     @Test
     public void testToPrincipalWithRdnUnknownToJre()
