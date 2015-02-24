@@ -29,7 +29,7 @@ import org.bouncycastle.asn1.DERObject;
 import junit.framework.TestCase;
 
 public class ProxyCertInfoTest extends TestCase {
-    
+
     String testPolicy = "blahblah";
     ASN1ObjectIdentifier testOid = new ASN1ObjectIdentifier("1.2.3.4.5");
 
@@ -39,22 +39,22 @@ public class ProxyCertInfoTest extends TestCase {
 
 	ProxyCertInfo info = new ProxyCertInfo(3,
 					       policy);
-	
+
 	assertEquals(3, info.getPathLenConstraint());
 
 	assertEquals(testPolicy, info.getProxyPolicy().getPolicyAsString());
 	assertEquals(testOid, info.getProxyPolicy().getPolicyLanguage());
-	
+
     }
 
     public void testParseProxyCertInfo() throws Exception {
-	
+
 	ProxyPolicy policy = new ProxyPolicy(testOid, testPolicy);
 
 	ProxyCertInfo info = new ProxyCertInfo(3,
 					       policy);
-	
-	
+
+
 	ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 	ASN1OutputStream dOut = new ASN1OutputStream(bOut);
 	dOut.writeObject(info);
@@ -67,7 +67,7 @@ public class ProxyCertInfoTest extends TestCase {
 	dIn.close();
 	
 	assertTrue(obj instanceof ASN1Sequence);
-	
+
 	ProxyCertInfo testInfo = new ProxyCertInfo((ASN1Sequence)obj);
 
 	assertEquals(3, testInfo.getPathLenConstraint());
@@ -89,14 +89,14 @@ public class ProxyCertInfoTest extends TestCase {
 	    fail("Did not throw exception as expected");
 	} catch (IllegalArgumentException e) {
 	}
-	
-    }	
+
+    }
 
     public void testCreateProxyCertInfo2() throws Exception {
-	
+
 	ProxyPolicy policy = new ProxyPolicy(testOid, testPolicy);
 	ProxyCertInfo info = new ProxyCertInfo(policy);
-	
+
 	assertEquals(Integer.MAX_VALUE, info.getPathLenConstraint());
 
 	assertEquals(testPolicy, info.getProxyPolicy().getPolicyAsString());
@@ -115,10 +115,10 @@ public class ProxyCertInfoTest extends TestCase {
 	
 	ProxyCertInfo testInfo = new ProxyCertInfo((ASN1Sequence)obj);
 
-	
+
 	assertEquals(Integer.MAX_VALUE, testInfo.getPathLenConstraint());
-	
+
 	assertEquals(testPolicy, testInfo.getProxyPolicy().getPolicyAsString());
 	assertEquals(testOid, testInfo.getProxyPolicy().getPolicyLanguage());
-    }	
+    }
 }

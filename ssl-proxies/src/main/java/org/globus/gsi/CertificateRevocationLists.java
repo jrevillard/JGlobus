@@ -52,7 +52,7 @@ public class CertificateRevocationLists {
     // the default crl locations list derived from prevCaCertLocations
     private static String defaultCrlLocations = null;
     private static CertificateRevocationLists defaultCrl  = null;
-    
+
     private volatile Map<String, X509CRL> crlIssuerDNMap;
 
     private CertificateRevocationLists() {}
@@ -103,7 +103,7 @@ public class CertificateRevocationLists {
 
         StringTokenizer tokens = new StringTokenizer(locations, ",");
         Map<String, X509CRL> newCrlIssuerDNMap = new HashMap<String, X509CRL>();
-        
+
         while(tokens.hasMoreTokens()) {
 
             try {

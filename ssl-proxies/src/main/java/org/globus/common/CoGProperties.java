@@ -1,3 +1,17 @@
+/*
+ * Copyright 1999-2010 University of Chicago
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
+ * compliance with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS,WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
 package org.globus.common;
 
 import java.io.FileInputStream;
@@ -14,7 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.util.ConfigUtil;
 
-/** Responsible for managing the properties file 
+/** Responsible for managing the properties file
  * "~/.globus/cog.properties", which holds information about various properties
  * needed by the security classes.  These properties include:
  * <UL>
@@ -28,19 +42,17 @@ import org.globus.util.ConfigUtil;
  * </UL>
  */
 public class CoGProperties extends Properties {
-	
-	private static final long serialVersionUID = -6124204536737322883L;
 
-	private static Log logger =
-			LogFactory.getLog(CoGProperties.class.getName());
-    
+    private static Log logger =
+        LogFactory.getLog(CoGProperties.class.getName());
+
     private static final String DEFAULT_RANDOM_PROVIDER =
 	"org.bouncycastle.jce.provider.BouncyCastleProvider";
-    
-    private static final String DEFAULT_RANDOM_ALGORITHM = 
+
+    private static final String DEFAULT_RANDOM_ALGORITHM =
 	"DevRandom";
 
-    public static final String ENFORCE_SIGNING_POLICY = 
+    public static final String ENFORCE_SIGNING_POLICY =
         "java.security.gsi.signing.policy";
 
     public static final String DELEGATION_KEY_CACHE_LIFETIME =
@@ -63,20 +75,20 @@ public class CoGProperties extends Properties {
     final static public String NO_CACHE = "NoCache";
     final static public String THREADED_CACHE = "ThreadedCache";
 
-    /** the configuration file properties are read from -- 
+    /** the configuration file properties are read from --
      * located in ~/.globus" */
     public static final String CONFIG_FILE = "cog.properties";
-    
+
     /** the default properties file **/
     private static CoGProperties defaultProps = null;
-    
+
     /** the config file location **/
     public static String configFile = null;
-    
+
     public CoGProperties() {
     }
-    
-    public CoGProperties(String file) 
+
+    public CoGProperties(String file)
 	throws IOException {
 	load(file);
     }
@@ -85,9 +97,9 @@ public class CoGProperties extends Properties {
 	if (defaultProps != null) {
 	    return defaultProps;
 	}
-	
+
 	defaultProps = new CoGProperties();
-	
+
 	String file = System.getProperty("org.globus.config.file");
 	if (file == null) {
 	    file = ConfigUtil.globus_dir + CONFIG_FILE;
@@ -96,13 +108,13 @@ public class CoGProperties extends Properties {
 	}
 
 	configFile = file;
-	
+
 	try {
 	    defaultProps.load(configFile);
 	} catch(IOException e) {
 	    logger.debug("Failed to load " + CONFIG_FILE + ". Using defaults.", e);
 	}
-	
+
 	return defaultProps;
     }
 
@@ -113,13 +125,13 @@ public class CoGProperties extends Properties {
     public static void setDefault(CoGProperties properties) {
 	defaultProps = properties;
     }
-    
+
     public void save()
 	throws IOException {
 	save(configFile);
     }
 
-    public void save(String file) 
+    public void save(String file)
 	throws IOException {
 	OutputStream out = null;
 	try {
@@ -131,8 +143,8 @@ public class CoGProperties extends Properties {
 	    }
 	}
     }
-    
-    public void load(String file) 
+
+    public void load(String file)
 	throws IOException {
 	FileInputStream in = null;
 	try {
@@ -144,13 +156,13 @@ public class CoGProperties extends Properties {
 	    }
 	}
     }
-    
-    public void load(InputStream in) 
+
+    public void load(InputStream in)
 	throws IOException {
 	super.load(in);
 	fixSpace(this);
     }
-    
+
     public static void fixSpace(Properties p) {
 	// this will get rid off the trailing spaces
 	String key, value;
@@ -163,7 +175,7 @@ public class CoGProperties extends Properties {
     }
 
     /**
-     * Retrieves the location of the user cert file. 
+     * Retrieves the location of the user cert file.
      * It first checks the X509_USER_CERT system property. If the property
      * is not set, it checks next the 'usercert' property in the current
      * configuration. If that property is not set, it returns a default
@@ -202,13 +214,13 @@ public class CoGProperties extends Properties {
 	}
 	return ConfigUtil.discoverPKCS11LibName();
     }
-  
+
     public String getDefaultPKCS11Handle() {
 	return getProperty("pkcs11.handle", "Globus User Credentials");
     }
 
     /**
-     * Retrieves the location of the user key file.  
+     * Retrieves the location of the user key file.
      * It first checks the X509_USER_KEY system property. If the property
      * is not set, it checks next the 'userkey' property in the current
      * configuration. If that property is not set, it returns a default
@@ -238,13 +250,13 @@ public class CoGProperties extends Properties {
     public void setUserKeyFile(String userKeyFile) {
 	put("userkey", userKeyFile);
     }
-    
+
     /**
      * Returns the user specified hostname. This is used
      * for DHCP machines where java is unable to determine the
      * right hostname/IP address.
      * It first checks the 'GLOBUS_HOSTNAME' system property. If the property
-     * is not set, it checks the 'host' system property next. If the 'host' 
+     * is not set, it checks the 'host' system property next. If the 'host'
      * property is not set in the current configuration, null is returned
      * (and default 'localhost' hostname will be used)
      *
@@ -271,10 +283,10 @@ public class CoGProperties extends Properties {
      * for DHCP machines where java is unable to determine the
      * right IP address.
      * It first checks the 'org.globus.ip' system property.
-     * If that property is not set, it checks next the 'ip' property 
+     * If that property is not set, it checks next the 'ip' property
      * in the current configuration. If the 'ip' property is not set in the
      * current configuration, the hostname of the machine is looked up
-     * using the {@link #getHostName() getHostName()} function. If 
+     * using the {@link #getHostName() getHostName()} function. If
      * <code>getHostName()</code> returns a hostname that hostname is converted
      * into an IP address and it is returned. Otherwise, null is returned
      * (and default ip address will be used)
@@ -308,9 +320,9 @@ public class CoGProperties extends Properties {
     public void setIPAddress(String ipAddress) {
 	put("ip", ipAddress);
     }
-            
+
     /**
-     * Retrieves the location of the CA certificate files.  
+     * Retrieves the location of the CA certificate files.
      * It first checks the X509_CERT_DIR system property. If the property
      * is not set, it checks next the 'cacert' property in the current
      * configuration. If that property is not set, it tries to find
@@ -318,13 +330,13 @@ public class CoGProperties extends Properties {
      * First the ${user.home}/.globus/certificates directory is checked.
      * If the directory does not exist, and on a Unix machine, the
      * /etc/grid-security/certificates directory is checked next.
-     * If that directory does not exist and GLOBUS_LOCATION 
+     * If that directory does not exist and GLOBUS_LOCATION
      * system property is set then the ${GLOBUS_LOCATION}/share/certificates
-     * directory is checked. Otherwise, null is returned. 
+     * directory is checked. Otherwise, null is returned.
      * This indicates that the certificates directory could
      * not be found.
      * <BR>
-     * Moreover, this function can return multiple file and directory 
+     * Moreover, this function can return multiple file and directory
      * locations. The locations must be comma separated.
      *
      * @return <code>String</code> the locations of the CA certificates
@@ -347,19 +359,19 @@ public class CoGProperties extends Properties {
     }
 
     /**
-     * Retrieves the location of the proxy file. 
+     * Retrieves the location of the proxy file.
      * It first checks the X509_USER_PROXY system property. If the property
      * is not set, it checks next the 'proxy' property in the current
-     * configuration. If that property is not set, then it defaults to a 
+     * configuration. If that property is not set, then it defaults to a
      * value based on the following rules: <BR>
-     * If a UID system property is set, and running on a Unix machine it 
+     * If a UID system property is set, and running on a Unix machine it
      * returns /tmp/x509up_u${UID}. If any other machine then Unix, it returns
-     * ${tempdir}/x509up_u${UID}, where tempdir is a platform-specific 
-     * temporary directory as indicated by the java.io.tmpdir system property. 
+     * ${tempdir}/x509up_u${UID}, where tempdir is a platform-specific
+     * temporary directory as indicated by the java.io.tmpdir system property.
      * If a UID system property is not set, the username will be used instead
      * of the UID. That is, it returns ${tempdir}/x509up_u_${username}
      * <BR>
-     * This is done this way because Java is not able to obtain the current 
+     * This is done this way because Java is not able to obtain the current
      * uid.
      *
      * @return <code>String</code> the location of the proxy file
@@ -380,17 +392,17 @@ public class CoGProperties extends Properties {
     public void setProxyFile(String proxyFile) {
 	put("proxy", proxyFile);
     }
-    
+
     /**
      * Returns the tcp port range.
-     * It first checks the 'GLOBUS_TCP_PORT_RANGE' system property. If that 
+     * It first checks the 'GLOBUS_TCP_PORT_RANGE' system property. If that
      * system property is not set then 'org.globus.tcp.port.range' system
      * property is checked. If that system property is not set then it returns
      * the value specified in the configuration file. Returns null if the port
      * range is not defined.<BR>
      * The port range is in the following form: <minport>, <maxport>
      *
-     * @return <code>String</code> the port range. 
+     * @return <code>String</code> the port range.
      */
     public String getTcpPortRange() {
 	String value = null;
@@ -407,15 +419,15 @@ public class CoGProperties extends Properties {
 
     /**
      * Returns the tcp source port range.
-     * It first checks the 'GLOBUS_TCP_SOURCE_PORT_RANGE' system property. 
-     * If that system property is not set then 
-     * 'org.globus.source.tcp.port.range' system property is checked. 
+     * It first checks the 'GLOBUS_TCP_SOURCE_PORT_RANGE' system property.
+     * If that system property is not set then
+     * 'org.globus.source.tcp.port.range' system property is checked.
      * If that system property is not set then it returns
      * the value specified in the configuration file. Returns null if the port
      * range is not defined.<BR>
      * The port range is in the following form: <minport>, <maxport>
      *
-     * @return <code>String</code> the port range. 
+     * @return <code>String</code> the port range.
      */
     public String getTcpSourcePortRange() {
 	String value = null;
@@ -432,15 +444,15 @@ public class CoGProperties extends Properties {
 
     /**
      * Returns the udp source port range.
-     * It first checks the 'GLOBUS_UDP_SOURCE_PORT_RANGE' system property. 
-     * If that system property is not set then 
-     * 'org.globus.source.udp.port.range' system property is checked. 
+     * It first checks the 'GLOBUS_UDP_SOURCE_PORT_RANGE' system property.
+     * If that system property is not set then
+     * 'org.globus.source.udp.port.range' system property is checked.
      * If that system property is not set then it returns
      * the value specified in the configuration file. Returns null if the port
      * range is not defined.<BR>
      * The port range is in the following form: <minport>, <maxport>
      *
-     * @return <code>String</code> the port range. 
+     * @return <code>String</code> the port range.
      */
     public String getUdpSourcePortRange() {
 	String value = null;
@@ -454,7 +466,7 @@ public class CoGProperties extends Properties {
 	}
 	return getProperty("udp.source.port.range", null);
     }
-    
+
     /**
      * Returns whether to use the /dev/urandom device
      * for seed generation.
@@ -642,7 +654,7 @@ public class CoGProperties extends Properties {
 	if (value != null) {
 	    return value;
 	}
-	return getProperty("random.provider", 
+	return getProperty("random.provider",
 			   DEFAULT_RANDOM_PROVIDER);
     }
 
@@ -651,7 +663,7 @@ public class CoGProperties extends Properties {
 	if (value != null) {
 	    return value;
 	}
-	return getProperty("random.algorithm", 
+	return getProperty("random.algorithm",
 			   DEFAULT_RANDOM_ALGORITHM);
     }
 
@@ -691,23 +703,23 @@ public class CoGProperties extends Properties {
 
 
     // -------------------------------------------------------
-    
+
     public int getProxyStrength() {
 	return getAsInt("proxy.strength", 512);
     }
-    
+
     public void setProxyStrength(int strength) {
 	put("proxy.strength", String.valueOf(strength));
     }
-    
+
     public int getProxyLifeTime() {
 	return getAsInt("proxy.lifetime", 12);
     }
-    
+
     public void setProxyLifeTime(int lifeTimeInHours) {
 	put("proxy.lifetime", String.valueOf(lifeTimeInHours));
     }
-        
+
     protected boolean getAsBoolean(String key, boolean defaultValue) {
 	String tmp = getProperty(key);
 	if (tmp == null) {
@@ -715,14 +727,14 @@ public class CoGProperties extends Properties {
 	}
 	return (tmp.equalsIgnoreCase("yes") || tmp.equalsIgnoreCase("true"));
     }
-    
+
     protected int getAsInt(String label, int defValue) {
 	String tmp = getProperty(label);
 	return (isNullOrEmpty(tmp)) ? defValue : Integer.parseInt(tmp);
     }
-    
+
     protected final static boolean isNullOrEmpty(String tmp) {
 	return (tmp == null || (tmp != null && tmp.length() == 0));
     }
-    
+
 }

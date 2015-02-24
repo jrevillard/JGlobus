@@ -57,7 +57,7 @@ diff -ur JGlobus.orig/ssl-proxies-tomcat/src/main/java/org/globus/gsi/tomcat/Glo
 -        return new TrustManager[]{trustManager};
 -    }
 -
--	
+-
  	@Override
  	protected Object clone() throws CloneNotSupportedException {
  		// TODO Auto-generated method stub
