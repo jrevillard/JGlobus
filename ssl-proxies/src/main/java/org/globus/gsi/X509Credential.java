@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -27,6 +28,7 @@ import java.security.cert.CertStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.apache.commons.logging.Log;
@@ -55,8 +57,9 @@ import org.globus.gsi.util.ProxyCertificateUtil;
  */
 // COMMENT: Added methods from GlobusCredential
 // COMMENT: Do we need the getDefaultCred functionality?
-public class X509Credential {
+public class X509Credential implements Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private static Log logger = LogFactory.getLog(X509Credential.class.getCanonicalName());
     private PrivateKey privateKey;
     private final String privateKeyFile;
@@ -497,5 +500,28 @@ public class X509Credential {
         buf.append("timeleft   : ").append(getTimeLeft() + " sec").append(lineSep);
         buf.append("proxy type : ").append(ProxyCertificateUtil.getProxyTypeAsString(getProxyType()));
         return buf.toString();
+    }
+    
+
+    @Override
+    public boolean equals(Object object) {
+        if(object == this) {
+            return true;
+        }
+        
+        if(!(object instanceof X509Credential)) {
+            return false;
+        }
+        
+        X509Credential other = (X509Credential) object;
+
+        return Arrays.equals(this.certChain, other.certChain) &&
+                this.privateKey.equals(other.privateKey);
+    }
+    
+    @Override
+    public int hashCode() {
+        return (certChain == null ? 0 : Arrays.hashCode(certChain)) ^
+        		privateKey.hashCode();
     }
 }
