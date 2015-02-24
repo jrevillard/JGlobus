@@ -17,12 +17,11 @@ package org.globus.gsi.gssapi.jaas;
 /**
  * A Globus DN principal. The Globus DN is in the form: "/CN=foo/O=bar".
  */
-public class GlobusPrincipal extends SimplePrincipal {
+public class GlobusPrincipal
+    extends SimplePrincipal {
 
-	private static final long serialVersionUID = 1L;
-
-	public GlobusPrincipal(String globusDn) {
+    public GlobusPrincipal(String globusDn) {
 	super(globusDn);
     }
-    
+
 }

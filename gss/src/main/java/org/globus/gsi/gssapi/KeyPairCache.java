@@ -15,7 +15,7 @@ import org.globus.common.CoGProperties;
  * Simple cache for key pairs. The cache is used to avoid excessive
  * CPU consumption from key pair generation. In particular for
  * purposes of delegation, reusing a key pair is safe.
- * 
+ *
  * @author Gerd Behrmann (behrmann@ndgf.org)
  */
 public class KeyPairCache {
@@ -28,17 +28,17 @@ public class KeyPairCache {
             this.keys = keys;
             this.created_at = created_at;
         }
-	
+
         public long getCreatedAt() {
             return created_at;
         }
-	
+
         public KeyPair getKeyPair() {
             return keys;
         }
     }
 
-    private static Log logger = 
+    private static Log logger =
         LogFactory.getLog(GlobusGSSContextImpl.class.getName());
 
     public static final String DEFAULT_ALGORITHM = "RSA";
@@ -49,7 +49,7 @@ public class KeyPairCache {
     private final long lifetime;
     private static KeyPairCache keyPairCache;
 
-    /** 
+    /**
      * Hash table of cache entries. The use of <code>Hashtable</code>
      * is significant, since we rely on access to the table being
      * synchronized.
@@ -64,7 +64,7 @@ public class KeyPairCache {
      * Appendix A in the Java Cryptography Architecture API
      * Specification &amp; Reference for information about standard
      * algorithm names.
-     * @param provider the string name of the provider. 
+     * @param provider the string name of the provider.
      * @param lifetime the lifetime of the cache in milliseconds.
      */
     private KeyPairCache(String algorithm, String provider, long lifetime) {
@@ -127,12 +127,12 @@ public class KeyPairCache {
         if (entry == null || st - entry.getCreatedAt() >= lifetime) {
             logger.debug("Creating " + bits + " bits keypair");
 
-            KeyPairGenerator generator = 
+            KeyPairGenerator generator =
                 KeyPairGenerator.getInstance(algorithm, provider);
             generator.initialize(bits);
-            logger.debug("Time to generate key pair: " + 
+            logger.debug("Time to generate key pair: " +
                          (System.currentTimeMillis() - st));
-            
+
             entry = new KeyPairCacheEntry(generator.generateKeyPair(), st);
             entries.put(keysize, entry);
         }

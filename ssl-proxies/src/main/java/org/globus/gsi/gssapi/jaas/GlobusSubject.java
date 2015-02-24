@@ -24,8 +24,8 @@ import javax.security.auth.Subject;
 /**
  * An implementation of the <code>JaasSubject</code> API to circumvent
  * the JAAS problem of Subject propagation. The implementation uses
- * a stackable version of 
- * {@link java.lang.InheritableThreadLocal InheritableThreadLocal} 
+ * a stackable version of
+ * {@link java.lang.InheritableThreadLocal InheritableThreadLocal}
  * class to associate the Subject object with the current thread.
  * Any new thread started within a thread that has a Subject object
  * associated with it, will inherit the parent's Subject object.
@@ -33,9 +33,9 @@ import javax.security.auth.Subject;
  */
 public class GlobusSubject extends JaasSubject {
 
-    private static StackableInheritableThreadLocal subjects = 
+    private static StackableInheritableThreadLocal subjects =
 	new StackableInheritableThreadLocal();
-    
+
     protected GlobusSubject() {
 	super();
     }
@@ -62,11 +62,11 @@ public class GlobusSubject extends JaasSubject {
 	    subjects.pop();
 	}
     }
-    
+
 }
 
 class StackableInheritableThreadLocal extends InheritableThreadLocal {
-    
+
     protected Object initialValue() {
 	return new LinkedList();
     }
@@ -84,12 +84,12 @@ class StackableInheritableThreadLocal extends InheritableThreadLocal {
 	LinkedList<Object> list = (LinkedList<Object>)get();
 	list.add(object);
     }
-    
+
     public Object pop() {
 	LinkedList list = (LinkedList)get();
 	return (list.isEmpty()) ? null : list.removeLast();
     }
-    
+
     public Object peek() {
 	LinkedList list = (LinkedList)get();
 	return (list.isEmpty()) ? null : list.getLast();

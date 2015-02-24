@@ -17,10 +17,10 @@ public class ChainedIOException extends java.io.IOException {
     }
 
     /**
-     * Constructs a new instance of <tt>ChainedIOException</tt> with a 
+     * Constructs a new instance of <tt>ChainedIOException</tt> with a
      * detailed message. The root exception is null.
      *
-     * @param detail A possibly null string containing details of the 
+     * @param detail A possibly null string containing details of the
      *        exception.
      *
      * @see java.lang.Throwable#getMessage
@@ -30,10 +30,10 @@ public class ChainedIOException extends java.io.IOException {
     }
 
     /**
-     * Constructs a new instance of <tt>ChainedIOException</tt> with a 
+     * Constructs a new instance of <tt>ChainedIOException</tt> with a
      * detailed message and a root exception.
      *
-     * @param detail A possibly null string containing details of the 
+     * @param detail A possibly null string containing details of the
      *        exception.
      * @param ex A possibly null root exception that caused this exception.
      *
@@ -73,7 +73,7 @@ public class ChainedIOException extends java.io.IOException {
             String superString = getLocalMessage();
             synchronized ( ps ) {
                 ps.print(superString);
-                ps.print((superString.endsWith(".") ? 
+                ps.print((superString.endsWith(".") ?
                           " Caused by " : ". Caused by "));
                 exception.printStackTrace( ps );
             }
@@ -81,7 +81,7 @@ public class ChainedIOException extends java.io.IOException {
             super.printStackTrace( ps );
         }
     }
-    
+
     /**
      * Prints this exception's stack trace to a print writer.
      * If this exception has a root exception; the stack trace of the
@@ -93,7 +93,7 @@ public class ChainedIOException extends java.io.IOException {
             String superString = getLocalMessage();
             synchronized (pw) {
                 pw.print(superString);
-                pw.print((superString.endsWith(".") ? 
+                pw.print((superString.endsWith(".") ?
                           " Caused by " : ". Caused by "));
                 exception.printStackTrace( pw );
             }
@@ -113,10 +113,10 @@ public class ChainedIOException extends java.io.IOException {
         }
         return answer;
     }
-    
+
     private String getLocalMessage() {
         String message = super.getMessage();
         return (message == null) ? getClass().getName() : message;
     }
-    
+
 }

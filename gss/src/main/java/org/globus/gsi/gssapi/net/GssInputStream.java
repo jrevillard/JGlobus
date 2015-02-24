@@ -14,19 +14,21 @@
  */
 package org.globus.gsi.gssapi.net;
 
+import java.io.EOFException;
 import java.io.InputStream;
 import java.io.IOException;
 
 import org.globus.common.ChainedIOException;
 
+import org.globus.gsi.gssapi.ClosedGSSException;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
 
 public abstract class GssInputStream extends InputStream {
-  
+
     protected InputStream in;
     protected GSSContext context;
-  
+
     protected byte [] buff;
     protected int index;
 
@@ -36,16 +38,18 @@ public abstract class GssInputStream extends InputStream {
 	this.buff = new byte[0];
 	this.index = 0;
     }
-  
-    protected byte[] unwrap(byte [] msg) 
+
+    protected byte[] unwrap(byte [] msg)
 	throws IOException {
 	try {
-	    return this.context.unwrap(msg, 0, msg.length, null);
+            return this.context.unwrap(msg, 0, msg.length, null);
+        } catch (ClosedGSSException e) {
+            throw new EOFException("Remote host terminated connection");
 	} catch (GSSException e) {
 	    throw new ChainedIOException("unwrap failed", e);
 	}
     }
-	
+
     protected abstract void readMsg()
 	throws IOException;
 
@@ -54,7 +58,7 @@ public abstract class GssInputStream extends InputStream {
 	return read(data, 0, data.length);
     }
 
-    public int read(byte [] data, int off, int len) 
+    public int read(byte [] data, int off, int len)
 	throws IOException {
 	if (!hasData()) {
 	    return -1;
@@ -67,7 +71,7 @@ public abstract class GssInputStream extends InputStream {
 	return max;
     }
 
-    public int read() 
+    public int read()
 	throws IOException {
 	if (!hasData()) {
 	    return -1;
@@ -76,20 +80,24 @@ public abstract class GssInputStream extends InputStream {
 	return buff[index++] & 0xff;
     }
 
-    protected boolean hasData() 
+    protected boolean hasData()
 	throws IOException {
 	if (this.buff == null) {
 	    return false;
 	}
 	if (this.buff.length == this.index) {
-	    readMsg();
-	}
+            try {
+                readMsg();
+            } catch (EOFException e) {
+                return false;
+            }
+        }
 	if (this.buff == null) {
             return false;
         }
 	return (this.buff.length != this.index);
     }
-    
+
     /* does not dispose of the context */
     public void close()
 	throws IOException {
@@ -105,5 +113,5 @@ public abstract class GssInputStream extends InputStream {
 	int avail = this.buff.length - this.index;
 	return (avail == 0) ? in.available() : avail;
     }
-    
+
 }

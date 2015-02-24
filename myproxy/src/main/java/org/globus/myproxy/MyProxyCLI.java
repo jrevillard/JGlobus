@@ -1,12 +1,12 @@
 /*
  * Copyright 1999-2006 University of Chicago
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,11 +47,11 @@ public class MyProxyCLI {
     public static final int MYPROXY_SERVER_PORT   = 7512;
     public static final int PORTAL_LIFETIME_HOURS = 12;
     public static final int CRED_LIFETIME_HOURS   = 168;
-    
+
     public static final int MATCH_CN_ONLY = 0;
     public static final int REGULAR_EXP = 1;
-    
-    private static final String commonOptions = 
+
+    private static final String commonOptions =
         "\tCommon Options:\n" +
         "\t-help\n" +
         "\t\tDisplays usage\n" +
@@ -62,7 +62,7 @@ public class MyProxyCLI {
         "\t\tHostname of the myproxy-server\n" +
         "\t-p <port> | -port <port>\n" +
         "\t\tPort of the myproxy-server\n" +
-        "\t\t(default " + MYPROXY_SERVER_PORT + ")\n" + 
+        "\t\t(default " + MYPROXY_SERVER_PORT + ")\n" +
         "\t-s <subject> | -subject <subject>\n" +
         "\t\tPerforms subject authorization\n" +
         "\t-l <username> | -username <username>\n" +
@@ -84,7 +84,7 @@ public class MyProxyCLI {
         "\t put            - put proxy\n" +
         "\t store          - store credentials\n" +
         "\t get            - get proxy\n" +
-        "\t anonget        - get proxy without local credentials\n" + 
+        "\t anonget        - get proxy without local credentials\n" +
         "\t get-trustroots - get trustroots information\n" +
         "\t destroy        - remove proxy\n" +
         "\t info           - credential information\n" +
@@ -95,7 +95,7 @@ public class MyProxyCLI {
         "\n" +
         "Syntax: java MyProxyCLI [common options] destroy [command options]\n\n" +
         commonOptions +
-        "\n" + 
+        "\n" +
         "\tCommand Options:\n" +
         "\t-help\n" +
         "\t\tDisplays usage\n" +
@@ -241,7 +241,7 @@ public class MyProxyCLI {
 
     protected void parseCmdLine(String [] args) {
         for (int i = 0; i < args.length; i++) {
-            
+
             if (args[i].charAt(0) != '-') {
 
                 CertificateLoadUtil.init();
@@ -265,13 +265,13 @@ public class MyProxyCLI {
                 } else {
                     error("Error: unknown command (" + args[i] +")");
                 }
-            } else if (args[i].equals("-h") || 
+            } else if (args[i].equals("-h") ||
                        args[i].equalsIgnoreCase("-host")) {
                 ++i;
                 if (i == args.length) {
                     error("Error: -h requires hostname");
                 } else {
-                    this.hostname = args[i]; 
+                    this.hostname = args[i];
                 }
             } else if (args[i].equals("-p") ||
                        args[i].equalsIgnoreCase("-port")) {
@@ -287,7 +287,7 @@ public class MyProxyCLI {
                 if (i == args.length) {
                     error("Error: -l requires username");
                 } else {
-                    this.username = args[i]; 
+                    this.username = args[i];
                 }
             } else if (args[i].equals("-d") ||
                        args[i].equalsIgnoreCase("-dn_as_username")) {
@@ -307,13 +307,13 @@ public class MyProxyCLI {
                 }
             } else if (args[i].equals("-v") ||
                        args[i].equalsIgnoreCase("-version")) {
-                
+
                 // display version info
                 System.out.println(Version.getVersion());
                 System.exit(1);
             } else if (args[i].equalsIgnoreCase("-help") ||
                        args[i].equalsIgnoreCase("-usage")) {
-                
+
                 System.err.println(message);
                 System.exit(1);
             } else {
@@ -322,7 +322,7 @@ public class MyProxyCLI {
         }
         error("Error: No command specified");
     }
-    
+
     private String getUsername() {
         if (dnAsUsername) {
             GSSCredential cred = getDefaultCredential();
@@ -344,10 +344,10 @@ public class MyProxyCLI {
         }
     }
 
-    private MyProxy getMyProxy() {
-        MyProxy myProxy = 
-            new MyProxy(this.hostname, 
-                                           this.port); 
+    private org.globus.myproxy.MyProxy getMyProxy() {
+        org.globus.myproxy.MyProxy myProxy =
+            new org.globus.myproxy.MyProxy(this.hostname,
+                                           this.port);
         if (this.subjectDN != null) {
             myProxy.setAuthorization(new IdentityAuthorization(this.subjectDN));
         }
@@ -363,7 +363,7 @@ public class MyProxyCLI {
                 System.err.println(infoMessage);
                 System.exit(1);
             } else {
-                error("Error: info argument #" + i + " (" + args[i] + 
+                error("Error: info argument #" + i + " (" + args[i] +
                       ") : unknown");
             }
         }
@@ -379,20 +379,20 @@ public class MyProxyCLI {
         String tmp;
 
         try {
-            MyProxy myProxy = getMyProxy();
-            CredentialInfo[] info = myProxy.info(credential, 
+            org.globus.myproxy.MyProxy myProxy = getMyProxy();
+            CredentialInfo[] info = myProxy.info(credential,
                                                       infoRequest);
-            
+
             System.out.println ("From MyProxy server: " + myProxy.getHost());
             System.out.println ("Owner: " + info[0].getOwner());
             for (int i=0;i<info.length;i++) {
                 tmp = info[i].getName();
                 System.out.println ((tmp == null) ? "default:" : tmp +":");
-                System.out.println ("\tStart Time  : " + 
+                System.out.println ("\tStart Time  : " +
                                     info[i].getStartTime());
-                System.out.println ("\tEnd Time    : " + 
+                System.out.println ("\tEnd Time    : " +
                                     info[i].getEndTime());
-                    
+
                 long now = System.currentTimeMillis();
                 if (info[i].getEndTime() > now) {
                     System.out.println ("\tTime left   : " +
@@ -422,7 +422,7 @@ public class MyProxyCLI {
 
     protected void doDestroy(String args[], int start) {
         String credName = null;
-        
+
         for (int i=start;i<args.length;i++) {
             if (args[i].equals("-k") ||
                 args[i].equalsIgnoreCase("-credname")) {
@@ -437,7 +437,7 @@ public class MyProxyCLI {
                 System.err.println(destroyMessage);
                 System.exit(1);
             } else {
-                error("Error: destroy argument #" + i + " (" + args[i] + 
+                error("Error: destroy argument #" + i + " (" + args[i] +
                       ") : unknown");
             }
         }
@@ -449,13 +449,13 @@ public class MyProxyCLI {
         destroyRequest.setUserName(getUsername());
         destroyRequest.setCredentialName(credName);
         destroyRequest.setPassphrase("DUMMY-PASSPHRASE");
-        
+
         try {
-            MyProxy myProxy = getMyProxy();
+            org.globus.myproxy.MyProxy myProxy = getMyProxy();
             myProxy.destroy(credential, destroyRequest);
-            
+
             System.out.println("A proxy was succesfully destroyed on " +
-                               myProxy.getHost() + " for user " + 
+                               myProxy.getHost() + " for user " +
                                getUsername() + ".");
         } catch(Exception e) {
             exit("Error: " + e.getMessage(), e);
@@ -465,7 +465,7 @@ public class MyProxyCLI {
 
     protected void doChangePassword(String args[], int start) {
         String credName = null;
-        
+
         for (int i=start;i<args.length;i++) {
             if (args[i].equals("-k") ||
                 args[i].equalsIgnoreCase("-credname")) {
@@ -480,7 +480,7 @@ public class MyProxyCLI {
                 System.err.println(pwdMessage);
                 System.exit(1);
             } else {
-                error("Error: pwd argument #" + i + " (" + args[i] + 
+                error("Error: pwd argument #" + i + " (" + args[i] +
                       ") : unknown");
             }
         }
@@ -507,12 +507,12 @@ public class MyProxyCLI {
             Util.getInput(prompt2) : Util.getPrivateInput(prompt2);
         if (password == null) return;
         request.setNewPassphrase(password);
-        
+
         try {
-            MyProxy myProxy = getMyProxy();
+            org.globus.myproxy.MyProxy myProxy = getMyProxy();
             myProxy.changePassword(credential,
                                         request);
-            
+
             System.out.println("Password changed successfully on " +
                                myProxy.getHost() + ".");
         } catch(Exception e) {
@@ -523,8 +523,8 @@ public class MyProxyCLI {
 
     private boolean isVOMS_USERCONFComment(String line) {
         if ((line == null)
-            || (line.length() == 0) 
-            || line.trim().startsWith("#") 
+            || (line.length() == 0)
+            || line.trim().startsWith("#")
             || line.matches("\\s*$") ) {
             return true;
         }
@@ -599,7 +599,7 @@ public class MyProxyCLI {
                     error("Error: -a requires an argument");
                 } else {
                     try {
-                        X509Credential pkiCred = 
+                        X509Credential pkiCred =
                             new X509Credential(args[i]);
                         authzcreds = new GlobusGSSCredentialImpl(
                                                  pkiCred,
@@ -625,11 +625,11 @@ public class MyProxyCLI {
                 System.err.println(getMessage);
                 System.exit(1);
             } else {
-                error("Error: get argument #" + i + " (" + args[i] + 
+                error("Error: get argument #" + i + " (" + args[i] +
                       ") : unknown");
             }
         }
-        
+
         verifyCommonCmdLine();
 
         GSSCredential credential = null;
@@ -650,7 +650,7 @@ public class MyProxyCLI {
 
         if (authzcreds == null) {
             String prompt = "Enter MyProxy Pass Phrase: ";
-            
+
             String password = (this.stdin) ?
                 Util.getInput(prompt) : Util.getPrivateInput(prompt);
             if (password == null) return;
@@ -658,16 +658,16 @@ public class MyProxyCLI {
         } else {
             getRequest.setAuthzCreds(authzcreds);
         }
-            
+
         try {
-            MyProxy myProxy = getMyProxy();
+            org.globus.myproxy.MyProxy myProxy = getMyProxy();
             if (this.wantTrustroots) {
                 bootstrapIfNeeded(myProxy);
             }
 
             GSSCredential newCred = myProxy.get(credential,
                                                 getRequest);
-                
+
             if (debug) {
                 String subject =  newCred.getName().toString();
                 System.out.println("Proxy subject name: " + subject);
@@ -690,21 +690,21 @@ public class MyProxyCLI {
             OutputStream out = null;
             try {
                 out = new FileOutputStream(path);
-                
+
                 // set read only permissions
                 Util.setOwnerAccessOnly(path);
-                
+
                 // write the contents
                 byte [] data =
                     ((ExtendedGSSCredential)newCred).export(ExtendedGSSCredential.IMPEXP_OPAQUE);
-                
+
                 out.write(data);
             } finally {
                 if (out != null) {
                     try { out.close(); } catch(Exception e) {}
                 }
             }
-            
+
             System.out.println("A proxy has been received from " +
                                myProxy.getHost() + " for user " +
                                getUsername() + " in " + path);
@@ -752,7 +752,7 @@ public class MyProxyCLI {
         boolean useEmptyPwd = false;
         X509Certificate [] userCerts = null;
         PrivateKey userKey = null;
-        
+
         for (int i=start;i<args.length;i++) {
             if (args[i].equals("-k") ||
                 args[i].equalsIgnoreCase("-credname")) {
@@ -801,11 +801,11 @@ public class MyProxyCLI {
                 } else {
                     credLifetime = Integer.parseInt(args[i]) * 3600;
                 }
-            } else if (args[i].equals("-x") || 
+            } else if (args[i].equals("-x") ||
                        args[i].equalsIgnoreCase("-regex_dn_match")) {
                 /*set expr type to regex*/
                 exprType = REGULAR_EXP;
-            } else if (args[i].equals("-X") ||  
+            } else if (args[i].equals("-X") ||
                        args[i].equalsIgnoreCase("-match_cn_only")) {
                 /*set expr type to common name*/
                 exprType = MATCH_CN_ONLY;
@@ -856,7 +856,7 @@ public class MyProxyCLI {
             } else if (!storeKey &&
                        (args[i].equals("-n") ||
                         args[i].equalsIgnoreCase("-no_passphrase"))) {
-                       /* use an empty passwd == require certificate based 
+                       /* use an empty passwd == require certificate based
                           authorization while getting the creds */
                 useEmptyPwd = true;
             } else if (args[i].equalsIgnoreCase("-help") ||
@@ -868,7 +868,7 @@ public class MyProxyCLI {
                 }
                 System.exit(1);
             } else {
-                error("Error: put argument #" + i + " (" + args[i] + 
+                error("Error: put argument #" + i + " (" + args[i] +
                       ") : unknown");
             }
         }
@@ -876,7 +876,7 @@ public class MyProxyCLI {
         verifyCommonCmdLine();
 
         CoGProperties properties = CoGProperties.getDefault();
-        
+
         if (userKeyFile == null) {
             userKeyFile = properties.getUserKeyFile();
         }
@@ -893,7 +893,7 @@ public class MyProxyCLI {
                 error("Error: Only one -A or -R option may be specified.");
             }
         }
-        
+
         if (retrievers != null) {
             if (renewers != null || anonRenewers) {
                 error("Error: -r is incompatible with -A and -R.");
@@ -902,28 +902,28 @@ public class MyProxyCLI {
                 error("Error: Only one -a or -r option may be specified.");
             }
         }
-        
+
         if (anonRetrievers) {
             if (anonRenewers || renewers != null) {
                 error("Error: -a is incompatible with -A and -R.");
             }
             if (useEmptyPwd) {
-                error("Error: -a is incompatible with -n. " + 
+                error("Error: -a is incompatible with -n. " +
                       "A passphrase is required for credential retrieval.");
             }
         }
-        
-        if (anonRenewers && 
+
+        if (anonRenewers &&
             (anonRetrievers || retrievers != null)) {
             error("Error: -A is incompatible with -a and -r.");
         }
-            
+
         if (retrievers != null && exprType == MATCH_CN_ONLY) {
             retrievers = "*/CN=" + retrievers;
         } else if (anonRetrievers) {
             retrievers = "*";
         }
-        
+
         if (renewers != null && exprType == MATCH_CN_ONLY) {
             renewers = "*/CN=" + renewers;
         } else if (anonRenewers) {
@@ -965,10 +965,10 @@ public class MyProxyCLI {
             GSSCredential credential = getDefaultCredential();
 
             try {
-                MyProxy myProxy = getMyProxy();
+                org.globus.myproxy.MyProxy myProxy = getMyProxy();
                 myProxy.store(credential, userCerts, userKey,
                                    storeRequest);
-                System.out.println("Credentials saved to MyProxy server on " + 
+                System.out.println("Credentials saved to MyProxy server on " +
                                    myProxy.getHost() + ".");
             } catch(Exception e) {
                 exit("Error: " + e.getMessage(), e);
@@ -1001,13 +1001,13 @@ public class MyProxyCLI {
             }
 
             try {
-                MyProxy myProxy = getMyProxy();
+                org.globus.myproxy.MyProxy myProxy = getMyProxy();
                 myProxy.put(credential, initRequest);
-            
-                System.out.println("A proxy valid for " + credLifetime/3600 + 
-                                   " hours (" + (credLifetime/(3600*24)) + 
-                                   " days) for user " + getUsername() + 
-                                   " now exists on " + 
+
+                System.out.println("A proxy valid for " + credLifetime/3600 +
+                                   " hours (" + (credLifetime/(3600*24)) +
+                                   " days) for user " + getUsername() +
+                                   " now exists on " +
                                    myProxy.getHost() + ".");
             } catch(Exception e) {
                 exit("Error: " + e.getMessage(), e);
@@ -1025,7 +1025,7 @@ public class MyProxyCLI {
                 System.err.println(getTrustrootsMessage);
                 System.exit(1);
             } else {
-                error("Error: get argument #" + i + " (" + args[i] + 
+                error("Error: get argument #" + i + " (" + args[i] +
                       ") : unknown");
             }
         }
@@ -1042,7 +1042,7 @@ public class MyProxyCLI {
 
         try
         {
-            MyProxy myProxy = getMyProxy();
+            org.globus.myproxy.MyProxy myProxy = getMyProxy();
             bootstrapIfNeeded(myProxy);
             myProxy.getTrustroots(credential, getTrustrootsRequest);
 
@@ -1090,7 +1090,7 @@ public class MyProxyCLI {
         System.err.println(msg);
         displaySyntax();
     }
-    
+
     private static void displaySyntax() {
         System.err.println("\nSyntax : java MyProxyCLI [-help] command [-help]");
         System.err.println();
@@ -1102,13 +1102,13 @@ public class MyProxyCLI {
         MyProxyCLI myProxyCLI = new MyProxyCLI();
         myProxyCLI.parseCmdLine(args);
     }
-    
+
     private static GSSCredential getDefaultCredential() {
         GSSManager manager = ExtendedGSSManager.getInstance();
         try {
             return manager.createCredential(GSSCredential.INITIATE_ONLY);
         } catch(GSSException e) {
-            System.err.println("Failed to load default credentials: " + 
+            System.err.println("Failed to load default credentials: " +
                                e.getMessage());
             System.exit(-1);
         }
@@ -1117,11 +1117,11 @@ public class MyProxyCLI {
 
     private static GSSCredential createNewProxy(String userCertFile,
                                                 String userKeyFile,
-                                                int lifetime, 
+                                                int lifetime,
                                                 final boolean stdin) {
 
         X509Certificate [] userCerts = null;
-        PrivateKey userKey = null;  
+        PrivateKey userKey = null;
 
         try {
         	String prompt = "Enter GRID pass phrase: ";
@@ -1133,33 +1133,34 @@ public class MyProxyCLI {
         } catch(IOException e) {
             System.err.println("Error: Failed to load key: " + userKeyFile);
             System.exit(-1);
-        } catch (GeneralSecurityException e) {
-        	System.err.println("Error: Failed to load key: " + userKeyFile);
+        } catch(GeneralSecurityException e) {
+            System.err.println("Error: Wrong pass phrase");
             System.exit(-1);
-		}
-    
+        }
+
         try {
             userCerts = CertificateLoadUtil.loadCertificates(userCertFile);
         } catch(IOException e) {
             System.err.println("Error: Failed to load cert: " + userCertFile);
             System.exit(-1);
-        } catch (GeneralSecurityException e) {
-        	System.err.println("Error: Failed to load cert: " + userCertFile);
+        } catch(GeneralSecurityException e) {
+            System.err.println("Error: Unable to load user certificate: " +
+                               userCertFile + " : " + e.getMessage());
             System.exit(-1);
-		}
-        
+        }
+
         BouncyCastleCertProcessingFactory factory =
             BouncyCastleCertProcessingFactory.getDefault();
 
-        int bits = MyProxy.DEFAULT_KEYBITS;
+        int bits = org.globus.myproxy.MyProxy.DEFAULT_KEYBITS;
         boolean limited = false;
 
-        GSIConstants.DelegationType proxyType = (limited) ? 
+        GSIConstants.DelegationType proxyType = (limited) ?
             GSIConstants.DelegationType.LIMITED :
             GSIConstants.DelegationType.FULL;
-        
+
         try {
-            X509Credential proxy = 
+            X509Credential proxy =
                 factory.createCredential(userCerts,
                                          userKey,
                                          bits,
@@ -1173,8 +1174,8 @@ public class MyProxyCLI {
             System.err.println("Failed to create a proxy: " + e.getMessage());
             System.exit(-1);
         }
-        
+
         return null;
     }
-    
+
 }

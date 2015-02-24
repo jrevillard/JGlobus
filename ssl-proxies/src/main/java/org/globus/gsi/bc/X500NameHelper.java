@@ -39,7 +39,7 @@ public class X500NameHelper {
      * object. 
      * This behaves like a copy constructor.
      *
-     * @param name existing <code>X500Name</code> 
+     * @param name existing <code>X500Name</code>
      */
     public X500NameHelper(X500Name name) {
     	RDN[] rdns = name.getRDNs();

@@ -38,21 +38,19 @@ import org.globus.gsi.util.CertificateLoadUtil;
 import org.globus.gsi.util.CertificateUtil;
 import org.globus.util.Util;
 
-/**
- * Changes the Passphrase.
- * 
+/** Changes the Passphrase.
  * <pre>
  * Syntax: java ChangePassPhrase [-help] [-version] [-file private_key_file]
- * Changes the passphrase that protects the private key. If the -file
- * argument is not given, the default location of the file containing
- * the private key is assumed:
- *   --  Config.getUserKeyFile() 
- * Options
- *   -help, -usage                Display usage
- *   -version                     Display version
- *   -file location               Change passphrase on key stored in the 
- *                                file at the non-standard 
- *                                location 'location';
+  * Changes the passphrase that protects the private key. If the -file
+  * argument is not given, the default location of the file containing
+  * the private key is assumed:
+  *   --  Config.getUserKeyFile()
+  * Options
+  *   -help, -usage                Display usage
+  *   -version                     Display version
+  *   -file location               Change passphrase on key stored in the
+  *                                file at the non-standard
+  *                                location 'location';
  * </pre>
  */
 public class ChangePassPhrase {

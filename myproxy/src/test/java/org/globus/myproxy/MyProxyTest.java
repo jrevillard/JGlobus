@@ -1,12 +1,12 @@
 /*
  * Copyright 1999-2006 University of Chicago
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,44 +33,37 @@ import junit.framework.TestSuite;
 import junit.framework.Test;
 
 import org.gridforum.jgss.ExtendedGSSManager;
+
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 
 public class MyProxyTest extends TestCase {
-	private static final String CONFIG = "org/globus/myproxy/test/test.properties";
-			    
-    private static String host = "localhost";
-    private static int port = 7512;
+
+    private static final String CONFIG =
+	"org/globus/myproxy/test/test.properties";
+
     private static final String username = "testusername";
-    private static final String password = "sfkK^JH897KJH";
+    private static final String password = "123456";
     private static final int lifetime    = 2 * 3600;
 
     private MyProxy myProxy;
     private GSSCredential cred;
 
     private static TestUtil util;
-    
-    static {
-    	try {
-    	    util = new TestUtil(CONFIG);
-    	} catch (Exception e) {
-    	    e.printStackTrace();
-    	    System.exit(-1);
-    	}
-        String value;
-        value = util.get("myproxy.port");
-        if (value != null)
-            port = Integer.parseInt(value.trim());
 
-        value = util.get("myproxy.host");
-        if (value != null)
-            host = value;
+    static {
+	try {
+	    util = new TestUtil(CONFIG);
+	} catch (Exception e) {
+	    e.printStackTrace();
+	    System.exit(-1);
+	}
     }
-    
+
     public MyProxyTest(String name) {
 	super(name);
     }
-    
+
     public static void main (String[] args) {
 	junit.textui.TestRunner.run (suite());
     }
@@ -80,11 +73,12 @@ public class MyProxyTest extends TestCase {
     }
 
     public void setUp() throws Exception {
-	myProxy = new MyProxy(host, port);
+	myProxy = new MyProxy(util.get("myproxy.host"),
+			      util.getAsInt("myproxy.port"));
 	GSSManager manager = ExtendedGSSManager.getInstance();
 	cred = manager.createCredential(GSSCredential.INITIATE_ONLY);
 
-	String subjectDN =  util.get("myproxy.subject");
+	String subjectDN = util.get("myproxy.subject");
 	if (subjectDN != null) {
 	    myProxy.setAuthorization(new IdentityAuthorization(subjectDN));
 	}
@@ -134,7 +128,7 @@ public class MyProxyTest extends TestCase {
 	myProxy.destroy(cred,
 			username,
 			password);
-	
+
 	try {
 	    myProxy.get(cred,
 			username,
@@ -150,18 +144,18 @@ public class MyProxyTest extends TestCase {
 		    username,
 		    password,
 		    lifetime);
-	
+
 	CredentialInfo info = myProxy.info(cred,
 					   username,
 					   password);
-	
+
 	assertTrue(info != null);
 	assertEquals(cred.getName().toString(),
 		     info.getOwner());
-	
+
 	long diff  = ((info.getEndTime() - info.getStartTime())/1000) -
 	    cred.getRemainingLifetime();
-	
+
 	// 360 - 5 min diff in delegation plus 1 min for padding
 	assertTrue(diff > 0 && diff < 360);
     }
@@ -175,8 +169,8 @@ public class MyProxyTest extends TestCase {
 	String credName2   = "bar";
 	String credDesc2   = "bar credential";
 	String credRenewer = "bar renewer";
-	
-	InitParams params1 
+
+	InitParams params1
 	    = new InitParams();
 
 	params1.setUserName(username);
@@ -195,17 +189,17 @@ public class MyProxyTest extends TestCase {
 	params2.setCredentialName(credName2);
 	params2.setCredentialDescription(credDesc2);
 	params2.setRenewer(credRenewer);
-	
+
 	myProxy.put(cred, params1);
 
 	myProxy.put(cred, params2);
-	
+
 	InfoParams infoParams
 	    = new InfoParams();
-	
+
 	infoParams.setUserName(username);
 	infoParams.setPassphrase(password);
-	
+
 	CredentialInfo info[] = myProxy.info(cred, infoParams);
 
 	assertTrue(info != null);
@@ -217,7 +211,7 @@ public class MyProxyTest extends TestCase {
 	for (int i=0;i<info.length;i++) {
 	    if (credName1.equals(info[i].getName())) {
 		f1 = true;
-		assertEquals(credDesc1, 
+		assertEquals(credDesc1,
 			     info[i].getDescription());
 		assertEquals(cred.getName().toString(),
 			     info[i].getOwner());
@@ -225,7 +219,7 @@ public class MyProxyTest extends TestCase {
 			     info[i].getRetrievers());
 	    } else if (credName2.equals(info[i].getName())) {
 		f2 = true;
-		assertEquals(credDesc2, 
+		assertEquals(credDesc2,
 			     info[i].getDescription());
 		assertEquals(cred.getName().toString(),
 			     info[i].getOwner());
@@ -233,7 +227,7 @@ public class MyProxyTest extends TestCase {
 			     info[i].getRenewers());
 	    }
 	}
-	
+
 	if (!f1) {
 	    fail("did not find " + credName1 + " credential");
 	}
@@ -267,7 +261,7 @@ public class MyProxyTest extends TestCase {
 
 	String newPwd = "newPassword123";
 
-	ChangePasswordParams params 
+	ChangePasswordParams params
 	    = new ChangePasswordParams();
 	params.setUserName(username);
 	params.setPassphrase(password);
@@ -275,7 +269,7 @@ public class MyProxyTest extends TestCase {
 
 	myProxy.changePassword(cred,
 			       params);
-	
+
 	GetParams getParams
 	    = new GetParams();
 	getParams.setUserName(username);
@@ -288,7 +282,7 @@ public class MyProxyTest extends TestCase {
 	    // that should be bad pwd error
 	    e.printStackTrace();
 	}
-	
+
 	// after that it should be successful
 	getParams.setPassphrase(newPwd);
 	myProxy.get(cred, getParams);
@@ -314,11 +308,11 @@ public class MyProxyTest extends TestCase {
 
     public void testCertAuthentications() throws Exception {
         InitParams params = new InitParams();
-        
+
 	params.setUserName(username);
 	params.setLifetime(lifetime);
 	params.setRenewer("*");
-        
+
 	myProxy.put(cred, params);
 
         GetParams getRequest = new GetParams();

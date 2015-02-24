@@ -88,7 +88,7 @@ public class CertificateUtilTest2 extends TestCase {
 	assertEquals(goodCertsArr[1], CertificateUtil.getIdentityCertificate(chain));
 
 	// double limited proxy, limited proxy, EEC, CA
-	chain = new X509Certificate[] {goodCertsArr[4], goodCertsArr[3], 
+	chain = new X509Certificate[] {goodCertsArr[4], goodCertsArr[3],
 				       goodCertsArr[1], goodCertsArr[0]};
 	assertEquals(goodCertsArr[1], CertificateUtil.getIdentityCertificate(chain));
     }
@@ -113,24 +113,24 @@ public class CertificateUtilTest2 extends TestCase {
 	// GSI 3 PC restricted, EEC, CA
 	chain = new X509Certificate[] {goodCertsArr[8], goodCertsArr[1], goodCertsArr[0]};
 	assertEquals(goodCertsArr[8], CertificateUtil.getIdentityCertificate(chain));
-	
+
 	// GSI 3 PC impersonation, GSI 3 PC limited impersonation, EEC, CA
-	chain = new X509Certificate[] {goodCertsArr[9], goodCertsArr[7], 
+	chain = new X509Certificate[] {goodCertsArr[9], goodCertsArr[7],
 				       goodCertsArr[1], goodCertsArr[0]};
 	assertEquals(goodCertsArr[1], CertificateUtil.getIdentityCertificate(chain));
 
 	// GSI 3 PC impersonation, GSI 3 PC impersonation, EEC, CA
-	chain = new X509Certificate[] {goodCertsArr[9], goodCertsArr[5], 
+	chain = new X509Certificate[] {goodCertsArr[9], goodCertsArr[5],
 				       goodCertsArr[1], goodCertsArr[0]};
 	assertEquals(goodCertsArr[1], CertificateUtil.getIdentityCertificate(chain));
 
 	// GSI 3 PC indepedent, GSI 3 PC independent, EEC, CA
-	chain = new X509Certificate[] {goodCertsArr[10], goodCertsArr[6], 
+	chain = new X509Certificate[] {goodCertsArr[10], goodCertsArr[6],
 				       goodCertsArr[1], goodCertsArr[0]};
 	assertEquals(goodCertsArr[10], CertificateUtil.getIdentityCertificate(chain));
 
 	// GSI 3 PC impersonation, GSI 3 PC independent, EEC, CA
-	chain = new X509Certificate[] {goodCertsArr[9], goodCertsArr[6], 
+	chain = new X509Certificate[] {goodCertsArr[9], goodCertsArr[6],
 				       goodCertsArr[1], goodCertsArr[0]};
 	assertEquals(goodCertsArr[6], CertificateUtil.getIdentityCertificate(chain));
     }

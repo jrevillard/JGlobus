@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -27,6 +28,7 @@ import java.security.cert.CertStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.apache.commons.logging.Log;
@@ -49,19 +51,20 @@ import org.globus.gsi.util.ProxyCertificateUtil;
  * FILL ME
  * <p/>
  * This class equivalent was called GlobusCredential in CoG -maybe a better name?
- * 
+ *
  * @author ranantha@mcs.anl.gov
  */
 // COMMENT: Added methods from GlobusCredential
 // COMMENT: Do we need the getDefaultCred functionality?
-public class X509Credential {
+public class X509Credential implements Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private static Log logger = LogFactory.getLog(X509Credential.class.getCanonicalName());
     private PrivateKey privateKey;
     private final String privateKeyFile;
     private X509Certificate[] certChain;
 
-    
+
     private static X509Credential defaultCred;
     private static long credentialLastModified = -1;
     // indicates if default credential was explicitely set
@@ -235,7 +238,7 @@ public class X509Credential {
 
     /**
      * Returns the number of certificates in the credential without the self-signed certificates.
-     * 
+     *
      * @return number of certificates without counting self-signed certificates
      */
     public int getCertNum() {
@@ -249,7 +252,7 @@ public class X509Credential {
 
     /**
      * Returns strength of the private/public key in bits.
-     * 
+     *
      * @return strength of the key in bits. Returns -1 if unable to determine it.
      */
     public int getStrength() throws CredentialException {
@@ -258,7 +261,7 @@ public class X509Credential {
 
     /**
      * Returns strength of the private/public key in bits.
-     * 
+     *
      * @return strength of the key in bits. Returns -1 if unable to determine it.
      */
     public int getStrength(String password) throws CredentialException {
@@ -274,7 +277,7 @@ public class X509Credential {
 
     /**
      * Returns the subject DN of the first certificate in the chain.
-     * 
+     *
      * @return subject DN.
      */
     public String getSubject() {
@@ -283,7 +286,7 @@ public class X509Credential {
 
     /**
      * Returns the issuer DN of the first certificate in the chain.
-     * 
+     *
      * @return issuer DN.
      */
     public String getIssuer() {
@@ -293,9 +296,9 @@ public class X509Credential {
     /**
      * Returns the certificate type of the first certificate in the chain. Returns -1 if unable to determine
      * the certificate type (an error occurred)
-     * 
+     *
      * @see BouncyCastleUtil#getCertificateType(X509Certificate)
-     * 
+     *
      * @return the type of first certificate in the chain. -1 if unable to determine the certificate type.
      */
     public CertificateType getProxyType() {
@@ -310,7 +313,7 @@ public class X509Credential {
     /**
      * Returns time left of this credential. The time left of the credential is based on the certificate with
      * the shortest validity time.
-     * 
+     *
      * @return time left in seconds. Returns 0 if the certificate has expired.
      */
     public long getTimeLeft() {
@@ -324,9 +327,9 @@ public class X509Credential {
         long diff = (earliestTime.getTime() - System.currentTimeMillis()) / 1000;
         return (diff < 0) ? 0 : diff;
     }
-    
+
     /**
-     * Returns the identity of this credential. 
+     * Returns the identity of this credential.
      * @see #getIdentityCertificate()
      *
      * @return The identity cert in Globus format (e.g. /C=US/..). Null,
@@ -344,7 +347,7 @@ public class X509Credential {
     /**
      * Returns the identity certificate of this credential. The identity certificate is the first certificate
      * in the chain that is not an impersonation proxy certificate.
-     * 
+     *
      * @return <code>X509Certificate</code> the identity cert. Null, if unable to get the identity certificate
      *         (an error occurred)
      */
@@ -385,11 +388,11 @@ public class X509Credential {
         }
         return pathLength;
     }
-    
+
     /**
      * Verifies the validity of the credentials. All certificate path validation is performed using trusted
      * certificates in default locations.
-     * 
+     *
      * @exception CredentialException
      *                if one of the certificates in the chain expired or if path validation fails.
      */
@@ -416,9 +419,9 @@ public class X509Credential {
         	}
 
             KeyStore keyStore = Stores.getTrustStore(caCertsLocation + "/" + Stores.getDefaultCAFilesPattern());
-            CertStore crlStore = Stores.getCRLStore(caCertsLocation + "/" + Stores.getDefaultCRLFilesPattern()); 
+            CertStore crlStore = Stores.getCRLStore(caCertsLocation + "/" + Stores.getDefaultCRLFilesPattern());
             ResourceSigningPolicyStore sigPolStore = Stores.getSigningPolicyStore(caCertsLocation + "/" + Stores.getDefaultSigningPolicyFilesPattern());
-            
+
             X509ProxyCertPathParameters parameters = new X509ProxyCertPathParameters(keyStore, crlStore, sigPolStore, false);
             X509ProxyCertPathValidator validator = new X509ProxyCertPathValidator();
             validator.engineValidate(CertificateUtil.getCertPath(certChain), parameters);
@@ -433,7 +436,7 @@ public class X509Credential {
      * The credential will be loaded on the initial call. It must not be expired. All subsequent calls to this
      * function return cached credential object. Once the credential is cached, and the underlying file
      * changes, the credential will be reloaded.
-     * 
+     *
      * @return the default credential.
      * @exception CredentialException
      *                if the credential expired or some other error with the credential.
@@ -452,7 +455,7 @@ public class X509Credential {
         return defaultCred;
     }
 
-    private static void reloadDefaultCredential() 
+    private static void reloadDefaultCredential()
         throws CredentialException {
         String proxyLocation = CoGProperties.getDefault().getProxyFile();
         defaultCred = new X509Credential(proxyLocation);
@@ -460,11 +463,11 @@ public class X509Credential {
         credentialLastModified = credentialFile.lastModified();
         defaultCred.verify();
     }
-    
-    
+
+
     /**
      * Sets default credential.
-     * 
+     *
      * @param cred
      *            the credential to set a default.
      */
@@ -473,7 +476,7 @@ public class X509Credential {
         credentialSet = (cred != null);
     }
 
-    // COMMENT: In case of an exception because of missing password with an 
+    // COMMENT: In case of an exception because of missing password with an
     // encrypted key: put in -1 as strength
     public String toString() {
         String lineSep = System.getProperty("line.separator");
@@ -488,5 +491,28 @@ public class X509Credential {
         buf.append("timeleft   : ").append(getTimeLeft() + " sec").append(lineSep);
         buf.append("proxy type : ").append(ProxyCertificateUtil.getProxyTypeAsString(getProxyType()));
         return buf.toString();
+    }
+    
+
+    @Override
+    public boolean equals(Object object) {
+        if(object == this) {
+            return true;
+        }
+        
+        if(!(object instanceof X509Credential)) {
+            return false;
+        }
+        
+        X509Credential other = (X509Credential) object;
+
+        return Arrays.equals(this.certChain, other.certChain) &&
+                this.privateKey.equals(other.privateKey);
+    }
+    
+    @Override
+    public int hashCode() {
+        return (certChain == null ? 0 : Arrays.hashCode(certChain)) ^
+        		privateKey.hashCode();
     }
 }

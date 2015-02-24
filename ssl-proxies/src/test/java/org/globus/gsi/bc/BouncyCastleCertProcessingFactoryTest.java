@@ -41,14 +41,14 @@ import org.globus.gsi.proxy.ext.RFC_ProxyCertInfoExtension;
 public class BouncyCastleCertProcessingFactoryTest extends TestCase {
 
     private String proxyFile = "validatorTest/gsi2fullproxy.pem";
-    
-    public static BouncyCastleCertProcessingFactory factory = 
+
+    public static BouncyCastleCertProcessingFactory factory =
     BouncyCastleCertProcessingFactory.getDefault();
 
     public BouncyCastleCertProcessingFactoryTest(String name) {
     super(name);
     }
-    
+
     public static void main (String[] args) {
     junit.textui.TestRunner.run (suite());
     }
@@ -56,9 +56,9 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     public static Test suite() {
     return new TestSuite(BouncyCastleCertProcessingFactoryTest.class);
     }
-    
+
     public void testResctrictedNoProxyCertInfoExt() throws Exception {
-    
+
     ClassLoader loader = BouncyCastleCertProcessingFactoryTest.class.getClassLoader();
     X509Credential cred = new X509Credential(loader.getResource(proxyFile).getPath());
     
@@ -111,7 +111,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
                      CertificateType.GSI_3_RESTRICTED_PROXY,
                      extSet,
                      null);
-    
+
     X509Certificate newCert = newCred.getCertificateChain()[0];
     verifyExtension(newCert, oid, expectedValue, critical);
     
@@ -122,14 +122,14 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     
     assertTrue(proxyCertInfo != null);
     assertTrue(proxyCertInfo.getProxyPolicy() != null);
-    assertEquals(policyOid, 
+    assertEquals(policyOid,
              proxyCertInfo.getProxyPolicy().getPolicyLanguage().getId());
     assertEquals(policyValue,
              proxyCertInfo.getProxyPolicy().getPolicyAsString());
     }
 
     public void testExtensions() throws Exception {
-    
+
     ClassLoader loader = BouncyCastleCertProcessingFactoryTest.class.getClassLoader();
     X509Credential cred = new X509Credential(loader.getResource(proxyFile).getFile());
     Extension ext = null;
@@ -137,7 +137,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     String oid1 = "1.2.3.4";
     String expectedValue1 = "foo";
     boolean critical1 = false;
-    
+
     // COMMENT Used to be 5.6.7.8. Didn't work with newer bouncy castle version
     String oid2 = "1.2.3.5";
     String expectedValue2 = "bar";
@@ -166,7 +166,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     verifyExtension(newCert, oid2, expectedValue2, critical2);
     }
 
-    private void verifyExtension(X509Certificate cert, 
+    private void verifyExtension(X509Certificate cert,
                  String oid,
                  String expectedValue,
                  boolean critical) throws Exception {
@@ -185,7 +185,7 @@ public class BouncyCastleCertProcessingFactoryTest extends TestCase {
     } else {
         exts = cert.getNonCriticalExtensionOIDs();
     }
-    
+
     assertTrue(exts.contains(oid));
     }
     
