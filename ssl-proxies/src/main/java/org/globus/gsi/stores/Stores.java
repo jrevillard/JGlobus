@@ -27,6 +27,7 @@ import java.security.cert.CertificateException;
 import java.util.HashMap;
 
 import org.globus.common.CoGProperties;
+import org.globus.gsi.ProviderLoader;
 import org.globus.gsi.provider.GlobusProvider;
 import org.globus.gsi.provider.KeyStoreParametersFactory;
 
@@ -44,6 +45,10 @@ public class Stores {
 	private static final HashMap<String, ReloadableCaCertStore> CA_CERT_STORES = new HashMap<String, ReloadableCaCertStore>();
 	private static final HashMap<String, ResourceSigningPolicyStore> SIGNING_POLICY_STORES = new HashMap<String, ResourceSigningPolicyStore>();
 	private final static long CACHE_TIME_MILLIS = 3600 * 1000;
+	
+	static{
+		new ProviderLoader();
+	}
 
 	public static KeyStore getDefaultTrustStore() throws GeneralSecurityException, IOException {
 		String pattern = "file:" + CoGProperties.getDefault().getCaCertLocations() + "/" + defaultCAFilesPattern;

@@ -15,23 +15,20 @@
 
 package org.globus.gsi.stores;
 
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.commons.logging.Log;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.SynchronousQueue;
 
-
-import org.globus.util.GlobusResource;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.globus.util.GlobusPathMatchingResourcePatternResolver;
+import org.globus.util.GlobusResource;
 
 /**
  * Created by IntelliJ IDEA. User: turtlebender Date: Dec 29, 2009 Time:
@@ -41,7 +38,7 @@ import org.globus.util.GlobusPathMatchingResourcePatternResolver;
  * @param <V>
  */
 public abstract class ResourceSecurityWrapperStore<T extends AbstractResourceSecurityWrapper<V>, V> {
-	private Collection<V> rootObjects;
+	private Set<V> rootObjects;
     private GlobusPathMatchingResourcePatternResolver globusResolver = new GlobusPathMatchingResourcePatternResolver();
 	private Map<String, T> wrapperMap = new HashMap<String, T>();
 	private Log logger = LogFactory.getLog(ResourceSecurityWrapperStore.class.getCanonicalName());
@@ -185,7 +182,7 @@ public abstract class ResourceSecurityWrapperStore<T extends AbstractResourceSec
 
 	public abstract FilenameFilter getDefaultFilenameFilter();
 
-	public Collection<V> getCollection() {
+	public Set<V> getCollection() {
 		return this.rootObjects;
 	}
 
