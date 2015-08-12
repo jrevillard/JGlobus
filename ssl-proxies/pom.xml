@@ -40,6 +40,7 @@
 								<Export-Package>
 									org.globus.*;version="${project.version}";-noimport:=true
 								</Export-Package>
+								<Bundle-Activator>org.globus.gsi.stores.Activator</Bundle-Activator>
 								<!-- BC bundle does not provide version... Import-Package>org.bouncycastle.*;version="${bcprov.version}",*</Import-Package-->
 							</instructions>
 						</configuration>
@@ -50,6 +51,12 @@
 	</build>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.osgi.core</artifactId>
+			<version>1.4.0</version>
+			<scope>provided</scope>
+		</dependency>
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
