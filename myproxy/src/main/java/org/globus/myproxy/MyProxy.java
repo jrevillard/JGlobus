@@ -88,7 +88,8 @@ import org.ietf.jgss.Oid;
  */
 public class MyProxy  {
 
-	private static Log logger = LogFactory.getLog(MyProxy.class.getName());
+    static Log logger =
+        LogFactory.getLog(MyProxy.class.getName());
 
     public final static String version = "2.0";
 
@@ -98,26 +99,26 @@ public class MyProxy  {
     public static final String MYPROXY_PROTOCOL_VERSION =
         MyProxyConstants.MYPROXY_PROTOCOL_VERSION;
 
-    private static final String RESPONSE   = "RESPONSE=";
-    private static final String ERROR      = "ERROR=";
-    private static final String AUTHZ_DATA = "AUTHORIZATION_DATA=";
+    protected static final String RESPONSE   = "RESPONSE=";
+    protected static final String ERROR      = "ERROR=";
+    protected static final String AUTHZ_DATA = "AUTHORIZATION_DATA=";
 
-    private static final String CRED            = "CRED_";
-    private static final String OWNER           = "OWNER=";
-    private static final String START_TIME      = "START_TIME=";
-    private static final String END_TIME        = "END_TIME=";
-    private static final String DESC            = "DESC=";
-    private static final String RETRIEVER       = "RETRIEVER=";
-    private static final String RENEWER         = "RENEWER=";
-    private static final String TRUSTROOTS      = "TRUSTED_CERTS=";
+    protected static final String CRED            = "CRED_";
+    protected static final String OWNER           = "OWNER=";
+    protected static final String START_TIME      = "START_TIME=";
+    protected static final String END_TIME        = "END_TIME=";
+    protected static final String DESC            = "DESC=";
+    protected static final String RETRIEVER       = "RETRIEVER=";
+    protected static final String RENEWER         = "RENEWER=";
+    protected static final String TRUSTROOTS      = "TRUSTED_CERTS=";
 
-    private static final String CRED_START_TIME = CRED + START_TIME;
-    private static final String CRED_END_TIME   = CRED + END_TIME;
-    private static final String CRED_OWNER      = CRED + OWNER;
-    private static final String CRED_DESC       = CRED + DESC;
-    private static final String CRED_RETRIEVER  = CRED + RETRIEVER;
-    private static final String CRED_RENEWER    = CRED + RENEWER;
-    private static final String CRED_NAME       = CRED + "NAME=";
+    protected static final String CRED_START_TIME = CRED + START_TIME;
+    protected static final String CRED_END_TIME   = CRED + END_TIME;
+    protected static final String CRED_OWNER      = CRED + OWNER;
+    protected static final String CRED_DESC       = CRED + DESC;
+    protected static final String CRED_RETRIEVER  = CRED + RETRIEVER;
+    protected static final String CRED_RENEWER    = CRED + RENEWER;
+    protected static final String CRED_NAME       = CRED + "NAME=";
 
     /** The default MyProxy server port (7512). */
     public static final int DEFAULT_PORT = 7512;
@@ -157,23 +158,8 @@ public class MyProxy  {
     /** Trustroot information and path constant. */
     protected String[] trustrootFilenames;
     protected String[] trustrootData;
-    private final static String TRUSTED_CERT_PATH = "/.globus/certificates";
+    protected final static String TRUSTED_CERT_PATH = "/.globus/certificates";
 
-    public static void main(String[] args) throws Exception {
-		MyProxy myProxy = new MyProxy("myproxy.gnubila.fr", 7512);
-		
-		X509Credential x509Credential = CertificateLoadUtil.loadKeystore("/home/jerome/Desktop/dani.p12", "ibanez270".toCharArray(), null, null, "PKCS12");
-//		x509Credential = BouncyCastleCertProcessingFactory.getDefault().createCredential(x509Credential.getCertificateChain(), x509Credential.getPrivateKey(), 1024, 12, CertificateType.GSI_2_PROXY);
-//		System.out.println(CertificateIOUtil.nameHash(new X500Name("DC=org,DC=terena,DC=tcs,C=SE,O=Karolinska Institutet,CN=daniel ferreira padilla danife@ki.se")));
-//		System.out.println(CertificateIOUtil.nameHash(new X500Name("CN=daniel ferreira padilla danife@ki.se,O=Karolinska Institutet,C=SE,DC=tcs,DC=terena,DC=org")));
-//		System.out.println(CertificateIOUtil.nameHash(new X500Principal("DC=org,DC=terena,DC=tcs,C=SE,O=Karolinska Institutet,CN=daniel ferreira padilla danife@ki.se")));
-//		System.out.println(CertificateIOUtil.nameHash(new X500Principal("CN=daniel ferreira padilla danife@ki.se, O=Karolinska Institutet, C=SE, DC=tcs, DC=terena, DC=org")));
-		//		X509Credential x509Credential = new X509Credential("/home/jerome/Desktop/danicert.pem", "/home/jerome/Desktop/danikey.pem");
-//		x509Credential.getPrivateKey("5axrw4");
-//		X509Credential x509Credential = X509Credential.getDefaultCredential();
-		myProxy.put(new GlobusGSSCredentialImpl(x509Credential, GSSCredential.INITIATE_AND_ACCEPT), "TestKICerts", "thisisatestforki", 10);
-	}
-    
     /**
      * Initialize the MyProxy client object with the default
      * authorization policy.
@@ -258,7 +244,7 @@ public class MyProxy  {
         return this.authorization;
     }
 
-    private GssSocket getSocket(GSSCredential credential)
+    protected GssSocket getSocket(GSSCredential credential)
         throws IOException, GSSException {
         GSSManager manager = ExtendedGSSManager.getInstance();
 
@@ -848,7 +834,7 @@ public class MyProxy  {
         }
     }
 
-    private boolean matches(String line, int pos, String arg) {
+    protected boolean matches(String line, int pos, String arg) {
         return line.regionMatches(true,
                                   pos - arg.length(),
                                   arg,
@@ -856,11 +842,11 @@ public class MyProxy  {
                                   arg.length());
     }
 
-    private String getCredName(String line, int pos, String arg) {
+    protected String getCredName(String line, int pos, String arg) {
         return line.substring(CRED.length(), pos-arg.length());
     }
 
-    private CredentialInfo getCredentialInfo(Map<String, CredentialInfo> map, String name) {
+    protected CredentialInfo getCredentialInfo(Map<String, CredentialInfo> map, String name) {
         CredentialInfo info = (CredentialInfo)map.get(name);
         if (info == null) {
             info = new CredentialInfo();
@@ -1239,7 +1225,7 @@ public class MyProxy  {
         }
     }
 
-    private static String readLine(InputStream is) throws IOException {
+    protected static String readLine(InputStream is) throws IOException {
         StringBuffer sb = new StringBuffer();
         for (int c = is.read(); c > 0 && c != '\n'; c = is.read()) {
             sb.append((char) c);
@@ -1253,13 +1239,13 @@ public class MyProxy  {
         return null;
     }
 
-    private InputStream handleReply(InputStream in)
+    protected InputStream handleReply(InputStream in)
         throws IOException, MyProxyException {
         return handleReply(in, null, null, false);
     }
 
 
-    private InputStream handleReply(InputStream in,
+    protected InputStream handleReply(InputStream in,
                                     OutputStream out,
                                     GSSCredential authzcreds,
                                     boolean wantTrustroots)
@@ -1402,7 +1388,7 @@ public class MyProxy  {
         return inn;
     }
 
-    private static void close(OutputStream out,
+    protected static void close(OutputStream out,
                               InputStream in,
                               Socket sock) {
         try {
@@ -1479,7 +1465,7 @@ public class MyProxy  {
       name hash from:
       http://blog.piefox.com/2008/10/javaopenssl-ca-generation.html
     */
-    private static String opensslHash(X509Certificate cert) {
+    protected static String opensslHash(X509Certificate cert) {
         try {
             return openssl_X509_NAME_hash(cert.getSubjectX500Principal());
         }
@@ -1492,7 +1478,7 @@ public class MyProxy  {
      * Generates a hex X509_NAME hash (like openssl x509 -hash -in cert.pem)
      * Based on openssl's crypto/x509/x509_cmp.c line 321
      */
-    private static String openssl_X509_NAME_hash(X500Principal p) throws Exception {
+    protected static String openssl_X509_NAME_hash(X500Principal p) throws Exception {
         // This code replicates OpenSSL's hashing function
         // DER-encode the Principal, MD5 hash it, then extract the first 4 bytes and reverse their positions
         byte[] derEncodedSubject = p.getEncoded();
@@ -1504,7 +1490,7 @@ public class MyProxy  {
     }
 
     // encode binary to hex
-    private static String toHex(final byte[] bin) {
+    protected static String toHex(final byte[] bin) {
         if (bin == null || bin.length == 0)
             return "";
 
