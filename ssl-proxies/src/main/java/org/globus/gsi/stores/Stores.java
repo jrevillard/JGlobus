@@ -27,6 +27,7 @@ import java.security.cert.CertificateException;
 import java.util.HashMap;
 
 import org.globus.common.CoGProperties;
+import org.globus.gsi.ProviderLoader;
 import org.globus.gsi.provider.GlobusProvider;
 import org.globus.gsi.provider.KeyStoreParametersFactory;
 
@@ -39,11 +40,34 @@ public class Stores {
 	private static String defaultCRLFilesPattern = "*.r*";
 	private static String defaultSigningPolicyFilesPattern = "*.signing_policy";
 
-	private static final HashMap<String, ReloadableTrustStore> TRUST_STORES = new HashMap<String, ReloadableTrustStore>();
-	private static final HashMap<String, ReloadableCrlStore> CRL_STORES = new HashMap<String, ReloadableCrlStore>();
-	private static final HashMap<String, ReloadableCaCertStore> CA_CERT_STORES = new HashMap<String, ReloadableCaCertStore>();
-	private static final HashMap<String, ResourceSigningPolicyStore> SIGNING_POLICY_STORES = new HashMap<String, ResourceSigningPolicyStore>();
+	private static HashMap<String, ReloadableTrustStore> TRUST_STORES = new HashMap<String, ReloadableTrustStore>();
+	private static HashMap<String, ReloadableCrlStore> CRL_STORES = new HashMap<String, ReloadableCrlStore>();
+	private static HashMap<String, ReloadableCaCertStore> CA_CERT_STORES = new HashMap<String, ReloadableCaCertStore>();
+	private static HashMap<String, ResourceSigningPolicyStore> SIGNING_POLICY_STORES = new HashMap<String, ResourceSigningPolicyStore>();
 	private final static long CACHE_TIME_MILLIS = 3600 * 1000;
+	
+	static{
+		new ProviderLoader();
+	}
+	
+	static void clearAll(){
+		synchronized (TRUST_STORES) {
+			TRUST_STORES.clear();
+			TRUST_STORES = new HashMap<String, ReloadableTrustStore>();
+		}
+		synchronized (CA_CERT_STORES) {
+			CA_CERT_STORES.clear();
+			CA_CERT_STORES = new HashMap<String, ReloadableCaCertStore>();
+		}
+		synchronized (CRL_STORES) {
+			CRL_STORES.clear();
+			CRL_STORES = new HashMap<String, ReloadableCrlStore>();
+		}
+		synchronized (SIGNING_POLICY_STORES) {
+			SIGNING_POLICY_STORES.clear();
+			SIGNING_POLICY_STORES = new HashMap<String, ResourceSigningPolicyStore>();
+		}
+	}
 
 	public static KeyStore getDefaultTrustStore() throws GeneralSecurityException, IOException {
 		String pattern = "file:" + CoGProperties.getDefault().getCaCertLocations() + "/" + defaultCAFilesPattern;

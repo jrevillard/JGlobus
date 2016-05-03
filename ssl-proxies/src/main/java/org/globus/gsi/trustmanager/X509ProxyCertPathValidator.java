@@ -33,8 +33,8 @@ import java.util.Map;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.KeyUsage;
-import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.globus.gsi.CertificateRevocationLists;
 import org.globus.gsi.GSIConstants.CertificateType;
@@ -387,7 +387,7 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
 
         KeyUsage issuerKeyUsage = CertificateUtil.getKeyUsage(issuersCertHolder);
         if (issuerKeyUsage != null){
-        	int bits = issuerKeyUsage.intValue();
+        	int bits = issuerKeyUsage.getBytes()[0] & 0xff;
         	if((bits & KeyUsage.keyCertSign) != KeyUsage.keyCertSign){
         		throw new CertPathValidatorException("Certificate " + issuersCertHolder.getSubject() + " violated key usage policy.");
             }
@@ -401,14 +401,14 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
         checkers.add(new DateValidityChecker());
         checkers.add(new UnsupportedCriticalExtensionChecker());
         checkers.add(new IdentityChecker(this));
-        // NOTE: the (possible) refresh of the CRLs happens when we call getDefault.
-        // Hence, we must recreate crlsList for each call to checkCertificate
-        // Sadly, this also means that the amount of work necessary for checkCertificate
-        // can be arbitrarily large (if the CRL is indeed refreshed).
-        //
-        // Note we DO NOT use this.certStore by default!  TODO: This differs from the unit test
-        CertificateRevocationLists crlsList = CertificateRevocationLists.getDefaultCertificateRevocationLists();
-        checkers.add(new CRLChecker(crlsList, this.keyStore, true));
+//        // NOTE: the (possible) refresh of the CRLs happens when we call getDefault.
+//        // Hence, we must recreate crlsList for each call to checkCertificate
+//        // Sadly, this also means that the amount of work necessary for checkCertificate
+//        // can be arbitrarily large (if the CRL is indeed refreshed).
+//        //
+//        // Note we DO NOT use this.certStore by default!  TODO: This differs from the unit test
+//        CertificateRevocationLists crlsList = CertificateRevocationLists.getDefaultCertificateRevocationLists();
+        checkers.add(new CRLChecker(this.certStore, this.keyStore, true));
         checkers.add(new SigningPolicyChecker(this.policyStore));
         return checkers;
     }
@@ -432,19 +432,19 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
     }
 
     protected void checkProxyConstraints(X509CertificateHolder proxy, X509CertificateHolder issuer) throws CertPathValidatorException, IOException {
-    	X509Extension proxyKeyUsage = null;
-    	X509Extension proxyExtension;
+    	Extension proxyKeyUsage = null;
+    	Extension proxyExtension;
         if (proxy.hasExtensions()) {
         	@SuppressWarnings("unchecked")
 			List<ASN1ObjectIdentifier> e = proxy.getExtensionOIDs();
             for (ASN1ObjectIdentifier oid : e) {
                 proxyExtension = proxy.getExtension(oid);
-                if (oid.equals(X509Extension.subjectAlternativeName)
-                        || oid.equals(X509Extension.issuerAlternativeName)) {
+                if (oid.equals(Extension.subjectAlternativeName)
+                        || oid.equals(Extension.issuerAlternativeName)) {
                     // No Alt name extensions - 3.2 & 3.5
                     throw new CertPathValidatorException(
                             "Proxy violation: no Subject or Issuer Alternative Name");
-                } else if (oid.equals(X509Extension.basicConstraints)) {
+                } else if (oid.equals(Extension.basicConstraints)) {
                     // Basic Constraint must not be true - 3.8
                     BasicConstraints basicExt =
                             CertificateUtil.getBasicConstraints(proxyExtension);
@@ -452,7 +452,7 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
                         throw new CertPathValidatorException(
                                 "Proxy violation: Basic Constraint CA is set to true");
                     }
-                } else if (oid.equals(X509Extension.keyUsage)) {
+                } else if (oid.equals(Extension.keyUsage)) {
                     proxyKeyUsage = proxyExtension;
 
                     checkKeyUsage(issuer, proxyExtension);
@@ -470,9 +470,9 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
 
     }
 
-    private void checkKeyUsage(X509CertificateHolder issuer, X509Extension proxyExtension) throws IOException, CertPathValidatorException {
+    private void checkKeyUsage(X509CertificateHolder issuer, Extension proxyExtension) throws IOException, CertPathValidatorException {
         KeyUsage keyUsage = CertificateUtil.getKeyUsage(proxyExtension);
-        int keyUsageBits = keyUsage.intValue();
+        int keyUsageBits = keyUsage.getBytes()[0] & 0xff;
 
         // these must not be asserted
         if(((keyUsageBits & KeyUsage.nonRepudiation) == KeyUsage.nonRepudiation)||((keyUsageBits & KeyUsage.keyCertSign) == KeyUsage.keyCertSign)){
@@ -480,8 +480,8 @@ public class X509ProxyCertPathValidator extends CertPathValidatorSpi {
         }
     }
 
-    private void checkExtension(ASN1ObjectIdentifier oid, X509Extension proxyExtension, X509Extension proxyKeyUsage) throws CertPathValidatorException {
-        if (oid.equals(X509Extension.keyUsage)) {
+    private void checkExtension(ASN1ObjectIdentifier oid, Extension proxyExtension, Extension proxyKeyUsage) throws CertPathValidatorException {
+        if (oid.equals(Extension.keyUsage)) {
             // If issuer has it then proxy must have it also
             if (proxyKeyUsage == null) {
                 throw new CertPathValidatorException(

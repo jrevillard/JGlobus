@@ -16,29 +16,15 @@ package org.globus.gsi.proxy.ext;
 
 import java.io.IOException;
 
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.x509.X509Extension;
+import org.bouncycastle.asn1.ASN1Encoding;
+import org.bouncycastle.asn1.x509.Extension;
 
 /**
  * Represents ProxyCertInfo X.509 extension.
  */
-public class ProxyCertInfoExtension extends X509Extension {
-	private final DERSequence bs;
+public class DRAFT_RFC_ProxyCertInfoExtension extends Extension {
 
-    public ProxyCertInfoExtension(ProxyCertInfo value) throws IOException {
-    	super(true, (ASN1OctetString)null); //ASN1OctetString.getInstance(value.getProxyPolicy())
-    	bs = (DERSequence) value.getDERObject();
-    }
-    
-    public ASN1OctetString getExtnValue() {
-        return null;
-		
-    }
-    
-    public ASN1Encodable getParsedValue()
-    {
-        return bs;
-    }
+    public DRAFT_RFC_ProxyCertInfoExtension(ProxyCertInfo value) throws IOException {
+	    super(ProxyCertInfo.DRAFT_RFC_OID, true, value.toASN1Primitive().getEncoded(ASN1Encoding.DER));
+	}
 }

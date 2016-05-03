@@ -36,7 +36,6 @@ import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.PasswordException;
-import org.bouncycastle.openssl.PasswordFinder;
 import org.globus.common.CoGProperties;
 import org.globus.gsi.GSIConstants.CertificateType;
 import org.globus.gsi.bc.GlobusStyle;
@@ -190,15 +189,7 @@ public class X509Credential implements Serializable {
     public PrivateKey getPrivateKey(final String password) throws CredentialException {
     	if(this.privateKey == null){
     		try {
-				this.privateKey = CertificateLoadUtil.loadPrivateKey(privateKeyFile, new PasswordFinder() {
-					
-					public char[] getPassword() {
-						if(password == null){
-							return null;
-						}
-						return password.toCharArray();
-					}
-				});
+				this.privateKey = CertificateLoadUtil.loadPrivateKey(privateKeyFile, password != null ? password.toCharArray() : null);
 			} catch (PasswordException e) {
 				throw new CredentialException("Key encrypted, password required");
 			} catch (IOException e) {

@@ -14,52 +14,46 @@
  */
 package org.globus.tools;
 
-import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.bouncycastle.asn1.x509.X509Extension;
-import org.bouncycastle.asn1.x509.X509Extensions;
-import org.bouncycastle.openssl.PasswordException;
-import org.globus.gsi.util.CertificateLoadUtil;
-import org.globus.gsi.util.CertificateUtil;
-import org.globus.gsi.util.ProxyCertificateUtil;
-
-import org.globus.gsi.trustmanager.X509ProxyCertPathValidator;
-
-import org.globus.gsi.stores.ResourceSigningPolicyStore;
-import org.globus.gsi.stores.Stores;
-
-import org.globus.gsi.X509Credential;
-import org.globus.gsi.X509ProxyCertPathParameters;
-
-import org.globus.gsi.provider.GlobusProvider;
-
-import java.security.Security;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Map;
-import java.security.cert.CertStore;
-import java.security.KeyStore;
-import java.security.cert.CertPathValidatorException;
-import java.security.cert.CertPath;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.Security;
+import java.security.cert.CertPath;
+import java.security.cert.CertPathValidatorException;
+import java.security.cert.CertStore;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.io.OutputStream;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.EOFException;
-import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.openssl.PasswordException;
 import org.globus.common.CoGProperties;
 import org.globus.common.Version;
 import org.globus.gsi.GSIConstants;
+import org.globus.gsi.X509Credential;
+import org.globus.gsi.X509ProxyCertPathParameters;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
-import org.globus.gsi.proxy.ext.ProxyPolicy;
-import org.globus.gsi.proxy.ext.ProxyCertInfo;
-import org.globus.gsi.proxy.ext.ProxyCertInfoExtension;
-import org.globus.gsi.proxy.ext.GlobusProxyCertInfoExtension;
+import org.globus.gsi.provider.GlobusProvider;
 import org.globus.gsi.proxy.ProxyPolicyHandler;
+import org.globus.gsi.proxy.ext.ProxyCertInfo;
+import org.globus.gsi.proxy.ext.ProxyPolicy;
+import org.globus.gsi.stores.ResourceSigningPolicyStore;
+import org.globus.gsi.stores.Stores;
+import org.globus.gsi.trustmanager.X509ProxyCertPathValidator;
+import org.globus.gsi.util.CertificateLoadUtil;
+import org.globus.gsi.util.CertificateUtil;
+import org.globus.gsi.util.ProxyCertificateUtil;
 import org.globus.util.Util;
 
 /* ###########################################################################
@@ -652,19 +646,21 @@ class DefaultProxyInit extends ProxyInit {
 	public void sign() {
 		try {
 			BouncyCastleCertProcessingFactory factory = BouncyCastleCertProcessingFactory.getDefault();
-			Hashtable<DERObjectIdentifier,X509Extension> extensions = new Hashtable<DERObjectIdentifier, X509Extension>();
-			if (proxyCertInfo != null) {
-				if (ProxyCertificateUtil.isGsi4Proxy(proxyType)) {
-					// RFC compliant OID
-				    X509Extension ext = new ProxyCertInfoExtension(proxyCertInfo);
-				    extensions.put(ProxyCertInfo.OID, ext);
-				} else {
-					// old OID
-					X509Extension ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
-					extensions.put(ProxyCertInfo.OID, ext);
-				}
-			}
-			proxy = factory.createCredential(certificates, userKey, bits, lifetime, proxyType, new X509Extensions(extensions));
+			List<Extension> extensions = new ArrayList<Extension>();
+			// FIXME
+			// if (proxyCertInfo != null) {
+			// if (ProxyCertificateUtil.isGsi4Proxy(proxyType)) {
+			// // RFC compliant OID
+			// Extension ext = new ProxyCertInfoExtension(proxyCertInfo);
+			// extensions.add(ext);
+			// } else {
+			// // old OID
+			// Extension ext = new GlobusProxyCertInfoExtension(proxyCertInfo);
+			// extensions.put(ProxyCertInfo.OID, ext);
+			// }
+			// }
+			proxy = factory.createCredential(certificates, userKey, bits, lifetime, proxyType, new Extensions(
+					extensions.toArray(new Extension[extensions.size()])));
 		} catch (Exception e) {
 			System.err.println("Failed to create a proxy: " + e.getMessage());
 			System.exit(-1);

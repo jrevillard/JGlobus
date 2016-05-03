@@ -28,7 +28,6 @@ import java.security.cert.CertStoreParameters;
 import java.security.cert.CertStoreSpi;
 import java.security.cert.Certificate;
 import java.security.cert.TrustAnchor;
-import java.security.cert.X509CRL;
 import java.security.cert.X509CRLSelector;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
@@ -113,7 +112,7 @@ public class ResourceCertStore extends CertStoreSpi {
 		}
 		// Given that we always only use subject, how can we improve performance
 		// here. Custom
-		Vector<X509Certificate> certSet = new Vector<X509Certificate>();
+		Vector<X509Certificate> certSet = new Vector<X509Certificate>(1);
 		if (selector == null) {
 			for (TrustAnchor trustAnchor : caDelegate.getCollection()) {
 				certSet.add(trustAnchor.getTrustedCert());
@@ -167,7 +166,7 @@ public class ResourceCertStore extends CertStoreSpi {
 		}
 
 		if (crlDelegate.getCollection() == null) {
-			return new Vector<X509CRL>();
+			return new Vector<RefreshableX509CRL>();
 		}
 
 		// Given that we always only use subject, how can we improve performance
@@ -176,8 +175,8 @@ public class ResourceCertStore extends CertStoreSpi {
 		if (selector == null) {
 			return crlDelegate.getCollection();
 		} else {
-			Vector<X509CRL> certSet = new Vector<X509CRL>();
-			for (X509CRL crl : crlDelegate.getCollection()) {
+			Vector<RefreshableX509CRL> certSet = new Vector<RefreshableX509CRL>(1);
+			for (RefreshableX509CRL crl : crlDelegate.getCollection()) {
 				if (selector.match(crl)) {
 					certSet.add(crl);
 				}

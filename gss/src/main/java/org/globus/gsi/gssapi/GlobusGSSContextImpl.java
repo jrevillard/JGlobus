@@ -16,8 +16,6 @@ package org.globus.gsi.gssapi;
 
 import org.globus.gsi.util.CertificateUtil;
 import org.globus.gsi.util.ProxyCertificateUtil;
-
-
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSContext;
@@ -26,10 +24,10 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.ietf.jgss.MessageProp;
 import org.ietf.jgss.ChannelBinding;
-
 import org.gridforum.jgss.ExtendedGSSContext;
 import org.gridforum.jgss.ExtendedGSSCredential;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -68,8 +66,8 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
-import org.globus.gsi.jsse.SSLConfigurator;
 
+import org.globus.gsi.jsse.SSLConfigurator;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 
 /*
@@ -87,7 +85,6 @@ import COM.claymoresystems.util.Util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.globus.gsi.stores.Stores;
 
 /**

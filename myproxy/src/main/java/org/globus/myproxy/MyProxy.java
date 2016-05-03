@@ -63,6 +63,7 @@ import org.globus.gsi.gssapi.auth.Authorization;
 import org.globus.gsi.gssapi.net.GssSocket;
 import org.globus.gsi.gssapi.net.GssSocketFactory;
 import org.globus.gsi.util.CertificateIOUtil;
+import org.globus.gsi.util.CertificateLoadUtil;
 import org.globus.gsi.util.CertificateUtil;
 import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSContext;
@@ -158,6 +159,21 @@ public class MyProxy  {
     protected String[] trustrootData;
     private final static String TRUSTED_CERT_PATH = "/.globus/certificates";
 
+    public static void main(String[] args) throws Exception {
+		MyProxy myProxy = new MyProxy("myproxy.gnubila.fr", 7512);
+		
+		X509Credential x509Credential = CertificateLoadUtil.loadKeystore("/home/jerome/Desktop/dani.p12", "ibanez270".toCharArray(), null, null, "PKCS12");
+//		x509Credential = BouncyCastleCertProcessingFactory.getDefault().createCredential(x509Credential.getCertificateChain(), x509Credential.getPrivateKey(), 1024, 12, CertificateType.GSI_2_PROXY);
+//		System.out.println(CertificateIOUtil.nameHash(new X500Name("DC=org,DC=terena,DC=tcs,C=SE,O=Karolinska Institutet,CN=daniel ferreira padilla danife@ki.se")));
+//		System.out.println(CertificateIOUtil.nameHash(new X500Name("CN=daniel ferreira padilla danife@ki.se,O=Karolinska Institutet,C=SE,DC=tcs,DC=terena,DC=org")));
+//		System.out.println(CertificateIOUtil.nameHash(new X500Principal("DC=org,DC=terena,DC=tcs,C=SE,O=Karolinska Institutet,CN=daniel ferreira padilla danife@ki.se")));
+//		System.out.println(CertificateIOUtil.nameHash(new X500Principal("CN=daniel ferreira padilla danife@ki.se, O=Karolinska Institutet, C=SE, DC=tcs, DC=terena, DC=org")));
+		//		X509Credential x509Credential = new X509Credential("/home/jerome/Desktop/danicert.pem", "/home/jerome/Desktop/danikey.pem");
+//		x509Credential.getPrivateKey("5axrw4");
+//		X509Credential x509Credential = X509Credential.getDefaultCredential();
+		myProxy.put(new GlobusGSSCredentialImpl(x509Credential, GSSCredential.INITIATE_AND_ACCEPT), "TestKICerts", "thisisatestforki", 10);
+	}
+    
     /**
      * Initialize the MyProxy client object with the default
      * authorization policy.

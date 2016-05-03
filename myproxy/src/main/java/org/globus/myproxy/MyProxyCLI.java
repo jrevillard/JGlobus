@@ -26,7 +26,6 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 
-import org.bouncycastle.openssl.PasswordFinder;
 import org.globus.common.CoGProperties;
 import org.globus.common.Version;
 import org.globus.gsi.GSIConstants;
@@ -1125,20 +1124,12 @@ public class MyProxyCLI {
         PrivateKey userKey = null;
 
         try {
-        	userKey = CertificateLoadUtil.loadPrivateKey(userKeyFile, new PasswordFinder() {
-				
-				public char[] getPassword() {
-					String prompt = "Enter GRID pass phrase: ";
+        	String prompt = "Enter GRID pass phrase: ";
 
-	                String pwd = (stdin) ? 
-	                    Util.getInput(prompt) : Util.getPrivateInput(prompt);
-	                
-	                if (pwd == null) {
-	                    System.exit(-1);
-	                }
-	                return pwd.toCharArray();
-				}
-			});
+            String pwd = (stdin) ? 
+                Util.getInput(prompt) : Util.getPrivateInput(prompt);
+            
+            userKey = CertificateLoadUtil.loadPrivateKey(userKeyFile,pwd != null ? pwd.toCharArray() : null);
         } catch(IOException e) {
             System.err.println("Error: Failed to load key: " + userKeyFile);
             System.exit(-1);

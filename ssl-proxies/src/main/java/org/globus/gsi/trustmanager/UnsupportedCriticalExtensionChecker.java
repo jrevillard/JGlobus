@@ -57,10 +57,10 @@ public class UnsupportedCriticalExtensionChecker implements CertificateChecker {
         boolean unsupportedCritExtention = criticalExtensionOid.equals(X509ProxyCertPathValidator.BASIC_CONSTRAINT_OID);
         unsupportedCritExtention = unsupportedCritExtention || criticalExtensionOid.equals(X509ProxyCertPathValidator.KEY_USAGE_OID);
         unsupportedCritExtention = unsupportedCritExtention
-                || (criticalExtensionOid.equals(ProxyCertInfo.OID.toString())
+                || (criticalExtensionOid.equals(ProxyCertInfo.RFC_OID.toString())
                 && ProxyCertificateUtil.isGsi4Proxy(certType));
         unsupportedCritExtention = unsupportedCritExtention
-                || (criticalExtensionOid.equals(ProxyCertInfo.OLD_OID.toString())
+                || (criticalExtensionOid.equals(ProxyCertInfo.DRAFT_RFC_OID.toString())
                 && ProxyCertificateUtil.isGsi3Proxy(certType));
 
         if (unsupportedCritExtention) {

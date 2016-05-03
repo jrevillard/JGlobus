@@ -14,28 +14,29 @@
  */
 package org.globus.tools;
 
-import java.security.GeneralSecurityException;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.openssl.MiscPEMGenerator;
-import org.bouncycastle.openssl.PKCS8Generator;
 import org.bouncycastle.openssl.PasswordException;
+import org.bouncycastle.openssl.jcajce.JcaPKCS8Generator;
+import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8EncryptorBuilder;
+import org.bouncycastle.openssl.jcajce.JcePEMEncryptorBuilder;
 import org.bouncycastle.util.io.pem.PemObjectGenerator;
 import org.bouncycastle.util.io.pem.PemWriter;
-import org.globus.util.Util;
 import org.globus.common.CoGProperties;
 import org.globus.common.Version;
 import org.globus.gsi.util.CertificateLoadUtil;
 import org.globus.gsi.util.CertificateUtil;
+import org.globus.util.Util;
 
 /** Changes the Passphrase.
  * <pre>
@@ -134,11 +135,9 @@ public class ChangePassPhrase {
 
 			PemObjectGenerator pemObjectGenerator;
 			if ("PKCS#8".equals(key.getFormat())) {
-				pemObjectGenerator = new PKCS8Generator(key);
-				((PKCS8Generator) pemObjectGenerator).setPassword(pwd1.toCharArray());
+				pemObjectGenerator = new JcaPKCS8Generator(key,new JceOpenSSLPKCS8EncryptorBuilder(PKCSObjectIdentifiers.sha1WithRSAEncryption).setPasssword(pwd1.toCharArray()).build());
 			} else {
-				pemObjectGenerator = new MiscPEMGenerator(key, "DES-EDE3-CBC", pwd1.toCharArray(),
-						new SecureRandom(), new BouncyCastleProvider());
+				pemObjectGenerator = new MiscPEMGenerator(key, new JcePEMEncryptorBuilder("DES-EDE3-CBC").build(pwd1.toCharArray()));
 			}
 
 			File newFile = Util.createFile(file + ".new");

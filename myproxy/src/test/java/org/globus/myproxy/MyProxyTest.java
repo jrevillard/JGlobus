@@ -236,22 +236,22 @@ public class MyProxyTest extends TestCase {
 	}
     }
 
-    // get credential anonymously
-    public void testPutGet3() throws Exception {
-	myProxy.put(cred,
-		    username,
-		    password,
-		    lifetime);
-
-	GSSCredential mCred = myProxy.get(username,
-					  password,
-					  lifetime);
-	assertTrue(mCred != null);
-	X509Credential gCred = 
-	    ((GlobusGSSCredentialImpl)mCred).getX509Credential();
-	assertTrue(gCred != null);
-	gCred.verify();
-    }
+//    // get credential anonymously
+//    public void testPutGet3() throws Exception {
+//	myProxy.put(cred,
+//		    username,
+//		    password,
+//		    lifetime);
+//
+//	GSSCredential mCred = myProxy.get(username,
+//					  password,
+//					  lifetime);
+//	assertTrue(mCred != null);
+//	X509Credential gCred = 
+//	    ((GlobusGSSCredentialImpl)mCred).getX509Credential();
+//	assertTrue(gCred != null);
+//	gCred.verify();
+//    }
 
     public void testChangePassword() throws Exception {
 	myProxy.put(cred,

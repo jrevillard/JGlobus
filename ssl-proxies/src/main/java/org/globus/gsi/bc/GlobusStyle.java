@@ -1,5 +1,6 @@
 package org.globus.gsi.bc;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.ASN1String;
@@ -279,12 +281,12 @@ public class GlobusStyle extends BCStyle {
 			Set<ASN1ObjectIdentifier> asn1ObjectIdentifiers = DefaultSymbols.keySet();
 			for (ASN1ObjectIdentifier asn1ObjectIdentifier : asn1ObjectIdentifiers) {
 				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
-						((ASN1Set) rdn1.getDERObject()).getObjectAt(0)).getType())) {
+						((ASN1Set) rdn1.toASN1Primitive()).getObjectAt(0)).getType())) {
 					// Revert
 					return true;
 				}
 				if (asn1ObjectIdentifier.equals(AttributeTypeAndValue.getInstance(
-						((ASN1Set) rdn2.getDERObject()).getObjectAt(0)).getType())) {
+						((ASN1Set) rdn2.toASN1Primitive()).getObjectAt(0)).getType())) {
 					// Do not revert;
 					return false;
 				}
@@ -319,23 +321,30 @@ public class GlobusStyle extends BCStyle {
 	 *
 	 */
 	public static class GlobusIETFUtils extends IETFUtils {
-		public static void appendTypeAndValue(StringBuffer buf, AttributeTypeAndValue typeAndValue, Hashtable oidSymbols) {
-			String sym = (String) oidSymbols.get(typeAndValue.getType());
+	    public static void appendTypeAndValue(
+	        StringBuffer          buf,
+	        AttributeTypeAndValue typeAndValue,
+	        Hashtable             oidSymbols)
+	    {
+	        String  sym = (String)oidSymbols.get(typeAndValue.getType());
 
-			if (sym != null) {
-				buf.append(sym);
-			} else {
-				buf.append(typeAndValue.getType().getId());
-			}
+	        if (sym != null)
+	        {
+	            buf.append(sym);
+	        }
+	        else
+	        {
+	            buf.append(typeAndValue.getType().getId());
+	        }
 
-			buf.append('=');
+	        buf.append('=');
 
-			buf.append(valueToString(typeAndValue.getValue()));
-		}
+	        buf.append(valueToString(typeAndValue.getValue()));
+	    }
 		
 		public static String valueToString(ASN1Encodable value)
 	    {
-	        StringBuffer vBuf = new StringBuffer();
+			StringBuffer vBuf = new StringBuffer();
 
 	        if (value instanceof ASN1String && !(value instanceof DERUniversalString))
 	        {
@@ -351,7 +360,14 @@ public class GlobusStyle extends BCStyle {
 	        }
 	        else
 	        {
-	            vBuf.append("#" + bytesToString(Hex.encode(value.getDERObject().getDEREncoded())));
+	            try
+	            {
+	                vBuf.append("#" + bytesToString(Hex.encode(value.toASN1Primitive().getEncoded(ASN1Encoding.DER))));
+	            }
+	            catch (IOException e)
+	            {
+	                throw new IllegalArgumentException("Other value has no encoded form");
+	            }
 	        }
 
 	        int     end = vBuf.length();
@@ -380,17 +396,38 @@ public class GlobusStyle extends BCStyle {
 	            index++;
 	        }
 
+	        int start = 0;
+	        if (vBuf.length() > 0)
+	        {
+	            while (vBuf.charAt(start) == ' ')
+	            {
+	                vBuf.insert(start, "\\");
+	                start += 2;
+	            }
+	        }
+
+	        int endBuf = vBuf.length() - 1;
+
+	        while (endBuf >= 0 && vBuf.charAt(endBuf) == ' ')
+	        {
+	            vBuf.insert(endBuf, '\\');
+	            endBuf--;
+	        }
+
 	        return vBuf.toString();
 	    }
 		
-		private static String bytesToString(byte[] data) {
-			char[] cs = new char[data.length];
+	    private static String bytesToString(
+	        byte[] data)
+	    {
+	        char[]  cs = new char[data.length];
 
-			for (int i = 0; i != cs.length; i++) {
-				cs[i] = (char) (data[i] & 0xff);
-			}
+	        for (int i = 0; i != cs.length; i++)
+	        {
+	            cs[i] = (char)(data[i] & 0xff);
+	        }
 
-			return new String(cs);
-		}
+	        return new String(cs);
+	    }
 	}
 }

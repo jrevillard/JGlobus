@@ -91,7 +91,7 @@ public final class CertificateIOUtil {
     }
 
     public static byte[] encodePrincipal(X500Name subject) throws IOException {
-        return subject.getDEREncoded();
+        return subject.getEncoded();
     }
 
     private synchronized static String hash(byte[] data) {

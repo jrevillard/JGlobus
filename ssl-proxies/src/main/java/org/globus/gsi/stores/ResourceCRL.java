@@ -31,7 +31,7 @@ import java.security.cert.X509CRL;
  * Time: 12:41:39 PM
  * To change this template use File | Settings | File Templates.
  */
-public class ResourceCRL extends AbstractResourceSecurityWrapper<X509CRL> {
+public class ResourceCRL extends AbstractResourceSecurityWrapper<RefreshableX509CRL> {
 
     public ResourceCRL(String fileName) throws ResourceStoreException {
     	super(false);
@@ -43,7 +43,7 @@ public class ResourceCRL extends AbstractResourceSecurityWrapper<X509CRL> {
         init(globusResource);
     }
 
-    public ResourceCRL(String fileName, X509CRL crl) throws ResourceStoreException {
+    public ResourceCRL(String fileName, RefreshableX509CRL crl) throws ResourceStoreException {
     	super(false);
         init(globusResolver.getResource(fileName), crl);
     }
@@ -53,11 +53,11 @@ public class ResourceCRL extends AbstractResourceSecurityWrapper<X509CRL> {
     }
 
     @Override
-    protected X509CRL create(GlobusResource resource) throws ResourceStoreException {
+    protected RefreshableX509CRL create(GlobusResource resource) throws ResourceStoreException {
         try {
             InputStream is = resource.getInputStream();
             try {
-                return CertificateLoadUtil.loadCrl(new BufferedInputStream(is));
+                return new RefreshableX509CRL(this,CertificateLoadUtil.loadCrl(new BufferedInputStream(is)));
             } finally {
                 try {
                     is.close();

@@ -21,7 +21,6 @@ import org.apache.commons.logging.Log;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.security.cert.X509CRL;
 
 
 import org.globus.util.GlobusResource;
@@ -29,7 +28,7 @@ import org.globus.util.GlobusResource;
 /**
  * Fill Me
  */
-public class ResourceCRLStore extends ResourceSecurityWrapperStore<ResourceCRL, X509CRL> {
+public class ResourceCRLStore extends ResourceSecurityWrapperStore<ResourceCRL, RefreshableX509CRL> {
 
     private static CrlFilter filter = new CrlFilter();
     private static final int MIN_NAME_LENGTH = 3;
