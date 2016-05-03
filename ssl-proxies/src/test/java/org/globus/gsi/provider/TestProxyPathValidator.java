@@ -292,7 +292,8 @@ public class TestProxyPathValidator {
     @Before
     public void setup() throws Exception {
 
-        CoGProperties.getDefault().setProperty(CoGProperties.getDefault().CRL_CACHE_LIFETIME, "1");
+        CoGProperties.getDefault().setProperty(CoGProperties.CRL_CACHE_LIFETIME, "1");
+        CoGProperties.getDefault().setProperty(CoGProperties.CERT_CACHE_LIFETIME, "1");
 
         Security.addProvider(new MockGlobusProvider());
 
@@ -709,7 +710,7 @@ public class TestProxyPathValidator {
                 new X509ProxyCertPathParameters(keyStore, certStore, policyStore, false, map);
         X509ProxyCertPathValidatorResult result =
                 (X509ProxyCertPathValidatorResult) validator.engineValidate(path, parameters);
-        // JGLOBUS-103 
+        // JGLOBUS-103
     }
 
     @Test

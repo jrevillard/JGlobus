@@ -83,7 +83,7 @@ public class BouncyCastleCertProcessingFactory {
 
     /**
      * Returns an instance of this class..
-     * 
+     *
      * @return <code>BouncyCastleCertProcessingFactory</code> instance.
      */
     public static synchronized BouncyCastleCertProcessingFactory getDefault() {
@@ -294,7 +294,7 @@ public class BouncyCastleCertProcessingFactory {
      * randomly. If the issuing certificate contains a <i>KeyUsage</i> extension, the extension will be copied
      * into the proxy certificate with <i>keyCertSign</i> and <i>nonRepudiation</i> bits turned off. No other
      * extensions are currently copied.
-     * 
+     *
      * The methods defaults to creating GSI 4 proxy
      * 
      * @param issuerCert
@@ -308,31 +308,17 @@ public class BouncyCastleCertProcessingFactory {
      *            lifetime of the new certificate in seconds. If 0 (or less then) the new certificate will
      *            have the same lifetime as the issuing certificate.
      * @param certType
-     *            can be one of {@link GSIConstants#CertificateType#DELEGATION_LIMITED GSIConstants.CertificateTypeDELEGATION_LIMITED},
-     *            {@link GSIConstants#CertificateType#DELEGATION_FULL GSIConstants.CertificateTypeDELEGATION_FULL},
-     * 
-     *            {@link GSIConstants#CertificateType#GSI_2_LIMITED_PROXY GSIConstants.CertificateType.GSI_2_LIMITED_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_2_PROXY GSIConstants.CertificateType.GSI_2_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_3_IMPERSONATION_PROXY GSIConstants.CertificateType.GSI_3_IMPERSONATION_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_3_LIMITED_PROXY GSIConstants.CertificateType.GSI_3_LIMITED_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_3_INDEPENDENT_PROXY GSIConstants.CertificateType.GSI_3_INDEPENDENT_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_3_RESTRICTED_PROXY GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY}.
-     *            {@link GSIConstants#CertificateType#GSI_4_IMPERSONATION_PROXY GSIConstants.CertificateType.GSI_4_IMPERSONATION_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_4_LIMITED_PROXY GSIConstants.CertificateType.GSI_3_LIMITED_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_4_INDEPENDENT_PROXY GSIConstants.CertificateType.GSI_4_INDEPENDENT_PROXY},
-     *            {@link GSIConstants#CertificateType#GSI_4_RESTRICTED_PROXY GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY}.
-     * 
-     *            If {@link GSIConstants#CertificateType#DELEGATION_LIMITED GSIConstants.CertificateTypeDELEGATION_LIMITED} and if
-     *            {@link VersionUtil#isGsi2Enabled() CertUtil.isGsi2Enabled} returns true then a GSI-2 limited
-     *            proxy will be created. Else if {@link VersionUtil#isGsi3Enabled() CertUtil.isGsi3Enabled}
-     *            returns true then a GSI-3 limited proxy will be created. If not, a GSI-4 limited proxy will
-     *            be created.
-     * 
-     *            If {@link GSIConstants#CertificateType#DELEGATION_FULL GSIConstants.CertificateTypeDELEGATION_FULL} and if
-     *            {@link VersionUtil#isGsi2Enabled() CertUtil.isGsi2Enabled} returns true then a GSI-2 full proxy
-     *            will be created. Else if {@link VersionUtil#isGsi3Enabled() CertUtil.isGsi3Enabled} returns
-     *            true then a GSI-3 full proxy will be created. If not, a GSI-4 full proxy will be created.
-     * 
+     *            can be one of {@link org.globus.gsi#GSIConstants.CertificateType#GSI_2_LIMITED_PROXY GSIConstants.CertificateType.GSI_2_LIMITED_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_2_PROXY GSIConstants.CertificateType.GSI_2_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_3_IMPERSONATION_PROXY GSIConstants.CertificateType.GSI_3_IMPERSONATION_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_3_LIMITED_PROXY GSIConstants.CertificateType.GSI_3_LIMITED_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_3_INDEPENDENT_PROXY GSIConstants.CertificateType.GSI_3_INDEPENDENT_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_3_RESTRICTED_PROXY GSIConstants.CertificateType.GSI_3_RESTRICTED_PROXY}.
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_4_IMPERSONATION_PROXY GSIConstants.CertificateType.GSI_4_IMPERSONATION_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_4_LIMITED_PROXY GSIConstants.CertificateType.GSI_3_LIMITED_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_4_INDEPENDENT_PROXY GSIConstants.CertificateType.GSI_4_INDEPENDENT_PROXY},
+     *            {@link org.globus.gsi.GSIConstants#CertificateType#GSI_4_RESTRICTED_PROXY GSIConstants.CertificateType.GSI_4_RESTRICTED_PROXY}.
+     *
      * @param extSet
      *            a set of X.509 extensions to be included in the new proxy certificate. Can be null. If
      *            delegation mode is {@link GSIConstants#CertificateType#GSI_3_RESTRICTED_PROXY
@@ -340,7 +326,7 @@ public class BouncyCastleCertProcessingFactory {
      *            GSIConstants.GSI_4_RESTRICTED_PROXY} then
      *            {@link org.globus.gsi.proxy.ext.ProxyCertInfoExtension ProxyCertInfoExtension} must be
      *            present in the extension set.
-     * 
+     *
      * @param cnValue
      *            the value of the CN component of the subject of the new certificate. If null, the defaults
      *            will be used depending on the proxy certificate type created.
@@ -583,7 +569,7 @@ public class BouncyCastleCertProcessingFactory {
      * DN with <I>"CN=proxy"</I> name component appended to the subject is used as the subject of the
      * certificate request. Also the certificate's signing algorithm is used as the certificate request
      * signing algorithm.
-     * 
+     *
      * @param cert
      *            the certificate to create the certificate request from.
      * @param keyPair
@@ -600,7 +586,7 @@ public class BouncyCastleCertProcessingFactory {
 
     /**
      * Creates a certificate request from the specified subject name, signing algorithm, and a key pair.
-     * 
+     *
      * @param subjectDN
      *            the subject name of the certificate request.
      * @param sigAlgName

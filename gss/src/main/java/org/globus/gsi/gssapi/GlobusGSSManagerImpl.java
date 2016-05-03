@@ -42,7 +42,7 @@ import org.ietf.jgss.Oid;
  */
 public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 
-    private static Log logger = 
+    private static Log logger =
 	LogFactory.getLog(GlobusGSSManagerImpl.class.getName());
 
     static final Oid[] MECHS;
@@ -58,15 +58,15 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
     private GlobusGSSCredentialImpl defaultCred;
 
     /**
-     * Acquires GSI GSS credentials. 
+     * Acquires GSI GSS credentials.
      *
      * @see #createCredential(GSSName, int, Oid, int)
      */
     public GSSCredential createCredential (int usage)
 	throws GSSException {
-	return createCredential(null, 
+	return createCredential(null,
 				GSSCredential.DEFAULT_LIFETIME,
-				(Oid)null, 
+				(Oid)null,
 				usage);
     }
 
@@ -74,19 +74,19 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
      * in the private credential set of the current JAAS Subject. If the
      * Subject is not set or credentials are not found in the Subject, it
      * tries to get a default user credential (usually an user proxy file)
-     * 
-     * @param lifetime Only lifetime set to 
+     *
+     * @param lifetime Only lifetime set to
      *        {@link GSSCredential#DEFAULT_LIFETIME
      *        GSSCredential.DEFAULT_LIFETIME} is allowed.
      * @see org.globus.gsi.X509Credential#getDefaultCredential()
      */
     public GSSCredential createCredential (GSSName name,
-					   int lifetime, 
-					   Oid mech, 
+					   int lifetime,
+					   Oid mech,
 					   int usage)
 	throws GSSException {
 	checkMechanism(mech);
-	
+
 	if (name != null) {
 	    if (name.isAnonymous()) {
 		return new GlobusGSSCredentialImpl();
@@ -100,11 +100,13 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	Subject subject = JaasSubject.getCurrentSubject();
 	if (subject != null) {
 	    logger.debug("Getting credential from context");
-	    Set<GlobusGSSCredentialImpl> gssCreds = subject.getPrivateCredentials(GlobusGSSCredentialImpl.class);
+	    Set<GlobusGSSCredentialImpl> gssCreds =
+		subject.getPrivateCredentials(GlobusGSSCredentialImpl.class);
 	    if (gssCreds != null) {
 		Iterator<GlobusGSSCredentialImpl> iter = gssCreds.iterator();
 		if (iter.hasNext()) {
-		    GlobusGSSCredentialImpl credImpl = iter.next();
+		    GlobusGSSCredentialImpl credImpl =
+			(GlobusGSSCredentialImpl)iter.next();
 		    cred = credImpl.getX509Credential();
 		}
 	    }
@@ -114,7 +116,7 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
             lifetime > 0) {
             // lifetime not supported
             throw new GlobusGSSException(GSSException.FAILURE,
-                                         GlobusGSSException.BAD_ARGUMENT, 
+                                         GlobusGSSException.BAD_ARGUMENT,
                                          "badLifetime01");
 	}
 
@@ -138,7 +140,7 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 
     private synchronized GSSCredential getDefaultCredential(
                                                  X509Credential cred,
-                                                 int usage) 
+                                                 int usage)
         throws GSSException {
         if (this.defaultCred != null &&
             this.defaultCred.getUsage() == usage &&
@@ -149,22 +151,22 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
             return this.defaultCred;
         }
     }
-    
+
     /**
-     * Acquires GSI GSS credentials. 
+     * Acquires GSI GSS credentials.
      *
      * @see #createCredential(GSSName, int, Oid, int)
      */
     public GSSCredential createCredential(GSSName name,
-					  int lifetime, 
-					  Oid mechs[], 
+					  int lifetime,
+					  Oid mechs[],
 					  int usage)
 	throws GSSException {
 	if (mechs == null || mechs.length == 0) {
 	    return createCredential(name, lifetime, (Oid)null, usage);
 	} else {
 	    // XXX: not sure this is correct
-	    GSSCredential cred = 
+	    GSSCredential cred =
 		createCredential(name, lifetime, mechs[0], usage);
 	    for (int i = 1; i < mechs.length; i++) {
 		cred.add(name, lifetime, lifetime, mechs[i], usage);
@@ -173,14 +175,14 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	}
     }
 
-    /** 
+    /**
      * Imports a credential.
      *
-     * @param lifetime Only lifetime set to 
+     * @param lifetime Only lifetime set to
      *        {@link GSSCredential#DEFAULT_LIFETIME
      *        GSSCredential.DEFAULT_LIFETIME} is allowed.
      */
-    public GSSCredential createCredential (byte[] buff, 
+    public GSSCredential createCredential (byte[] buff,
 					   int option,
 					   int lifetime,
 					   Oid mech,
@@ -189,7 +191,7 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	checkMechanism(mech);
 
 	if (buff == null || buff.length < 1) {
-	    throw new GlobusGSSException(GSSException.FAILURE, 
+	    throw new GlobusGSSException(GSSException.FAILURE,
 					 GlobusGSSException.BAD_ARGUMENT,
 					 "invalidBuf");
 	}
@@ -198,7 +200,7 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
             lifetime > 0) {
             // lifetime not supported
             throw new GlobusGSSException(GSSException.FAILURE,
-                                         GlobusGSSException.BAD_ARGUMENT, 
+                                         GlobusGSSException.BAD_ARGUMENT,
                                          "badLifetime01");
 	}
 
@@ -238,19 +240,19 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 		}
 	}finally{
 		if (input != null) {
-            try {
-            	input.close();
-            } catch (Exception e) {
-                logger.warn("Unable to close streamreader.");
-            }
+		try {
+			input.close();
+		} catch (Exception e) {
+			logger.warn("Unable to close streamreader.");
+		}
         }
 	}
-	
+
 	return new GlobusGSSCredentialImpl(cred, usage);
     }
 
     // for initiators
-    public GSSContext createContext(GSSName peer, 
+    public GSSContext createContext(GSSName peer,
 				    Oid mech,
 				    GSSCredential cred,
 				    int lifetime)
@@ -272,11 +274,11 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 
 	return ctx;
     }
-    
+
     // for acceptors
     public GSSContext createContext(GSSCredential cred)
 	throws GSSException {
-	
+
 	GlobusGSSCredentialImpl globusCred = null;
 	if (cred == null) {
 	    globusCred = (GlobusGSSCredentialImpl)createCredential(GSSCredential.ACCEPT_ONLY);
@@ -289,7 +291,7 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	GSSContext ctx = new GlobusGSSContextImpl(null,  globusCred);
 	return ctx;
     }
-    
+
     public Oid[] getMechs() {
 	return MECHS;
     }
@@ -302,11 +304,11 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
     /**
      * Checks if the specified mechanism matches
      * the mechanism supported by this implementation.
-     * 
+     *
      * @param mech mechanism to check
      * @exception GSSException if mechanism not supported.
      */
-    public static void checkMechanism(Oid mech) 
+    public static void checkMechanism(Oid mech)
 	throws GSSException {
 	if (mech != null && !mech.equals(GSSConstants.MECH_OID)) {
 	    throw new GSSException(GSSException.BAD_MECH);
@@ -332,7 +334,7 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	throws GSSException {
 	throw new GSSException(GSSException.UNAVAILABLE);
     }
-    
+
     /**
      * Currently not implemented.
      */
@@ -340,13 +342,13 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	// not implemented, not needed by Globus
 	return null;
     }
-    
+
     /**
      * Currently not implemented.
      */
-    public GSSName createName(String nameStr, 
+    public GSSName createName(String nameStr,
 			      Oid nameType,
-			      Oid mech) 
+			      Oid mech)
 	throws GSSException {
 	throw new GSSException(GSSException.UNAVAILABLE);
     }
@@ -386,6 +388,6 @@ public class GlobusGSSManagerImpl extends ExtendedGSSManager {
 	// with a pluggable provider architecture
 	throw new GSSException(GSSException.UNAVAILABLE);
     }
-    
-    
+
+
 }

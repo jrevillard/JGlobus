@@ -1,15 +1,11 @@
 package org.globus.util;
 
-import org.apache.commons.codec.net.URLCodec;
-
 import java.io.File;
-import java.util.Arrays;
-import java.util.Vector;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
-import java.lang.reflect.Array;
-import java.net.URL;
 import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Provides methods to resolve locationPatterns and return GlobusResource
@@ -65,7 +61,7 @@ public class GlobusPathMatchingResourcePatternResolver {
      * Finds all the resources that match the Ant-Style locationPattern
      * @param locationPattern  Ant-Style location pattern which may be prefixed with
      *                         classpath:/, file:/, or describe a relative path.
-     * @return An array of GlobusResource containing all resources whose location match the locationPattern
+     * @return An array of GlobusResource containing all resources whose locaiton match the locationPattern
      */
     public GlobusResource[] getResources(String locationPattern) {
         String mainPath = "";
@@ -104,8 +100,7 @@ public class GlobusPathMatchingResourcePatternResolver {
      * @return A regex style location pattern representation of the antStyleLocationPattern
      */
     private String antToRegexConverter(String antStyleLocationPattern) {
-    	String regexStyleLocationPattern = antStyleLocationPattern.replaceAll("\\\\", "/");  // Escape \ in Windows OS path
-    	regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("\\+", "\\\\+"); // replace + with \\+ (the + is a path can produce "Dangling meta character '+' near index xx"
+        String regexStyleLocationPattern = antStyleLocationPattern.replace("\\", "/");
         regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("\\.", "\\\\."); // replace . with \\.
         regexStyleLocationPattern = regexStyleLocationPattern.replaceAll("//", "/");//Solution for known test cases with // issue at org.globus.gsi.proxy.ProxyPathValidatorTest line 536, Needs Review
         regexStyleLocationPattern = regexStyleLocationPattern.replace('?', '.'); // replace ? with .
@@ -142,15 +137,25 @@ public class GlobusPathMatchingResourcePatternResolver {
     }
 
     /**
-     * Go through every directory recursively and perform parseFilesInDirectory method.
+     * Recursive variant of parseFilesInDirectory.
      * @param currentDirectory The currentDirectory to explore.
      */
     private void parseDirectoryStructure(File currentDirectory) {
-        parseFilesInDirectory(currentDirectory);
-        File[] directoryContents = currentDirectory.listFiles();
-        if (directoryContents != null) {
+        File[] directoryContents;
+        if (currentDirectory.isDirectory()) {
+            directoryContents = currentDirectory.listFiles();    //Get a list of the files and directories
+        } else {
+            directoryContents = new File[] { currentDirectory };
+        }
+        if(directoryContents != null){
             for (File currentFile : directoryContents) {
-                if (currentFile.isDirectory()) {
+                if (currentFile.isFile()) { //We are only interested in files not directories
+                    String absolutePath = currentFile.getAbsolutePath().replace("\\", "/");
+                    Matcher locationPatternMatcher = locationPattern.matcher(absolutePath);
+                    if (locationPatternMatcher.find()) {
+                        pathsMatchingLocationPattern.add(new GlobusResource(absolutePath));
+                    }
+                } else if (currentFile.isDirectory()) {
                     parseDirectoryStructure(currentFile);
                 }
             }
@@ -175,7 +180,7 @@ public class GlobusPathMatchingResourcePatternResolver {
         if(directoryContents != null){
         for (File currentFile : directoryContents) {
             if (currentFile.isFile()) { //We are only interested in files not directories
-                absolutePath = currentFile.getAbsolutePath().replace("\\", "/"); // On Windows OS, update \ with /
+                absolutePath = currentFile.getAbsolutePath();
                 locationPatternMatcher = locationPattern.matcher(absolutePath);
                 if (locationPatternMatcher.find()) {
                     pathsMatchingLocationPattern.add(new GlobusResource(absolutePath));

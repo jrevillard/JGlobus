@@ -7,8 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.ASN1String;
+import org.bouncycastle.asn1.DERUniversalString;
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -16,6 +19,7 @@ import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.X500NameStyle;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.util.encoders.Hex;
 
 public class GlobusStyle extends BCStyle {
 
@@ -302,10 +306,91 @@ public class GlobusStyle extends BCStyle {
 					buf.append('/');
 				}
 
-				IETFUtils.appendTypeAndValue(buf, atv[j], DefaultSymbols);
+				GlobusIETFUtils.appendTypeAndValue(buf, atv[j], DefaultSymbols);
 			}
 		} else {
-			IETFUtils.appendTypeAndValue(buf, rdn.getFirst(), DefaultSymbols);
+			GlobusIETFUtils.appendTypeAndValue(buf, rdn.getFirst(), DefaultSymbols);
+		}
+	}
+	
+	/**
+	 * This class only modify the default {@link IETFUtils} behaviour not to escape ','
+	 * in {@link #valueToString(ASN1Encodable)}
+	 *
+	 */
+	public static class GlobusIETFUtils extends IETFUtils {
+		public static void appendTypeAndValue(StringBuffer buf, AttributeTypeAndValue typeAndValue, Hashtable oidSymbols) {
+			String sym = (String) oidSymbols.get(typeAndValue.getType());
+
+			if (sym != null) {
+				buf.append(sym);
+			} else {
+				buf.append(typeAndValue.getType().getId());
+			}
+
+			buf.append('=');
+
+			buf.append(valueToString(typeAndValue.getValue()));
+		}
+		
+		public static String valueToString(ASN1Encodable value)
+	    {
+	        StringBuffer vBuf = new StringBuffer();
+
+	        if (value instanceof ASN1String && !(value instanceof DERUniversalString))
+	        {
+	            String v = ((ASN1String)value).getString();
+	            if (v.length() > 0 && v.charAt(0) == '#')
+	            {
+	                vBuf.append("\\" + v);
+	            }
+	            else
+	            {
+	                vBuf.append(v);
+	            }
+	        }
+	        else
+	        {
+	            vBuf.append("#" + bytesToString(Hex.encode(value.getDERObject().getDEREncoded())));
+	        }
+
+	        int     end = vBuf.length();
+	        int     index = 0;
+
+	        if (vBuf.length() >= 2 && vBuf.charAt(0) == '\\' && vBuf.charAt(1) == '#')
+	        {
+	            index += 2;
+	        }
+
+	        while (index != end)
+	        {
+	            if ((vBuf.charAt(index) == '"')
+	               || (vBuf.charAt(index) == '\\')
+	               || (vBuf.charAt(index) == '+')
+	               || (vBuf.charAt(index) == '=')
+	               || (vBuf.charAt(index) == '<')
+	               || (vBuf.charAt(index) == '>')
+	               || (vBuf.charAt(index) == ';'))
+	            {
+	                vBuf.insert(index, "\\");
+	                index++;
+	                end++;
+	            }
+
+	            index++;
+	        }
+
+	        return vBuf.toString();
+	    }
+		
+		private static String bytesToString(byte[] data) {
+			char[] cs = new char[data.length];
+
+			for (int i = 0; i != cs.length; i++) {
+				cs[i] = (char) (data[i] & 0xff);
+			}
+
+			return new String(cs);
 		}
 	}
 }

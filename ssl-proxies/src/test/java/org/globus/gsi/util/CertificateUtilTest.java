@@ -263,14 +263,14 @@ public class CertificateUtilTest {
         assertThat(principal, is(new X500Principal("")));
     }
 
-//    @Test
-//    public void testToPrincipalWithWhiteSpace()
-//    {
-//        X500Principal principal =
-//            CertificateUtil.toPrincipal(" /DC=org/ DC=DOEGrids/OU=Certificate Authorities / CN=DOEGrids CA 1   ");
-//        assertThat(principal, is(new X500Principal(
-//            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
-//    }
+    @Test
+    public void testToPrincipalWithWhiteSpace()
+    {
+        X500Principal principal =
+            CertificateUtil.toPrincipal(" /DC=org/ DC=DOEGrids/OU=Certificate Authorities / CN=DOEGrids CA 1   ");
+        assertThat(principal, is(new X500Principal(
+            "CN=DOEGrids CA 1, OU=Certificate Authorities, DC=DOEGrids, DC=org")));
+    }
 
     @Test
     public void testToPrincipalWithRdnUnknownToJre()
@@ -286,6 +286,14 @@ public class CertificateUtilTest {
     public void testToPrincipalWithUrl() {
         String dn = "/C=US/ST=UT/L=Salt Lake City/O=The USERTRUST Network"
                 + "/OU=http://www.usertrust.com/CN=UTN-USERFirst-Client Authentication and Email";
+        X500Principal principal = CertificateUtil.toPrincipal(dn);
+        String newDn = CertificateUtil.toGlobusID(principal);
+        assertThat(newDn, is(dn));
+    }
+
+    @Test
+    public void testToPrincipalWithComma() {
+        String dn = "/C=DE/ST=Hamburg/O=dCache.ORG/CN=Gena, Crocodile";
         X500Principal principal = CertificateUtil.toPrincipal(dn);
         String newDn = CertificateUtil.toGlobusID(principal);
         assertThat(newDn, is(dn));

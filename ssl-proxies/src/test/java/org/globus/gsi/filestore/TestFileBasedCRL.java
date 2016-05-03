@@ -16,10 +16,14 @@ package org.globus.gsi.filestore;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import org.globus.common.CoGProperties;
 import org.globus.gsi.stores.ResourceCRL;
 import org.globus.gsi.testutils.FileSetupUtil;
+
 import java.io.File;
 import java.security.cert.X509CRL;
+import org.globus.common.CoGProperties;
 import org.globus.util.GlobusResource;
 import org.junit.After;
 import org.junit.Before;
@@ -37,6 +41,8 @@ public class TestFileBasedCRL {
     @Before
     public void setUp() throws Exception {
 
+        CoGProperties.getDefault().setProperty(CoGProperties.CRL_CACHE_LIFETIME, "1");
+        CoGProperties.getDefault().setProperty(CoGProperties.CERT_CACHE_LIFETIME, "1");
         this.testCrl1 = new FileSetupUtil("certificateUtilTest/validCrl.r0");
     }
 
@@ -103,17 +109,17 @@ public class TestFileBasedCRL {
 //        assertTrue(filter.accept(null, "foo.r0"));
 //
 //    }
-    public static boolean deleteDir(File dir) { 
-		if (dir.isDirectory()) { 
-			String[] dirContent = dir.list(); 
-			for (int i=0; i<dirContent.length; i++){ 
-				boolean success = deleteDir(new File(dir, dirContent[i])); 
-				if (!success) { 
-					return false; 
-				} 
-			} 
-		} // The directory is now empty so delete it 
-		return dir.delete(); 
+    public static boolean deleteDir(File dir) {
+		if (dir.isDirectory()) {
+			String[] dirContent = dir.list();
+			for (int i=0; i<dirContent.length; i++){
+				boolean success = deleteDir(new File(dir, dirContent[i]));
+				if (!success) {
+					return false;
+				}
+			}
+		} // The directory is now empty so delete it
+		return dir.delete();
 	}
     @After
     public void tearDown() throws Exception {
